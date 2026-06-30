@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Interstellar — Relativistic Solar System Flight</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script type="importmap">
+  { "imports": { "three": "./lib/three.module.js" } }
+  </script>
+</head>
+<body>
+  <canvas id="view"></canvas>
+
+  <!-- Language toggle (always visible) -->
+  <div id="langtoggle"><span data-lang="en">EN</span><span data-lang="ru">RU</span></div>
+
+  <!-- Start screen / how-to-fly -->
+  <div id="startscreen">
+    <div class="card">
+      <div id="langtoggle2"><span data-lang="en">English</span><span data-lang="ru">Русский</span></div>
+      <h1>INTERSTELLAR</h1>
+      <p class="sub" data-i18n="start.sub"></p>
+      <p data-i18n-html="start.intro"></p>
+      <div class="controls" data-i18n-html="start.controls"></div>
+      <p class="tip" data-i18n-html="start.tip"></p>
+      <button id="startbtn" data-i18n="start.launch"></button>
+    </div>
+  </div>
+
+  <!-- World-space overlay: body labels, target reticle, flight markers -->
+  <div id="overlay"></div>
+
+  <!-- Crosshair -->
+  <div id="crosshair">+</div>
+
+  <!-- Transient event log + live status line -->
+  <div id="eventlog"></div>
+  <div id="status" class="panel"></div>
+
+  <!-- HUD -->
+  <div id="hud" class="panel">
+    <div class="row"><span data-i18n="hud.speed"></span><b id="speed">0</b></div>
+    <div class="row"><span data-i18n="hud.gamma"></span><b id="gamma">1</b></div>
+    <div class="row"><span data-i18n="hud.dilation"></span><b id="dilation">—</b></div>
+    <div class="row"><span data-i18n="hud.accel"></span><b id="gforce">0 g</b></div>
+    <hr/>
+    <div class="row"><span data-i18n="hud.mode"></span><b id="mode">—</b></div>
+    <div class="row"><span data-i18n="hud.throttle"></span><b id="throttle">0 %</b></div>
+    <div class="row"><span data-i18n="hud.fuel"></span><b id="fuel">∞</b></div>
+    <hr/>
+    <div class="row"><span data-i18n="hud.ref"></span><b id="refbody">—</b></div>
+    <div class="row"><span data-i18n="hud.alt"></span><b id="altitude">—</b></div>
+    <div class="row"><span data-i18n="hud.atmo"></span><b id="atmo">—</b></div>
+  </div>
+
+  <div id="nav" class="panel">
+    <div class="row"><span data-i18n="nav.target"></span><b id="target">—</b></div>
+    <div class="row"><span data-i18n="nav.distance"></span><b id="tgtdist">—</b></div>
+    <div class="row"><span data-i18n="nav.eta"></span><b id="tgteta">—</b></div>
+    <hr/>
+    <div class="row"><span data-i18n="nav.simtime"></span><b id="simtime">0</b></div>
+    <div class="row"><span data-i18n="nav.shiptime"></span><b id="shiptime">0</b></div>
+    <div class="row"><span data-i18n="nav.warp"></span><b id="warp">1×</b></div>
+    <div class="row"><span data-i18n="nav.fps"></span><b id="fps">—</b></div>
+  </div>
+
+  <div id="help" class="panel" data-i18n-html="help.html"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

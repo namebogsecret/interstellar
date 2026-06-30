@@ -1,0 +1,199 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+#view { display: block; width: 100vw; height: 100vh; cursor: crosshair; }
+
+:root {
+  --fg: #9fe7ff;
+  --dim: #5b7c88;
+  --bg: rgba(6, 14, 20, 0.66);
+  --line: rgba(120, 200, 230, 0.18);
+}
+
+.panel {
+  position: fixed;
+  font: 12px/1.5 "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  backdrop-filter: blur(4px);
+  user-select: none;
+  pointer-events: none;
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+}
+
+#hud { top: 14px; left: 14px; width: 270px; }
+#nav { top: 14px; right: 14px; width: 240px; }
+#help { bottom: 14px; left: 14px; right: 14px; max-width: 720px; margin: 0 auto; opacity: 0.82; }
+
+.row { display: flex; justify-content: space-between; gap: 12px; }
+.row span { color: var(--dim); letter-spacing: 0.04em; }
+.row b { color: #d7f6ff; font-weight: 600; }
+.row b.limited { color: #ffcf7a; }
+hr { border: none; border-top: 1px solid var(--line); margin: 6px 0; }
+
+#help .keys { margin-top: 6px; color: var(--dim); }
+#help .keys span { color: #d7f6ff; }
+
+/* ---- start screen ---- */
+#startscreen {
+  position: fixed; inset: 0; z-index: 20; display: flex;
+  align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 40%, rgba(10,20,30,0.82), rgba(0,0,0,0.94));
+  backdrop-filter: blur(2px);
+}
+#startscreen .card {
+  width: min(640px, 92vw); padding: 26px 30px;
+  background: rgba(8, 16, 24, 0.92); border: 1px solid var(--line);
+  border-radius: 14px; color: #cfeefc;
+  font: 13px/1.6 "SF Mono", Menlo, Consolas, monospace;
+  box-shadow: 0 20px 80px rgba(0,0,0,0.6);
+}
+#startscreen h1 { font-size: 26px; letter-spacing: 0.18em; color: #bfeeff; font-weight: 700; }
+#startscreen .sub { color: var(--dim); margin: 2px 0 16px; letter-spacing: 0.05em; }
+#startscreen p { margin: 10px 0; color: #b9d8e6; }
+#startscreen b { color: #eaffff; }
+#startscreen .controls { margin: 14px 0; }
+#startscreen .cline { padding: 3px 0; color: #b9d8e6; border-bottom: 1px solid rgba(120,200,230,0.07); }
+#startscreen .cline b { color: #d7f6ff; }
+#startscreen .tip { background: rgba(40,90,120,0.18); border-left: 2px solid #4a8fb0; padding: 8px 12px; border-radius: 5px; color: #bfe6f4; }
+#langtoggle2 { position: absolute; top: 18px; right: 22px; display: flex; gap: 4px; }
+#langtoggle2 span {
+  cursor: pointer; padding: 3px 9px; border-radius: 6px; font-size: 11px;
+  color: var(--dim); border: 1px solid var(--line);
+}
+#langtoggle2 span.active { color: #eaffff; background: rgba(60,116,148,0.5); border-color: #3d7494; }
+
+/* ---- always-visible language switch ---- */
+#langtoggle {
+  position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+  z-index: 8; display: flex; gap: 3px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 3px;
+  font: 11px "SF Mono", Menlo, Consolas, monospace; backdrop-filter: blur(4px);
+}
+#langtoggle span {
+  cursor: pointer; padding: 3px 9px; border-radius: 5px; color: var(--dim);
+}
+#langtoggle span.active { color: #eaffff; background: rgba(60,116,148,0.5); }
+#startbtn {
+  margin-top: 16px; width: 100%; padding: 11px; cursor: pointer;
+  background: linear-gradient(180deg, #1d3f54, #15303f); color: #eaffff;
+  border: 1px solid #3d7494; border-radius: 8px; font: 600 14px monospace;
+  letter-spacing: 0.05em; transition: background 0.15s;
+}
+#startbtn:hover { background: linear-gradient(180deg, #275168, #1a3c4e); }
+
+#crosshair {
+  position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  color: rgba(180, 240, 255, 0.55); font: 18px monospace; pointer-events: none;
+  text-shadow: 0 0 4px #000; z-index: 5;
+}
+
+/* ---- world-space overlay ---- */
+#overlay {
+  position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 4;
+  font: 11px/1.2 "SF Mono", Menlo, Consolas, monospace;
+}
+.wlabel {
+  position: absolute; transform: translate(10px, -50%);
+  display: flex; align-items: center; gap: 5px; white-space: nowrap;
+  color: rgba(190, 230, 245, 0.78); text-shadow: 0 0 5px #000;
+}
+.wlabel .dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: rgba(160, 220, 245, 0.7); box-shadow: 0 0 6px rgba(120, 200, 240, 0.9);
+}
+.wlabel.istarget { color: #ffd27a; font-weight: 600; }
+.wlabel.istarget .dot { background: #ffd27a; box-shadow: 0 0 8px #ffb347; }
+
+.reticle {
+  position: absolute; width: 34px; height: 34px; transform: translate(-50%, -50%);
+  border: 1.5px solid #ffd27a; border-radius: 50%;
+  box-shadow: 0 0 8px rgba(255, 180, 70, 0.5); display: none;
+}
+.reticle::before, .reticle::after {
+  content: ''; position: absolute; background: #ffd27a;
+}
+.reticle::before { left: 50%; top: -7px; width: 1px; height: 7px; }
+.reticle::after { top: 50%; left: -7px; height: 1px; width: 7px; }
+
+.edgearrow {
+  position: absolute; color: #ffd27a; font-size: 22px; display: none;
+  text-shadow: 0 0 6px rgba(255, 160, 50, 0.7);
+}
+
+.marker {
+  position: absolute; transform: translate(-50%, -50%); font-size: 17px;
+  display: none; text-shadow: 0 0 5px #000;
+}
+.marker.prograde { color: #7CFC8A; }
+.marker.retrograde { color: #8fb3c8; opacity: 0.8; }
+
+#status {
+  bottom: 96px; left: 50%; transform: translateX(-50%);
+  padding: 5px 14px; z-index: 6; font-size: 12px; letter-spacing: 0.03em;
+}
+#status .ok { color: #9fe7ff; }
+#status .warn { color: #ffcf7a; }
+
+#eventlog {
+  position: fixed; top: 92px; left: 50%; transform: translateX(-50%);
+  text-align: center; pointer-events: none; z-index: 6;
+  font: 12px/1.6 "SF Mono", Menlo, Consolas, monospace;
+  color: rgba(200, 235, 250, 0.92); text-shadow: 0 0 6px #000;
+}
+#eventlog div { animation: fade 6s forwards; }
+@keyframes fade { 0%,70% { opacity: 1; } 100% { opacity: 0.25; } }
+
+/* ---- touch / mobile controls ---- */
+#touchui { display: none; }
+body.touch #touchui { display: block; }
+body.touch { touch-action: none; }
+body.touch #view { cursor: default; }
+body.touch #help { display: none; }            /* keyboard hints are irrelevant */
+
+#touchui #joy, #touchui .tbtn {
+  position: fixed; z-index: 10; touch-action: none; user-select: none;
+  -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+}
+#touchui #joy {
+  left: 22px; bottom: 26px; width: 132px; height: 132px; border-radius: 50%;
+  background: rgba(10, 22, 30, 0.4); border: 1.5px solid var(--line);
+  backdrop-filter: blur(3px);
+}
+#touchui #joyknob {
+  position: absolute; left: 50%; top: 50%; width: 54px; height: 54px;
+  margin: -27px 0 0 -27px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, rgba(120,210,245,0.85), rgba(40,100,130,0.7));
+  border: 1px solid #3d7494; box-shadow: 0 0 12px rgba(80,180,230,0.5);
+}
+#touchui #tbtns-r {
+  position: fixed; right: 20px; bottom: 26px; z-index: 10;
+  display: flex; flex-direction: column; gap: 12px; align-items: center;
+}
+#touchui #tbtns-b {
+  position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 10;
+  display: flex; gap: 8px;
+}
+#touchui .tbtn {
+  position: static; min-width: 56px; height: 56px; padding: 0 12px;
+  font: 600 15px/1 "SF Mono", Menlo, Consolas, monospace; color: #d7f6ff;
+  background: rgba(10, 22, 30, 0.55); border: 1.5px solid var(--line);
+  border-radius: 12px; backdrop-filter: blur(3px);
+}
+#touchui #tbtns-b .tbtn { height: 46px; min-width: 46px; font-size: 13px; border-radius: 10px; }
+#touchui .tbtn.on { background: rgba(60,116,148,0.6); border-color: #5fb4e6; }
+#touchui .tbtn.stop { color: #ffb0b0; border-color: rgba(230,120,120,0.5); }
+
+/* tighten the readouts on small screens so the two panels never collide and
+   the centred status line clears the joystick */
+@media (max-width: 760px) {
+  #hud, #nav { font-size: 10px; padding: 7px 8px; line-height: 1.45; }
+  #hud { width: 165px; left: 8px; top: 8px; }
+  #nav { width: 150px; right: 8px; top: 8px; }
+  #langtoggle { top: 6px; }
+  #eventlog { top: 70px; font-size: 11px; width: 60%; }
+  #status { bottom: 184px; font-size: 11px; }
+  #startscreen .card { font-size: 12px; padding: 20px 18px; }
+}
