@@ -1,0 +1,29 @@
+# physics-gate.yaml — маппинг INV-id (~/.claude/agents/_shared/invariants-catalog.md)
+# на PHYSICS GATE этого репо. НЕ дублирует тесты — вызывает каждый существующий
+# tests/*.test.mjs ИНДИВИДУАЛЬНО (тот же loader/механизм, что и bash tests/run.sh,
+# который гоняет все 6 файлов вместе за ~2.2s) — это даёт per-инвариант exit-код,
+# а не один общий FAIL на весь run.sh.
+invariants:
+  - id: INV-PHYS-01   # энергия/импульс релятивистской ракеты — longitudinal.regression.test.mjs
+                       # (файл сам помечен NEVER DELETE/WEAKEN): γ(t)=√(1+(αt/c)²) при 1000g proper-accel
+    cmd: node --no-warnings --loader "file://$PWD/tests/three-loader.mjs" tests/longitudinal.regression.test.mjs
+    tolerance: 0.02   # 2% — допуск теста на γ=13
+
+  - id: INV-PHYS-03   # сохранение момента импульса при центральных силах — orbits.test.mjs
+                       # (circularizeVelocity/orbitFromState: v⟂r, эксцентриситет/периапсис/апоапсис)
+    cmd: node --no-warnings --loader "file://$PWD/tests/three-loader.mjs" tests/orbits.test.mjs
+    tolerance: 1e-3   # tol теста orbits.test.mjs для e/a против заданных aWant/eWant
+
+  - id: INV-PHYS-06   # инвариантность единиц / согласованность формул с c² — gravity.test.mjs
+                       # (Φ<0, |Φ| убывает с r, dτ-weak-field-factor → 1 на большом r)
+    cmd: node --no-warnings --loader "file://$PWD/tests/three-loader.mjs" tests/gravity.test.mjs
+    tolerance: 1e-12  # tol теста gravity.test.mjs для dτ→1 на большом r
+
+  - id: INV-PHYS-09   # бит-точная алгебраическая формула аберрации — relativity.test.mjs
+                       # (aberratedCos(cp,β)=(cp-β)/(1-β·cp), round-trip + монотонность)
+    cmd: node --no-warnings --loader "file://$PWD/tests/three-loader.mjs" tests/relativity.test.mjs
+    tolerance: 1e-9   # tol теста relativity.test.mjs
+
+# Не включены в physics-gate.yaml (не запрошены ТЗ для этого репо, но существуют в tests/):
+# epoch.test.mjs (J2000 mean anomaly), ship.test.mjs (топливо/4-сила/drag) — покрыты общим
+# bash tests/run.sh, но не имеют собственной записи INV-id здесь (см. tz1-phaseB-report.md).

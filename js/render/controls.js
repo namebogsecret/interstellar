@@ -1,12 +1,26 @@
 import * as THREE from 'three';
 
+// Digit (1-9) -> engine power mapping, LOGARITHMIC across 1g..1000g so a
+// fresh pilot pressing '1' gets a gentle nudge instead of instantly maxing
+// out arcade-mode thrust (1000g) and tearing up their orbit.
+//   g(n)        = MAX_G ^ ((n-1) / 8)     → g(1)=1g, g(9)=1000g (geometric ladder)
+//   throttle(n) = g(n) / MAX_G            → ship.js: aThrust = maxAccelArcade * throttle,
+//                                            and maxAccelArcade = MAX_G * G0.
+const MAX_G = 1000;
+function powerToThrottle(n) {
+  const g = Math.pow(MAX_G, (n - 1) / 8);
+  return g / MAX_G;
+}
+// First unthrottled W-press should be gentle (~1g), not full power.
+const DEFAULT_THROTTLE = powerToThrottle(1);
+
 // First-person flight controls. Mouse (pointer-lock) yaws/pitches the ship;
 // keys translate thrust along ship axes, roll, set throttle, time-warp, etc.
 export class FlightControls {
   constructor(ship, domElement, hooks = {}) {
     this.ship = ship;
     this.dom = domElement;
-    this.hooks = hooks;            // { onModeToggle, onTarget, onFastTravel, onWarp, onReset }
+    this.hooks = hooks;            // { onModeToggle, onTarget, onFastTravel, onWarp, onReset, onPause, onCircularize }
     this.keys = new Set();
     this.mouseSens = 0.0022;
     this.rollRate = 1.2;           // rad/s
@@ -37,8 +51,10 @@ export class FlightControls {
       else if (k === 'l') this.hooks.onLabels?.();      // toggle labels
       else if (k === 'b') this.hooks.onBloom?.();       // toggle bloom
       else if (k === 'c') this.hooks.onRelFx?.();       // toggle relativistic optics
+      else if (k === 'p') this.hooks.onPause?.();        // pause / warp-0
+      else if (k === 'k') this.hooks.onCircularize?.();  // circularize orbit
       else if (k === 'backspace') this.hooks.onReset?.();
-      else if (/^[0-9]$/.test(k)) this.ship.throttle = k === '0' ? 0 : Number(k) / 9;
+      else if (/^[0-9]$/.test(k)) this.ship.throttle = k === '0' ? 0 : powerToThrottle(Number(k));
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
   }
@@ -64,9 +80,10 @@ export class FlightControls {
     if (this.keys.has('q')) s.angRate.z += this.rollRate;
     if (this.keys.has('e')) s.angRate.z -= this.rollRate;
 
-    // Throttle trim via Shift / Ctrl.
-    if (this.keys.has('shift')) s.throttle = Math.min(1, s.throttle + dt * 0.6);
-    if (this.keys.has('control')) s.throttle = Math.max(0, s.throttle - dt * 0.6);
+    // Throttle trim via [ / ] (not Ctrl/Shift: Ctrl+W closes the browser tab,
+    // and Shift collides with Shift+Tab = cycle target backward).
+    if (this.keys.has(']')) s.throttle = Math.min(1, s.throttle + dt * 0.6);
+    if (this.keys.has('[')) s.throttle = Math.max(0, s.throttle - dt * 0.6);
 
     // --- translation thrust direction (body frame) --------------------------
     const dir = new THREE.Vector3();
@@ -81,8 +98,9 @@ export class FlightControls {
 
     if (dir.lengthSq() > 0) {
       dir.normalize();
-      // If no explicit throttle is set, holding a thrust key implies full.
-      if (s.throttle === 0) s.throttle = 1;
+      // If no explicit throttle is set, holding a thrust key implies a gentle
+      // default burn (~1g), not full arcade-mode thrust (1000g).
+      if (s.throttle === 0) s.throttle = DEFAULT_THROTTLE;
       return dir;
     }
     return null;   // coasting (throttle has no direction)

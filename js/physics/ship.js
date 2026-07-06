@@ -1,6 +1,7 @@
 import * as THREE from 'three';
-import { C, G0 } from './constants.js';
-import { gravityAccel, dominantBody } from './gravity.js';
+import { C, C2, G0 } from './constants.js';
+import { gravityAccel, dominantBody, gravitationalPotential } from './gravity.js';
+import { surfaceRotationVelocity } from './orbits.js';
 import { gammaFromW, velocityFromW, relativisticDeltaV } from './relativity.js';
 
 // Two flight models:
@@ -62,7 +63,10 @@ export class Ship {
 
   // --- one physics substep -------------------------------------------------
   // dt: coordinate-time seconds. bodies + positions describe the universe now.
-  step(dt, bodies, positions, thrustDir) {
+  // refBodyVel: heliocentric ORBITAL velocity of the dominant body (Vector3) or
+  //   null. Treated READ-ONLY (it is main.js's shared _refVel — mutating it would
+  //   corrupt the warp-cap); we only copy it into scratch.
+  step(dt, bodies, positions, thrustDir, refBodyVel = null) {
     // 1) Orientation update from angular-rate commands (simple body-rate).
     if (this.angRate.lengthSq() > 0) {
       const dq = new THREE.Quaternion();
@@ -84,8 +88,9 @@ export class Ship {
       } else if (this.fuelMass > 0) {
         const F = this.thrustForce * this.throttle;
         aThrust.copy(thrustDir).multiplyScalar(F / this.mass);
-        // Mass flow: dm/dt = F / ve  (proper-ish; good enough for the sim).
-        this.fuelMass = Math.max(0, this.fuelMass - (F / this.ve) * dt);
+        // Mass flow: dm = (F/ve)*dtau. The engine burns in the SHIP frame, so it
+        // consumes PROPER time dtau = dt/gamma, not coordinate time dt.
+        this.fuelMass = Math.max(0, this.fuelMass - (F / this.ve) * dt / gammaFromW(this.w));
       }
     }
 
@@ -102,13 +107,25 @@ export class Ship {
         const h = Math.max(0, this.altitude);
         const rho = atmo.density0 * Math.exp(-h / atmo.scaleHeight);
         this.atmoDensity = rho;
-        // Drag relative to co-rotating atmosphere (approx: ignore wind, use v).
-        const speed = this.v.length();
-        if (speed > 0 && rho > 1e-9) {
-          // a_drag = -0.5 * rho * v^2 * Cd * A / m  along -v
+        // Drag acts on velocity RELATIVE to the co-rotating atmosphere:
+        //   vAtmo = refBodyVel (body orbital velocity) + omega x r (surface spin).
+        // refBodyVel is read-only shared state -> copy it, never mutate. With no
+        // reference velocity we fall back to vAtmo = v (i.e. zero drag).
+        let vRelMag = 0;
+        const vRel = _vRel;
+        if (refBodyVel) {
+          const omegaR = surfaceRotationVelocity(this.refBody, this.pos, bp, _omegaR);
+          _vAtmo.copy(refBodyVel).add(omegaR);
+          vRel.subVectors(this.v, _vAtmo);
+          vRelMag = vRel.length();
+        } else {
+          vRel.set(0, 0, 0);
+        }
+        if (vRelMag > 0 && rho > 1e-9) {
+          // a_drag = -0.5 * rho * vRel^2 * Cd * A / m  along -vRel
           const Cd = 0.8, area = 30, m = this.mass;
-          const mag = 0.5 * rho * speed * speed * Cd * area / m;
-          aDrag.copy(this.v).multiplyScalar(-mag / speed);
+          const mag = 0.5 * rho * vRelMag * vRelMag * Cd * area / m;
+          aDrag.copy(vRel).multiplyScalar(-mag / vRelMag);
         }
       }
     } else {
@@ -116,14 +133,37 @@ export class Ship {
     }
 
     // 5) Integrate specific momentum (relativistic), then position.
-    const aTot = _aTot.copy(aGrav).add(aThrust).add(aDrag);
-    this.lastAccel.copy(aThrust).add(aDrag);   // felt acceleration (g-meter, no gravity)
-    this.w.addScaledVector(aTot, dt);
+    // Thrust + drag are FELT proper-force terms and get the honest 4-force
+    // decomposition: the transverse proper acceleration equals gamma*(dw/dt)_perp,
+    // so the perpendicular part of dw/dt divides by gamma. GRAVITY is a geometric
+    // (geodesic) term — NOT decomposed; decomposing centripetal gravity would
+    // break circular orbits. (With thrust || v and no drag, aPerp = 0 so
+    // dwFelt = aThrust, and dw/dt = aGrav + aThrust — identical to the old aTot.)
+    const aFelt = _aFelt.copy(aThrust).add(aDrag);
+    const g = gammaFromW(this.w);
+    const speed = this.v.length();
+    let dwFelt;
+    if (speed > 1) {                                     // |v| > 1 m/s
+      const vhat = _vhat.copy(this.v).multiplyScalar(1 / speed);
+      const aParMag = aFelt.dot(vhat);
+      const aPar = _aPar.copy(vhat).multiplyScalar(aParMag);
+      const aPerp = _aPerp.subVectors(aFelt, aPar);      // aFelt - aPar
+      dwFelt = _dwFelt.copy(aPar).addScaledVector(aPerp, 1 / g);
+    } else {
+      dwFelt = _dwFelt.copy(aFelt);
+    }
+    this.w.addScaledVector(aGrav, dt).addScaledVector(dwFelt, dt);  // gravity undivided
+    this.lastAccel.copy(aFelt);                // g-meter = true felt proper accel
     velocityFromW(this.w, this.v);
     this.pos.addScaledVector(this.v, dt);
 
-    // 6) Proper time aboard ship.
-    this.properTime += dt / gammaFromW(this.w);
+    // 6) Proper time aboard ship: SR (velocity) + weak-field GR (potential).
+    //   dtau = dt * sqrt(1 + 2*Phi/c^2 - v^2/c^2)
+    // Valid for r >> r_s = 2GM/c^2 (always true in the solar system); max(0,.)
+    // guards the unreachable strong field. Phi -> 0, v -> 0 at infinity => dtau = dt.
+    const phi = gravitationalPotential(this.pos, bodies, positions);
+    const betaSq = this.v.lengthSq() / C2;
+    this.properTime += dt * Math.sqrt(Math.max(0, 1 + 2 * phi / C2 - betaSq));
   }
 }
 
@@ -131,4 +171,13 @@ const _v1 = new THREE.Vector3();
 const _aGrav = new THREE.Vector3();
 const _aThrust = new THREE.Vector3();
 const _aDrag = new THREE.Vector3();
-const _aTot = new THREE.Vector3();
+// Drag: velocity relative to the co-rotating atmosphere.
+const _omegaR = new THREE.Vector3();   // surface rotation velocity (omega x r)
+const _vAtmo = new THREE.Vector3();     // refBodyVel + omegaR
+const _vRel = new THREE.Vector3();      // ship velocity minus atmosphere velocity
+// Integrator: 4-force decomposition of the felt (thrust+drag) proper force.
+const _aFelt = new THREE.Vector3();
+const _vhat = new THREE.Vector3();
+const _aPar = new THREE.Vector3();
+const _aPerp = new THREE.Vector3();
+const _dwFelt = new THREE.Vector3();

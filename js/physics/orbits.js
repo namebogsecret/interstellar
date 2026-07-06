@@ -83,3 +83,73 @@ export function spinAngle(b, t) {
   if (!isFinite(b.rotPeriod) || b.rotPeriod === 0) return 0;
   return (2 * Math.PI * t) / b.rotPeriod;
 }
+
+// World-frame reference for spin-axis tilt (obliquity direction simplified —
+// only the magnitude of surface speed matters downstream, not the true node
+// of the equinoxes, so we just tip "up" by the body's axial tilt).
+const X_AXIS = new THREE.Vector3(1, 0, 0);
+
+// Unit spin axis of a body in the world frame. Always well-defined (even when
+// rotPeriod is 0/non-finite, in which case the downstream angular velocity is
+// zero but the axis direction itself is still meaningful for e.g. rendering).
+export function spinAxis(b, out = new THREE.Vector3()) {
+  return out.set(0, 1, 0).applyAxisAngle(X_AXIS, b.tilt || 0);
+}
+
+// Velocity (m/s, world frame) of the point on a rotating body at `shipPos`
+// due to that body's spin: v = omega x r, omega = spinAxis(b) * (2*pi/rotPeriod)
+// (SIGNED -- a negative rotPeriod is retrograde, matching spinAngle's sign
+// convention), r = shipPos - bodyPos. Returns (0,0,0) if rotPeriod is 0 or
+// non-finite (no rotation, or undefined for a body without one).
+const _spinAxis = new THREE.Vector3();
+const _r = new THREE.Vector3();
+export function surfaceRotationVelocity(b, shipPos, bodyPos, out = new THREE.Vector3()) {
+  if (!isFinite(b.rotPeriod) || b.rotPeriod === 0) return out.set(0, 0, 0);
+  const omega = (2 * Math.PI) / b.rotPeriod;      // signed: negative -> retrograde
+  spinAxis(b, _spinAxis).multiplyScalar(omega);   // omega vector
+  _r.subVectors(shipPos, bodyPos);
+  return out.crossVectors(_spinAxis, _r);
+}
+
+// Relative velocity (m/s) for a circular orbit at the current radius,
+// preserving the orbital plane and prograde sense of the given state vector.
+// mu = standard gravitational parameter (b.GM) of the body being orbited.
+const _h = new THREE.Vector3();
+const _dir = new THREE.Vector3();
+export function circularizeVelocity(mu, rVec, vVec, out = new THREE.Vector3()) {
+  const r = rVec.length();
+  const speed = Math.sqrt(mu / r);
+  _h.crossVectors(rVec, vVec);
+  if (_h.lengthSq() > 1e-12) {
+    _dir.crossVectors(_h, rVec).normalize();
+  } else {
+    // Radial (degenerate) state: no defined orbital plane -- pick any unit
+    // vector perpendicular to rVec.
+    _dir.set(-rVec.y, rVec.x, 0);
+    if (_dir.lengthSq() < 1e-12) _dir.set(0, -rVec.z, rVec.y);
+    _dir.normalize();
+  }
+  return out.copy(_dir).multiplyScalar(speed);
+}
+
+// Classic two-body orbital elements from a state vector (rVec, vVec) about a
+// body with gravitational parameter mu. Returns { a, e, rPeri, rApo }.
+// NOTE: rVec/vVec are typically formed by subtracting two heliocentric
+// double-precision positions (~1e11 m each); the subtraction leaves ~1e3 m of
+// floating-point residual error. Fine for a HUD readout, NOT for physics.
+export function orbitFromState(mu, rVec, vVec) {
+  const r = rVec.length();
+  const v2 = vVec.lengthSq();
+  const eps = v2 / 2 - mu / r;                    // specific orbital energy
+  const a = -mu / (2 * eps);
+  const rv = rVec.dot(vVec);
+  const ex = ((v2 - mu / r) * rVec.x - rv * vVec.x) / mu;
+  const ey = ((v2 - mu / r) * rVec.y - rv * vVec.y) / mu;
+  const ez = ((v2 - mu / r) * rVec.z - rv * vVec.z) / mu;
+  const e = Math.sqrt(ex * ex + ey * ey + ez * ez);
+  if (e >= 1) {
+    // Hyperbolic/parabolic -- unbound. rPeri is still meaningful; rApo is not.
+    return { a, e, rPeri: a * (1 - e), rApo: Infinity };
+  }
+  return { a, e, rPeri: a * (1 - e), rApo: a * (1 + e) };
+}

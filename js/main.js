@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { BODIES, byName } from './data/bodies.js';
-import { absolutePosition, orbitEllipse } from './physics/orbits.js';
+import { absolutePosition, orbitEllipse, spinAxis, spinAngle, surfaceRotationVelocity, circularizeVelocity } from './physics/orbits.js';
 import { dominantBody } from './physics/gravity.js';
 import { Ship, MODES } from './physics/ship.js';
 import { momentumFromV } from './physics/relativity.js';
@@ -12,7 +12,7 @@ import { FlightControls } from './render/controls.js';
 import { updateHUD } from './render/hud.js';
 import { Overlay } from './render/overlay.js';
 import { TouchControls } from './render/touch.js';
-import { t, bodyName, fmtSpeed, applyStatic, setLang } from './i18n.js';
+import { t, bodyName, fmtSpeed, applyStatic, setLang, getLang } from './i18n.js';
 
 applyStatic();   // localize all static UI text on load
 
@@ -59,7 +59,7 @@ for (const b of BODIES) {
 // Ship + simulation state.
 const ship = new Ship();
 const sim = { time: 0, warp: 1, warpTarget: 1, warpCap: Infinity, warpIdx: 0,
-              target: null, targetIdx: -1, targetDist: 0,
+              target: null, targetIdx: -1, targetDist: 0, paused: false,
               fps: 60, bloom: true, relFx: true, showOrbits: true, showLabels: true, warpLimited: false };
 
 const positions = new Map();
@@ -116,10 +116,17 @@ sim.target = byName('Moon'); sim.targetIdx = BODIES.indexOf(sim.target);
 const overlay = new Overlay(views);
 overlay.event(t('ev.online'));
 
+// ---- persisted toggles (localStorage) -------------------------------------
+// Mirror the getLang/setLang persistence pattern. All reads are defensive:
+// absent/corrupt values are ignored so a wiped store just falls back to defaults.
+function saveToggle(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch { /* storage disabled */ } }
+function loadToggle(key) { try { const s = localStorage.getItem(key); return s == null ? undefined : JSON.parse(s); } catch { return undefined; } }
+
 // ---- controls hooks -------------------------------------------------------
 const controls = new FlightControls(ship, canvas, {
   onModeToggle() {
     ship.mode = MODES[(MODES.indexOf(ship.mode) + 1) % MODES.length];
+    saveToggle('iss_mode', ship.mode);
     overlay.event(t('ev.mode', { m: t(ship.mode === 'arcade' ? 'mode.arcade' : 'mode.realistic') }));
   },
   onTarget(dir) {
@@ -146,11 +153,41 @@ const controls = new FlightControls(ship, canvas, {
     } else { ship.w.set(0, 0, 0); ship.v.set(0, 0, 0); overlay.event(t('ev.stopped')); }
   },
   onReset() { sim.time = 0; spawnAt('Earth'); ship.w.set(0, 0, 0); ship.v.set(0, 0, 0); overlay.event(t('ev.reset')); },
-  onOrbits() { sim.showOrbits = !sim.showOrbits; orbitGroup.visible = sim.showOrbits; overlay.event(t('ev.orbits', { s: t(sim.showOrbits ? 'w.on' : 'w.off') })); },
-  onLabels() { sim.showLabels = !sim.showLabels; overlay.root.style.display = sim.showLabels ? 'block' : 'none'; overlay.event(t('ev.labels', { s: t(sim.showLabels ? 'w.on' : 'w.off') })); },
-  onBloom() { sim.bloom = !sim.bloom; overlay.event(t('ev.bloom', { s: t(sim.bloom ? 'w.on' : 'w.off') })); },
-  onRelFx() { sim.relFx = !sim.relFx; overlay.event(t('ev.relfx', { s: t(sim.relFx ? 'w.on' : 'w.off') })); },
+  onOrbits() { sim.showOrbits = !sim.showOrbits; orbitGroup.visible = sim.showOrbits; saveToggle('iss_orbits', sim.showOrbits); overlay.event(t('ev.orbits', { s: t(sim.showOrbits ? 'w.on' : 'w.off') })); },
+  onLabels() { sim.showLabels = !sim.showLabels; overlay.root.style.display = sim.showLabels ? 'block' : 'none'; saveToggle('iss_labels', sim.showLabels); overlay.event(t('ev.labels', { s: t(sim.showLabels ? 'w.on' : 'w.off') })); },
+  onBloom() { sim.bloom = !sim.bloom; saveToggle('iss_glow', sim.bloom); overlay.event(t('ev.bloom', { s: t(sim.bloom ? 'w.on' : 'w.off') })); },
+  onRelFx() { sim.relFx = !sim.relFx; saveToggle('iss_relfx', sim.relFx); overlay.event(t('ev.relfx', { s: t(sim.relFx ? 'w.on' : 'w.off') })); },
+  onPause() { sim.paused = !sim.paused; overlay.event(sim.paused ? (getLang() === 'ru' ? 'Пауза' : 'Paused') : (getLang() === 'ru' ? 'Продолжено' : 'Resumed')); },
+  onCircularize() {
+    // Snap to a circular orbit around the dominant body. Ignore while landed
+    // (simplest safe choice — no lift-off first).
+    if (ship.landed) return;
+    const b = ship.refBody || dominantBody(ship.pos, BODIES, positions);
+    if (!b) return;
+    const bp = positions.get(b.name);
+    const bVel = bodyVelocity(b, sim.time, new THREE.Vector3());
+    const rVec = new THREE.Vector3().subVectors(ship.pos, bp);   // fresh: relative position
+    const vVec = new THREE.Vector3().subVectors(ship.v, bVel);   // fresh: relative velocity
+    const relV = circularizeVelocity(b.GM, rVec, vVec, new THREE.Vector3());
+    ship.v.copy(bVel).add(relV); momentumFromV(ship.v, ship.w);
+    overlay.event((getLang() === 'ru' ? 'Орбита скруглена вокруг ' : 'Circularized around ') + bodyName(b.name));
+  },
 });
+
+// Apply any persisted O/L/B/C/M toggles from a previous session, reflecting
+// each into the render layer exactly as its toggle hook would (not just the flag).
+{
+  const o = loadToggle('iss_orbits'); if (typeof o === 'boolean') { sim.showOrbits = o; orbitGroup.visible = o; }
+  const l = loadToggle('iss_labels'); if (typeof l === 'boolean') { sim.showLabels = l; overlay.root.style.display = l ? 'block' : 'none'; }
+  const g = loadToggle('iss_glow');   if (typeof g === 'boolean') sim.bloom = g;   // applied via bloom.enabled in loop
+  const r = loadToggle('iss_relfx');  if (typeof r === 'boolean') sim.relFx = r;   // applied via relativistic.enabled in loop
+  // Base RenderPass camera must match relFx from the very first frame: ON uses
+  // the wide sourceCamera (aberration headroom), OFF uses the display camera
+  // (correct 60° framing) — otherwise a restored OFF value would render the
+  // first frame at 90° until the loop below corrects it.
+  composer.renderPass.camera = sim.relFx ? composer.sourceCamera : camera;
+  const m = loadToggle('iss_mode');   if (m === 'arcade' || m === 'realistic') ship.mode = m;
+}
 
 // Ship reached a surface: pin to it, kill relative velocity, announce it.
 // Slow contact = landing; fast = crash. Either way you can thrust to fly off.
@@ -162,7 +199,11 @@ function touchdown() {
   const impact = _tmp.subVectors(ship.v, bvel).length();   // speed rel. to surface
 
   ship.pos.copy(bp).addScaledVector(up, b.radius + 1);
-  ship.landedOffset.copy(ship.pos).sub(bp);
+  // Store the offset in the body-FIXED frame (undo the body's current spin) so
+  // the landed ship rides the planet's rotation instead of the ground turning
+  // under it. Re-applied each landed frame with +spinAngle.
+  ship.landedOffset.copy(ship.pos).sub(bp)
+    .applyAxisAngle(spinAxis(b, _axis), -spinAngle(b, sim.time));
   ship.v.copy(bvel); momentumFromV(bvel, ship.w);
   ship.landed = true; ship.landedBody = b.name; ship.throttle = 0;
   ship.touchdownSpeed = impact;
@@ -216,6 +257,10 @@ function frame(now) {
   const refAlt = refB ? positions.get(refB.name).distanceTo(ship.pos) - refB.radius : Infinity;
   const refVel = refB ? bodyVelocity(refB, sim.time, _refVel) : null;
 
+  // When paused, freeze all physics + the sim clock. Rendering, HUD and input
+  // (controls.update above) still run below. No dt accumulator to reset — `last`
+  // is advanced every frame regardless, so unpausing never sees a dt spike.
+  if (!sim.paused) {
   // --- proximity time-warp cap -------------------------------------------
   // The closer / faster you approach a body, the lower the safe time speed.
   // You keep full control UP TO that ceiling, and it climbs back as you leave.
@@ -244,19 +289,26 @@ function frame(now) {
   if (!tdir && ship.throttle > 0) tdir = ship.forward(_fwd);
 
   if (ship.landed) {
-    // Sit on the surface and ride along with the planet's motion.
+    // Sit on the surface and ride along with the planet's ROTATION (body-fixed
+    // offset rotated back into inertial by the current spin) + orbital motion.
     sim.time += simDt;
     computePositions(sim.time);
+    const b = byName(ship.landedBody);
     const bp = positions.get(ship.landedBody);
-    ship.pos.copy(bp).add(ship.landedOffset);
-    if (refVel) { ship.v.copy(refVel); momentumFromV(refVel, ship.w); }
+    const inertialOff = _landOff.copy(ship.landedOffset)
+      .applyAxisAngle(spinAxis(b, _axis), spinAngle(b, sim.time));
+    ship.pos.copy(bp).add(inertialOff);
+    // Ground velocity = body's orbital velocity + surface rotation at this point.
+    ship.v.copy(bodyVelocity(b, sim.time, _landVel))
+      .add(surfaceRotationVelocity(b, ship.pos, bp, _landSurf));
+    momentumFromV(ship.v, ship.w);
     ship.lastAccel.set(0, 0, 0);
-    // Lift off the moment the pilot applies thrust.
+    // Lift off the moment the pilot applies thrust — keep v (it already carries
+    // orbital + surface motion) so the ship departs with the ground's velocity.
     if (ship.throttle > 0 || tdir) {
       ship.landed = false; ship.crashed = false;
       const up = _dir.subVectors(ship.pos, bp).normalize();
       ship.pos.addScaledVector(up, 50);          // unstick from the surface
-      if (refVel) { ship.v.copy(refVel); momentumFromV(refVel, ship.w); }
       overlay.event(t('ev.liftoff', { name: bodyName(ship.landedBody) }));
     }
   } else {
@@ -266,11 +318,12 @@ function frame(now) {
     for (let i = 0; i < nSub; i++) {
       sim.time += subDt;
       computePositions(sim.time);
-      ship.step(subDt, BODIES, positions, tdir || _zero);
+      ship.step(subDt, BODIES, positions, tdir || _zero, refVel);   // refVel READ-ONLY (step copies)
       if (ship.refBody && ship.altitude <= 0) { touchdown(); break; }
     }
     computePositions(sim.time);
   }
+  }   // end if (!sim.paused)
 
   if (sim.target) sim.targetDist = positions.get(sim.target.name).distanceTo(ship.pos);
 
@@ -292,6 +345,14 @@ function frame(now) {
 
   // Relativistic aberration / Doppler from the ship's velocity in view space.
   relativistic.enabled = sim.relFx;
+  // The relativistic pass is the ONLY thing that crops the wide-FOV source
+  // render back to the display's 60° frame (see relativisticPass SOURCE_FOV).
+  // When it's off, the base RenderPass must render through the display camera
+  // directly, or the full 90° source gets stretched onto the screen (visible
+  // zoom-out). Swap here — the single place sim.relFx actually drives the
+  // pass's enabled state — rather than duplicating this in onRelFx, so both
+  // the O key toggle and the persisted-toggle startup path stay in sync.
+  composer.renderPass.camera = sim.relFx ? composer.sourceCamera : camera;
   if (sim.relFx) {
     const qInv = _qInv.copy(camera.quaternion).invert();
     updateRelativisticPass(relativistic, ship.v, qInv, camera, 1.0);
@@ -306,7 +367,21 @@ function frame(now) {
   const tgtRel = sim.target ? _rel2.subVectors(positions.get(sim.target.name), ship.pos) : null;
   if (sim.showLabels) overlay.update(camera, views, ship, sim.target, tgtRel);
   updateStatusAndEvents();
-  updateHUD(ship, sim);
+
+  // HUD navigation context — built with DEDICATED scratch (never _tmp/_rel/_dir,
+  // which the landed block + floating-origin loop clobber). refVel stays read-only.
+  const navBody = ship.refBody || refB;
+  const nav = {
+    refBody: navBody || null,
+    refPos: navBody ? _navRefPos.copy(positions.get(navBody.name)) : null,
+    refVel: navBody
+      ? (navBody === refB && refVel ? _navRefVel.copy(refVel) : bodyVelocity(navBody, sim.time, _navRefVel))
+      : null,
+    targetBody: sim.target || null,
+    targetPos: sim.target ? _navTgtPos.copy(positions.get(sim.target.name)) : null,
+    targetVel: sim.target ? bodyVelocity(sim.target, sim.time, _navTgtVel) : null,
+  };
+  updateHUD(ship, sim, nav);
 
   // FPS + adaptive bloom (drop it if the machine struggles).
   fpsAccum += realDt; fpsFrames++;
@@ -327,6 +402,16 @@ const _refVel = new THREE.Vector3();
 const _dir = new THREE.Vector3();
 const _tmp = new THREE.Vector3();
 const _qInv = new THREE.Quaternion();
+// Body-fixed landing scratch (item 3).
+const _axis = new THREE.Vector3();
+const _landOff = new THREE.Vector3();
+const _landVel = new THREE.Vector3();
+const _landSurf = new THREE.Vector3();
+// HUD nav scratch (item 2) — dedicated, never reused by the hot loop.
+const _navRefPos = new THREE.Vector3();
+const _navRefVel = new THREE.Vector3();
+const _navTgtPos = new THREE.Vector3();
+const _navTgtVel = new THREE.Vector3();
 requestAnimationFrame(frame);
 
 // ---- start screen / help --------------------------------------------------

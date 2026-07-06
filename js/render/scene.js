@@ -4,7 +4,7 @@ import { RenderPass } from '../../lib/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../../lib/jsm/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from '../../lib/jsm/postprocessing/ShaderPass.js';
 import { CopyShader } from '../../lib/jsm/shaders/CopyShader.js';
-import { createRelativisticPass } from './relativisticPass.js';
+import { createRelativisticPass, SOURCE_FOV } from './relativisticPass.js';
 
 // Renderer tuned for weak hardware: log depth buffer (essential for the
 // metre-to-trillion-metre range), capped pixel ratio, filmic tone mapping for
@@ -88,7 +88,17 @@ export function createCamera() {
 // Selective bloom for the Sun / bright faces. Half-internal-res keeps it light.
 export function createBloom(renderer, scene, camera) {
   const composer = new EffectComposer(renderer);
-  composer.addPass(new RenderPass(scene, camera));
+  // Source scene is rendered through a WIDER fov than the display camera so
+  // that, once the aberration shader's sign is correct, forward-looking
+  // display pixels (which map to REST-frame angles wider than the display
+  // FOV) have something to sample instead of clamping at the screen edge.
+  // Parented to the main camera so it inherits its world transform for free —
+  // main.js already calls camera.updateMatrixWorld() every frame, which
+  // propagates to children with no extra per-frame sync needed here.
+  const sourceCamera = new THREE.PerspectiveCamera(SOURCE_FOV, camera.aspect, 0.05, 1e14);
+  camera.add(sourceCamera);
+  const renderPass = new RenderPass(scene, sourceCamera);
+  composer.addPass(renderPass);
   // Relativistic aberration + Doppler, BEFORE bloom so blueshifted/beamed
   // bright stars ahead also pick up the glow.
   const relativistic = createRelativisticPass(window.innerWidth, window.innerHeight);
@@ -105,6 +115,14 @@ export function createBloom(renderer, scene, camera) {
   // EffectComposer "disabled last pass" gotcha).
   const copy = new ShaderPass(CopyShader);
   composer.addPass(copy);
+  // Stashed on the composer (rather than widening this function's return
+  // contract) so handleResize below can keep sourceCamera's aspect in sync
+  // without needing its own signature change. renderPass is stashed the same
+  // way so main.js can swap its camera between sourceCamera (relFx on, wide
+  // FOV for aberration headroom) and the display camera (relFx off, correct
+  // 60° framing) whenever the relativistic pass is toggled.
+  composer.sourceCamera = sourceCamera;
+  composer.renderPass = renderPass;
   return { composer, bloom, relativistic };
 }
 
@@ -112,6 +130,10 @@ export function handleResize(renderer, camera, composer) {
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
+    if (composer?.sourceCamera) {
+      composer.sourceCamera.aspect = camera.aspect;
+      composer.sourceCamera.updateProjectionMatrix();
+    }
     renderer.setSize(window.innerWidth, window.innerHeight);
     composer?.setSize(window.innerWidth, window.innerHeight);
   });

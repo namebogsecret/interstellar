@@ -137,6 +137,19 @@ orbital flight is untouched — then blooms dramatically as you burn toward *c*.
 > bodies don't perturb each other — appropriate simplifications for a real-time
 > sim. The *kinematics* of motion near light speed are fully special-relativistic.
 
+## Known limitations
+
+- **Transverse thrust** — the sim models the honest relativistic 4-force: a
+  commanded felt acceleration applied perpendicular to your velocity produces
+  `dw/dt` reduced by a further factor of γ versus the longitudinal case.
+  Longitudinal thrust is exact throughout (the verified 1000 g → γ≈13 burn
+  above is unaffected).
+- **Aberration** (toggle **C**) is rendered by reprojecting a wider-FOV (90°)
+  source image; at high β a forward pixel can map beyond that source frustum
+  and gets clamped, showing as a mild smear near the forward rim. Full
+  forward-hemisphere aberration would need a cubemap source — noted as future
+  work rather than solved here.
+
 ## Because the distances are real…
 
 …planets are genuinely tiny specks across interplanetary space. Two aids keep it

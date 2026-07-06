@@ -44,6 +44,14 @@ export function dopplerFactor(vRadial) {
   return Math.sqrt((1 + b) / (1 - b));
 }
 
+// Relativistic aberration of light — maps a ship-frame cosine cosThetaPrime to
+// the rest-frame cosine, given the closing speed fraction beta. Pure (three-free)
+// so it runs under node tests as the mirror of the shader aberration.
+// GLSL mirror in js/render/relativisticPass.js — keep byte-identical: (cp - beta)/(1.0 - beta*cp)
+export function aberratedCos(cosThetaPrime, beta) {
+  return (cosThetaPrime - beta) / (1 - beta * cosThetaPrime);
+}
+
 // Tsiolkovsky (relativistic) — final speed for a given mass ratio and exhaust
 // velocity ve. Used to show remaining delta-v budget in finite-fuel mode.
 export function relativisticDeltaV(massRatio, ve) {

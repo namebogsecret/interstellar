@@ -24,6 +24,26 @@ export function gravityAccel(shipPos, bodies, positions, out = new THREE.Vector3
   return out;
 }
 
+// Newtonian gravitational potential at shipPos: Phi = -sum_i GM_i / r_i
+// (NEGATIVE, summed over every massive body). Each r_i is clamped to the body
+// radius exactly as gravityAccel does, to avoid the interior singularity. Feeds
+// the weak-field gravitational time-dilation term (valid for r >> r_s = 2GM/c^2,
+// always true in the solar system).
+export function gravitationalPotential(shipPos, bodies, positions) {
+  let phi = 0;
+  for (const b of bodies) {
+    if (!b.GM) continue;
+    const bp = positions.get(b.name);
+    if (!bp) continue;
+    d.subVectors(bp, shipPos);
+    let r2 = d.lengthSq();
+    const rSurf2 = b.radius * b.radius;
+    if (r2 < rSurf2) r2 = rSurf2;           // clamp inside the body
+    phi -= b.GM / Math.sqrt(r2);
+  }
+  return phi;
+}
+
 // Dominant gravity source (nearest in terms of strongest pull) — used for the
 // HUD "reference body", altitude, and atmosphere checks.
 export function dominantBody(shipPos, bodies, positions) {
