@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { BODIES, byName } from './data/bodies.js';
-import { absolutePosition, orbitEllipse, spinAxis, spinAngle, surfaceRotationVelocity, circularizeVelocity } from './physics/orbits.js';
+import { absolutePosition, orbitEllipse, spinAxis, spinAngle, surfaceRotationVelocity, circularizeVelocity, bodyVelocity } from './physics/orbits.js';
 import { dominantBody } from './physics/gravity.js';
+import { cabotageEngaged, tryAnalyticCoast } from './physics/cabotage.js';
 import { Ship, MODES } from './physics/ship.js';
 import { momentumFromV } from './physics/relativity.js';
 import { G0 } from './physics/constants.js';
@@ -72,12 +73,7 @@ function computePositions(t) {
   }
 }
 
-function bodyVelocity(b, t, out = new THREE.Vector3()) {
-  const h = 60;
-  const a = absolutePosition(b, t + h, byName, new THREE.Vector3());
-  const c = absolutePosition(b, t - h, byName, new THREE.Vector3());
-  return out.subVectors(a, c).multiplyScalar(1 / (2 * h));
-}
+// bodyVelocity relocated to physics/orbits.js (pure) — imported above.
 
 // Spawn in a STABLE CIRCULAR ORBIT around a body (not at rest — otherwise you
 // just free-fall into it). Velocity = body's velocity + circular orbit speed.
@@ -92,7 +88,7 @@ function spawnAt(name, distMul = 4) {
   let perp = new THREE.Vector3(0, 1, 0).cross(off);  // perpendicular to radius
   if (perp.lengthSq() < 1e-6) perp.set(1, 0, 0);
   perp.normalize();
-  const vel = bodyVelocity(b, sim.time).addScaledVector(perp, vCirc);
+  const vel = bodyVelocity(b, sim.time, byName).addScaledVector(perp, vCirc);
   ship.v.copy(vel); momentumFromV(vel, ship.w);
   ship.properTime = 0;
   ship.landed = false; ship.crashed = false; ship.throttle = 0;
@@ -147,7 +143,7 @@ const controls = new FlightControls(ship, canvas, {
     // brake. Far from everything, stop relative to the Sun.
     ship.angRate.set(0, 0, 0);
     if (ship.refBody) {
-      const rv = bodyVelocity(ship.refBody, sim.time, new THREE.Vector3());
+      const rv = bodyVelocity(ship.refBody, sim.time, byName, new THREE.Vector3());
       ship.v.copy(rv); momentumFromV(rv, ship.w);
       overlay.event(t('ev.drift', { name: bodyName(ship.refBody.name) }));
     } else { ship.w.set(0, 0, 0); ship.v.set(0, 0, 0); overlay.event(t('ev.stopped')); }
@@ -165,7 +161,7 @@ const controls = new FlightControls(ship, canvas, {
     const b = ship.refBody || dominantBody(ship.pos, BODIES, positions);
     if (!b) return;
     const bp = positions.get(b.name);
-    const bVel = bodyVelocity(b, sim.time, new THREE.Vector3());
+    const bVel = bodyVelocity(b, sim.time, byName, new THREE.Vector3());
     const rVec = new THREE.Vector3().subVectors(ship.pos, bp);   // fresh: relative position
     const vVec = new THREE.Vector3().subVectors(ship.v, bVel);   // fresh: relative velocity
     const relV = circularizeVelocity(b.GM, rVec, vVec, new THREE.Vector3());
@@ -194,7 +190,7 @@ const controls = new FlightControls(ship, canvas, {
 function touchdown() {
   const b = ship.refBody;
   const bp = positions.get(b.name);
-  const bvel = bodyVelocity(b, sim.time, new THREE.Vector3());
+  const bvel = bodyVelocity(b, sim.time, byName, new THREE.Vector3());
   const up = _dir.subVectors(ship.pos, bp).normalize();
   const impact = _tmp.subVectors(ship.v, bvel).length();   // speed rel. to surface
 
@@ -255,7 +251,7 @@ function frame(now) {
   // so the warp cap reacts the same frame and never overshoots by a step.
   const refB = dominantBody(ship.pos, BODIES, positions);
   const refAlt = refB ? positions.get(refB.name).distanceTo(ship.pos) - refB.radius : Infinity;
-  const refVel = refB ? bodyVelocity(refB, sim.time, _refVel) : null;
+  const refVel = refB ? bodyVelocity(refB, sim.time, byName, _refVel) : null;
 
   // When paused, freeze all physics + the sim clock. Rendering, HUD and input
   // (controls.update above) still run below. No dt accumulator to reset — `last`
@@ -299,7 +295,7 @@ function frame(now) {
       .applyAxisAngle(spinAxis(b, _axis), spinAngle(b, sim.time));
     ship.pos.copy(bp).add(inertialOff);
     // Ground velocity = body's orbital velocity + surface rotation at this point.
-    ship.v.copy(bodyVelocity(b, sim.time, _landVel))
+    ship.v.copy(bodyVelocity(b, sim.time, byName, _landVel))
       .add(surfaceRotationVelocity(b, ship.pos, bp, _landSurf));
     momentumFromV(ship.v, ship.w);
     ship.lastAccel.set(0, 0, 0);
@@ -311,6 +307,14 @@ function frame(now) {
       ship.pos.addScaledVector(up, 50);          // unstick from the surface
       overlay.event(t('ev.liftoff', { name: bodyName(ship.landedBody) }));
     }
+  } else if (cabotageEngaged(ship, refB, refAlt, effWarp, BODIES, byName, sim.time)
+             && tryAnalyticCoast(ship, refB, BODIES, byName, sim.time, simDt)) {
+    // Kepler cabotage: the whole warp frame was advanced analytically along the
+    // two-body conic (zero secular drift). All-or-nothing — tryAnalyticCoast
+    // committed a SAFE step (above atmosphere, no SOI crossing) or mutated
+    // nothing and returned false, falling through to the numeric loop below.
+    sim.time += simDt;
+    computePositions(sim.time);          // refresh shared Map at the new time (as numeric does)
   } else {
     let nSub, subDt;
     if (effWarp <= 1) { nSub = 1; subDt = simDt; }
