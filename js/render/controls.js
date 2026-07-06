@@ -1,18 +1,23 @@
 import * as THREE from 'three';
+import { G0 } from '../physics/constants.js';
 
-// Digit (1-9) -> engine power mapping, LOGARITHMIC across 1g..1000g so a
-// fresh pilot pressing '1' gets a gentle nudge instead of instantly maxing
-// out arcade-mode thrust (1000g) and tearing up their orbit.
-//   g(n)        = MAX_G ^ ((n-1) / 8)     → g(1)=1g, g(9)=1000g (geometric ladder)
-//   throttle(n) = g(n) / MAX_G            → ship.js: aThrust = maxAccelArcade * throttle,
-//                                            and maxAccelArcade = MAX_G * G0.
+// Digit (1-9) -> throttle mapping, LOGARITHMIC across 1g..1000g so a fresh pilot
+// pressing '1' gets a gentle ~1g nudge instead of instantly maxing out thrust
+// and tearing up their orbit. The TARGET felt acceleration is mode-INDEPENDENT:
+//   targetAccel(n) = MAX_G ^ ((n-1)/8) · G0        → 1g (n=1) … 1000g (n=9)
+// The throttle is that target divided by the mode's REAL ceiling (maxThrustAccel),
+// honestly clamped to 1. So '1'≈1g in BOTH modes, and realistic clamps to the
+// ship's thrust limit (~3–15g) instead of the arcade fiction of 1000g.
+//   • arcade:    target/maxAccelArcade = (g(n)·G0)/(1000·G0) = g(n)/1000  (old formula, bit-identical)
+//   • realistic: target/(F/m); '1'→~1g, high digits clamp at the thrust ceiling.
 const MAX_G = 1000;
-function powerToThrottle(n) {
-  const g = Math.pow(MAX_G, (n - 1) / 8);
-  return g / MAX_G;
+export function powerToThrottle(n, ship) {
+  const targetAccel = Math.pow(MAX_G, (n - 1) / 8) * G0;
+  const maxAccel = ship.maxThrustAccel;
+  return maxAccel > 0 ? Math.min(1, targetAccel / maxAccel) : 0;
 }
-// First unthrottled W-press should be gentle (~1g), not full power.
-const DEFAULT_THROTTLE = powerToThrottle(1);
+// First unthrottled thrust-key press should be gentle (~1g), not full power.
+function defaultThrottle(ship) { return powerToThrottle(1, ship); }
 
 // First-person flight controls. Mouse (pointer-lock) yaws/pitches the ship;
 // keys translate thrust along ship axes, roll, set throttle, time-warp, etc.
@@ -56,7 +61,7 @@ export class FlightControls {
       else if (k === 'v') this.hooks.onMap?.();          // toggle top-down system map
       else if (k === 't') this.hooks.onTargetList?.();   // toggle proximity-sorted target list
       else if (k === 'backspace') this.hooks.onReset?.();
-      else if (/^[0-9]$/.test(k)) this.ship.throttle = k === '0' ? 0 : powerToThrottle(Number(k));
+      else if (/^[0-9]$/.test(k)) this.ship.throttle = k === '0' ? 0 : powerToThrottle(Number(k), this.ship);
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
   }
@@ -102,7 +107,7 @@ export class FlightControls {
       dir.normalize();
       // If no explicit throttle is set, holding a thrust key implies a gentle
       // default burn (~1g), not full arcade-mode thrust (1000g).
-      if (s.throttle === 0) s.throttle = DEFAULT_THROTTLE;
+      if (s.throttle === 0) s.throttle = defaultThrottle(s);
       return dir;
     }
     return null;   // coasting (throttle has no direction)

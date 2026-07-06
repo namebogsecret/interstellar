@@ -142,7 +142,12 @@ function loadToggle(key) { try { const s = localStorage.getItem(key); return s =
 // ---- controls hooks -------------------------------------------------------
 const controls = new FlightControls(ship, canvas, {
   onModeToggle() {
+    // Preserve the FELT acceleration across the switch: throttle is a raw [0,1]
+    // scalar whose meaning depends on the mode's ceiling, so recompute it against
+    // the new ceiling (honest clamp to 1; 0 when the new mode has no thrust).
+    const aOld = ship.throttle * ship.maxThrustAccel;
     ship.mode = MODES[(MODES.indexOf(ship.mode) + 1) % MODES.length];
+    ship.throttle = ship.maxThrustAccel > 0 ? Math.min(1, aOld / ship.maxThrustAccel) : 0;
     saveToggle('iss_mode', ship.mode);
     overlay.event(t('ev.mode', { m: t(ship.mode === 'arcade' ? 'mode.arcade' : 'mode.realistic') }));
   },

@@ -26,7 +26,7 @@ const DICT = {
       <div class="cline"><b>Move the mouse</b> — look around / aim the nose of the ship.</div>
       <div class="cline"><b>W</b> — fire engine forward (speed up). &nbsp; <b>S</b> — fire backward (slow down / reverse).</div>
       <div class="cline"><b>A · D</b> — slide left / right. &nbsp; <b>R · F</b> — slide up / down.</div>
-      <div class="cline"><b>1…9</b> — set engine power, log scale (1≈1 g … 9≈1000 g, <b>0</b> = engine off). &nbsp; <b>[ · ]</b> — trim power down / up. &nbsp; <b>Q · E</b> — tilt (roll).</div>
+      <div class="cline"><b>1…9</b> — set engine power, log scale (1≈1 g … 9≈1000 g in arcade; realistic clamps to the ship's thrust limit ≈3–15 g, <b>0</b> = engine off). &nbsp; <b>[ · ]</b> — trim power down / up. &nbsp; <b>Q · E</b> — tilt (roll).</div>
       <div class="cline"><b>X</b> — <b>STOP</b>: cancel all drifting and stop spinning (your "brake"). &nbsp; <b>K</b> — circularize your orbit around the nearest body.</div>
       <div class="cline"><b>Tab</b> — pick somewhere to go (Sun / planet / moon). &nbsp; <b>G</b> — instantly jump next to it.</div>
       <div class="cline"><b>.</b> / <b>,</b> — speed up / slow down time (to watch planets move or cross huge distances). &nbsp; <b>P</b> — pause.</div>
@@ -77,7 +77,7 @@ const DICT = {
     'tlist.title': 'SELECT TARGET',
     'tlist.hint': 'Click a row or press 1-9 · Esc / T to close',
     'help.html': `<b>CONTROLS</b> &nbsp;·&nbsp; <span>X</span> = STOP (brake) &nbsp;·&nbsp; <span>H</span> full help
-      <div class="keys"><span>Mouse</span> look &nbsp; <span>W/S</span> forward/back &nbsp; <span>A D R F</span> slide &nbsp; <span>Q/E</span> roll &nbsp; <span>1–9/0</span> power (log, 1≈1g…9≈1000g) &nbsp; <span>[ ]</span> trim &nbsp; <span>Tab</span> target &nbsp; <span>G</span> jump &nbsp; <span>,/.</span> time &nbsp; <span>P</span> pause &nbsp; <span>K</span> circularize &nbsp; <span>M</span> fuel &nbsp; <span>⌫</span> reset &nbsp; <span>O/L/B/C</span> orbits/labels/glow/relativity</div>`,
+      <div class="keys"><span>Mouse</span> look &nbsp; <span>W/S</span> forward/back &nbsp; <span>A D R F</span> slide &nbsp; <span>Q/E</span> roll &nbsp; <span>1–9/0</span> power (log, 1≈1g…9≈1000g arcade; realistic ≈3–15g) &nbsp; <span>[ ]</span> trim &nbsp; <span>Tab</span> target &nbsp; <span>G</span> jump &nbsp; <span>,/.</span> time &nbsp; <span>P</span> pause &nbsp; <span>K</span> circularize &nbsp; <span>M</span> fuel &nbsp; <span>⌫</span> reset &nbsp; <span>O/L/B/C</span> orbits/labels/glow/relativity</div>`,
     // units
     'u.m': ' m', 'u.km': ' km', 'u.AU': ' AU', 'u.ly': ' ly', 'u.ms': ' m/s', 'u.kms': ' km/s',
     'u.s': ' s', 'u.min': ' min', 'u.h': ' h', 'u.d': ' d', 'u.yr': ' yr',
@@ -94,7 +94,7 @@ const DICT = {
       <div class="cline"><b>Двигайте мышью</b> — осмотреться / навести нос корабля.</div>
       <div class="cline"><b>W</b> — двигатель вперёд (разгон). &nbsp; <b>S</b> — двигатель назад (торможение / задний ход).</div>
       <div class="cline"><b>A · D</b> — сместиться влево / вправо. &nbsp; <b>R · F</b> — вверх / вниз.</div>
-      <div class="cline"><b>1…9</b> — мощность двигателя, логарифмическая шкала (1≈1 g … 9≈1000 g, <b>0</b> = выключен). &nbsp; <b>[ · ]</b> — подстройка мощности вниз / вверх. &nbsp; <b>Q · E</b> — крен (наклон вбок).</div>
+      <div class="cline"><b>1…9</b> — мощность двигателя, логарифмическая шкала (1≈1 g … 9≈1000 g в аркаде; в реализме упирается в предел тяги корабля ≈3–15 g, <b>0</b> = выключен). &nbsp; <b>[ · ]</b> — подстройка мощности вниз / вверх. &nbsp; <b>Q · E</b> — крен (наклон вбок).</div>
       <div class="cline"><b>X</b> — <b>СТОП</b>: погасить весь дрейф и вращение (это ваш «тормоз»). &nbsp; <b>K</b> — выйти на круговую орбиту вокруг ближайшего тела.</div>
       <div class="cline"><b>Tab</b> — выбрать, куда лететь (Солнце / планета / луна). &nbsp; <b>G</b> — мгновенно перенестись к ней.</div>
       <div class="cline"><b>.</b> / <b>,</b> — ускорить / замедлить время (смотреть, как движутся планеты, или покрывать огромные расстояния). &nbsp; <b>P</b> — пауза.</div>
@@ -143,7 +143,7 @@ const DICT = {
     'tlist.title': 'ВЫБОР ЦЕЛИ',
     'tlist.hint': 'Клик по строке или 1-9 · Esc / T — закрыть',
     'help.html': `<b>УПРАВЛЕНИЕ</b> &nbsp;·&nbsp; <span>X</span> = СТОП (тормоз) &nbsp;·&nbsp; <span>H</span> вся справка
-      <div class="keys"><span>Мышь</span> обзор &nbsp; <span>W/S</span> вперёд/назад &nbsp; <span>A D R F</span> сдвиг &nbsp; <span>Q/E</span> крен &nbsp; <span>1–9/0</span> мощность (лог., 1≈1g…9≈1000g) &nbsp; <span>[ ]</span> подстройка &nbsp; <span>Tab</span> цель &nbsp; <span>G</span> прыжок &nbsp; <span>,/.</span> время &nbsp; <span>P</span> пауза &nbsp; <span>K</span> круговая орбита &nbsp; <span>M</span> топливо &nbsp; <span>⌫</span> сброс &nbsp; <span>O/L/B/C</span> орбиты/подписи/свечение/релятивизм</div>`,
+      <div class="keys"><span>Мышь</span> обзор &nbsp; <span>W/S</span> вперёд/назад &nbsp; <span>A D R F</span> сдвиг &nbsp; <span>Q/E</span> крен &nbsp; <span>1–9/0</span> мощность (лог., 1≈1g…9≈1000g аркада; реализм ≈3–15g) &nbsp; <span>[ ]</span> подстройка &nbsp; <span>Tab</span> цель &nbsp; <span>G</span> прыжок &nbsp; <span>,/.</span> время &nbsp; <span>P</span> пауза &nbsp; <span>K</span> круговая орбита &nbsp; <span>M</span> топливо &nbsp; <span>⌫</span> сброс &nbsp; <span>O/L/B/C</span> орбиты/подписи/свечение/релятивизм</div>`,
     'u.m': ' м', 'u.km': ' км', 'u.AU': ' а.е.', 'u.ly': ' св.лет', 'u.ms': ' м/с', 'u.kms': ' км/с',
     'u.s': ' с', 'u.min': ' мин', 'u.h': ' ч', 'u.d': ' дн', 'u.yr': ' лет',
   },

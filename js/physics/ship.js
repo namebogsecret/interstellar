@@ -46,6 +46,16 @@ export class Ship {
   }
 
   get mass() { return this.dryMass + (this.mode === 'realistic' ? this.fuelMass : 0); }
+
+  // Maximum FELT thrust acceleration available in the current mode (m/s²) — the
+  // single source of truth for throttle calibration (controls.js powerToThrottle).
+  // Arcade: the fixed arcade cap. Realistic: F/m, but 0 on an empty tank (no
+  // thrust) — the guard also keeps callers from dividing by a zero ceiling.
+  get maxThrustAccel() {
+    if (this.mode === 'arcade') return this.maxAccelArcade;
+    return this.fuelMass > 0 ? this.thrustForce / this.mass : 0;
+  }
+
   get gamma() { return gammaFromW(this.w); }
   get speed() { return this.v.length(); }
   get beta()  { return this.speed / C; }
