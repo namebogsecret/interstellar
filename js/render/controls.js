@@ -20,7 +20,7 @@ export class FlightControls {
   constructor(ship, domElement, hooks = {}) {
     this.ship = ship;
     this.dom = domElement;
-    this.hooks = hooks;            // { onModeToggle, onTarget, onFastTravel, onWarp, onReset, onPause, onCircularize }
+    this.hooks = hooks;            // { onModeToggle, onTarget, onFastTravel, onWarp, onReset, onPause, onCircularize, onMap }
     this.keys = new Set();
     this.mouseSens = 0.0022;
     this.rollRate = 1.2;           // rad/s
@@ -53,6 +53,7 @@ export class FlightControls {
       else if (k === 'c') this.hooks.onRelFx?.();       // toggle relativistic optics
       else if (k === 'p') this.hooks.onPause?.();        // pause / warp-0
       else if (k === 'k') this.hooks.onCircularize?.();  // circularize orbit
+      else if (k === 'v') this.hooks.onMap?.();          // toggle top-down system map
       else if (k === 'backspace') this.hooks.onReset?.();
       else if (/^[0-9]$/.test(k)) this.ship.throttle = k === '0' ? 0 : powerToThrottle(Number(k));
     });

@@ -10,6 +10,7 @@ import { createRenderer, createScene, createCamera, createBloom, handleResize } 
 import { updateRelativisticPass } from './render/relativisticPass.js';
 import { BodyView } from './render/bodies.js';
 import { FlightControls } from './render/controls.js';
+import { SystemMap } from './render/map.js';
 import { updateHUD } from './render/hud.js';
 import { Overlay } from './render/overlay.js';
 import { TouchControls } from './render/touch.js';
@@ -61,7 +62,8 @@ for (const b of BODIES) {
 const ship = new Ship();
 const sim = { time: 0, warp: 1, warpTarget: 1, warpCap: Infinity, warpIdx: 0,
               target: null, targetIdx: -1, targetDist: 0, paused: false,
-              fps: 60, bloom: true, relFx: true, showOrbits: true, showLabels: true, warpLimited: false };
+              fps: 60, bloom: true, relFx: true, showOrbits: true, showLabels: true,
+              warpLimited: false, showMap: false };
 
 const positions = new Map();
 function computePositions(t) {
@@ -112,6 +114,11 @@ sim.target = byName('Moon'); sim.targetIdx = BODIES.indexOf(sim.target);
 const overlay = new Overlay(views);
 overlay.event(t('ev.online'));
 
+// Top-down system map: its own 2D-canvas overlay (js/render/map.js), never
+// routed through the Three.js scene/relativistic pass. Built once; toggled
+// by V (onMap hook below), drawn only while sim.showMap is true.
+const systemMap = new SystemMap(BODIES, byName);
+
 // ---- persisted toggles (localStorage) -------------------------------------
 // Mirror the getLang/setLang persistence pattern. All reads are defensive:
 // absent/corrupt values are ignored so a wiped store just falls back to defaults.
@@ -154,6 +161,7 @@ const controls = new FlightControls(ship, canvas, {
   onBloom() { sim.bloom = !sim.bloom; saveToggle('iss_glow', sim.bloom); overlay.event(t('ev.bloom', { s: t(sim.bloom ? 'w.on' : 'w.off') })); },
   onRelFx() { sim.relFx = !sim.relFx; saveToggle('iss_relfx', sim.relFx); overlay.event(t('ev.relfx', { s: t(sim.relFx ? 'w.on' : 'w.off') })); },
   onPause() { sim.paused = !sim.paused; overlay.event(t(sim.paused ? 'ev.pause' : 'ev.resume')); },
+  onMap() { sim.showMap = systemMap.toggle(); },
   onCircularize() {
     // Snap to a circular orbit around the dominant body. Ignore while landed
     // (simplest safe choice — no lift-off first).
@@ -391,6 +399,10 @@ function frame(now) {
     targetVel: sim.target ? bodyVelocity(sim.target, sim.time, byName, _navTgtVel) : null,
   };
   updateHUD(ship, sim, nav);
+
+  // Top-down system map overlay — zero cost when closed (guarded here AND
+  // inside draw() itself; positions/ship/sim are read-only from map.js).
+  if (sim.showMap) systemMap.draw(positions, ship, sim);
 
   // FPS + adaptive bloom (drop it if the machine struggles).
   fpsAccum += realDt; fpsFrames++;

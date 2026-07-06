@@ -69,6 +69,10 @@ const DICT = {
     'ev.bloomAuto': 'Glow turned off (slow frame-rate) — press B to force on',
     'ev.enterAtmo': 'Entering {name}’s atmosphere', 'ev.leftAtmo': 'Left {name}’s atmosphere',
     'w.on': 'on', 'w.off': 'off',
+    // --- system map (V) ---
+    'map.title': 'SYSTEM MAP', 'map.target': 'Target: {name}',
+    'map.legend': 'Yellow ring = target · triangle = ship · arrow = velocity',
+    'map.hint': 'Scroll to zoom · V to close',
     'help.html': `<b>CONTROLS</b> &nbsp;·&nbsp; <span>X</span> = STOP (brake) &nbsp;·&nbsp; <span>H</span> full help
       <div class="keys"><span>Mouse</span> look &nbsp; <span>W/S</span> forward/back &nbsp; <span>A D R F</span> slide &nbsp; <span>Q/E</span> roll &nbsp; <span>1–9/0</span> power (log, 1≈1g…9≈1000g) &nbsp; <span>[ ]</span> trim &nbsp; <span>Tab</span> target &nbsp; <span>G</span> jump &nbsp; <span>,/.</span> time &nbsp; <span>P</span> pause &nbsp; <span>K</span> circularize &nbsp; <span>M</span> fuel &nbsp; <span>⌫</span> reset &nbsp; <span>O/L/B/C</span> orbits/labels/glow/relativity</div>`,
     // units
@@ -128,6 +132,10 @@ const DICT = {
     'ev.bloomAuto': 'Свечение выключено (низкий FPS) — нажмите B, чтобы вернуть',
     'ev.enterAtmo': 'Вход в атмосферу: {name}', 'ev.leftAtmo': 'Покинули атмосферу: {name}',
     'w.on': 'вкл.', 'w.off': 'выкл.',
+    // --- карта системы (V) ---
+    'map.title': 'КАРТА СИСТЕМЫ', 'map.target': 'Цель: {name}',
+    'map.legend': 'Жёлтое кольцо = цель · треугольник = корабль · стрелка = скорость',
+    'map.hint': 'Колесо мыши — зум · V — закрыть',
     'help.html': `<b>УПРАВЛЕНИЕ</b> &nbsp;·&nbsp; <span>X</span> = СТОП (тормоз) &nbsp;·&nbsp; <span>H</span> вся справка
       <div class="keys"><span>Мышь</span> обзор &nbsp; <span>W/S</span> вперёд/назад &nbsp; <span>A D R F</span> сдвиг &nbsp; <span>Q/E</span> крен &nbsp; <span>1–9/0</span> мощность (лог., 1≈1g…9≈1000g) &nbsp; <span>[ ]</span> подстройка &nbsp; <span>Tab</span> цель &nbsp; <span>G</span> прыжок &nbsp; <span>,/.</span> время &nbsp; <span>P</span> пауза &nbsp; <span>K</span> круговая орбита &nbsp; <span>M</span> топливо &nbsp; <span>⌫</span> сброс &nbsp; <span>O/L/B/C</span> орбиты/подписи/свечение/релятивизм</div>`,
     'u.m': ' м', 'u.km': ' км', 'u.AU': ' а.е.', 'u.ly': ' св.лет', 'u.ms': ' м/с', 'u.kms': ' км/с',
