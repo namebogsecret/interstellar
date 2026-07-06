@@ -138,6 +138,57 @@ function integrateDtau(refBody, bodies, byName, simTime, dt, rRel, vRel, r0, mu)
   return (hstep / 3) * sum;
 }
 
+// Time (>=0, seconds) until the NEXT periapsis passage of the two-body conic
+// (r0=|rRel|, rdotv0=rRel·vRel, h=|rRel×vRel|, eps=specific energy), or
+// Infinity if the conic never reaches periapsis again in the forward
+// direction (hyperbolic/parabolic, already past periapsis and receding).
+//
+// Handles ellipse/hyperbola/near-parabola via the matching anomaly (Kepler /
+// hyperbolic-Kepler / Barker). The KEY property that makes this exact and
+// direction-agnostic: mean anomaly (Kepler's M, or Barker's M for the
+// parabola) is EXACTLY LINEAR in physical time — unlike true anomaly, which
+// only tells you WHERE on the conic you are, not how time maps to it. So
+// there is no sign-flip heuristic and no missed double-crossing (an arc that
+// sweeps past apoapsis and back through periapsis, sharing radial-velocity
+// sign at both endpoints, is caught exactly like a direct approach).
+function timeToPeriapsis(mu, r0, rdotv0, h, eps) {
+  const p = (h * h) / mu;
+  const scale = mu / Math.max(r0, 1);            // energy scale to make the eps~0 test relative
+  if (eps < -1e-9 * scale) {
+    // Elliptical (bound): a>0, mean anomaly M is linear in time over period T.
+    const a = -mu / (2 * eps);
+    const e = Math.sqrt(Math.max(0, 1 - p / a));
+    if (e < 1e-9) return Infinity;               // circular: no meaningful periapsis
+    const n = Math.sqrt(mu / (a * a * a));
+    const cosE0 = (a - r0) / (a * e);
+    const sinE0 = rdotv0 / (e * Math.sqrt(mu * a));
+    const E0 = Math.atan2(sinE0, cosE0);
+    const M0 = E0 - e * Math.sin(E0);
+    const M0w = ((M0 % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    return M0w === 0 ? (2 * Math.PI) / n : (2 * Math.PI - M0w) / n;   // in (0,T]
+  } else if (eps > 1e-9 * scale) {
+    // Hyperbolic: periapsis occurs at most ONCE (ever) on the whole trajectory.
+    const aAbs = mu / (2 * eps);
+    const e = Math.sqrt(Math.max(1, 1 + p / aAbs));
+    const coshH0 = Math.max(1, r0 / aAbs + 1) / e;
+    let H0 = Math.acosh(Math.min(1e15, Math.max(1, coshH0)));
+    if (rdotv0 < 0) H0 = -H0;                    // inbound ⇒ before periapsis
+    const Mh0 = e * Math.sinh(H0) - H0;
+    const nHyp = Math.sqrt(mu / (aAbs * aAbs * aAbs));
+    const tSince = Mh0 / nHyp;                   // signed: <0 before periapsis, >0 after
+    return tSince < 0 ? -tSince : Infinity;
+  } else {
+    // Near-parabolic (|eps|≈0): Barker's equation.
+    const q = p / 2;
+    if (!(q > 0)) return Infinity;
+    const D0 = Math.sqrt(Math.max(0, r0 / q - 1)) * (rdotv0 < 0 ? -1 : 1);
+    const M0 = D0 + (D0 * D0 * D0) / 3;
+    const nParab = Math.sqrt(mu / (2 * q * q * q));
+    const tSince = M0 / nParab;
+    return tSince < 0 ? -tSince : Infinity;
+  }
+}
+
 // §5 boundary look-ahead + all-or-nothing analytic commit. Returns TRUE only
 // after committing a safe analytic step; returns FALSE (mutating NOTHING) so the
 // caller runs the existing numeric substep loop → no overshoot possible.
@@ -166,6 +217,15 @@ export function tryAnalyticCoast(ship, refBody, bodies, byName, simTime, dt) {
   if (!propagateUniversal(mu, _cabR, _cabV, dt, _cabREnd, _cabVEnd)) return false;
 
   // (4) min-radius guard (surface/atmosphere) from the accurate RELATIVE state.
+  // periapsisInArc is decided by an EXACT time-to-periapsis (Kepler/Barker mean
+  // anomaly, linear in time — see timeToPeriapsis) rather than an endpoint
+  // radial-velocity sign flip: a sign-flip-only check misses any arc that
+  // crosses periapsis once AND ALSO crosses apoapsis in between (apoapsis
+  // flips the sign a second time, so both endpoints share the same sign even
+  // though periapsis genuinely happened inside the arc) — a confirmed INV-B1
+  // hole, now closed (tests/cabotage.periapsis.test.mjs). For dt >= one period
+  // (bound orbit), tPeri (always in (0,T]) is automatically <= dt, so the old
+  // separate "spans >= one period" fast path is subsumed, not lost.
   _cabH.crossVectors(_cabR, _cabV);
   const h = _cabH.length();
   const eps = 0.5 * _cabV.lengthSq() - mu / r0;
@@ -174,13 +234,8 @@ export function tryAnalyticCoast(ship, refBody, bodies, byName, simTime, dt) {
   const rPeri = p / (1 + e);
   const rEndMag = _cabREnd.length();
   const rvStart = _cabR.dot(_cabV);
-  const rvEnd = _cabREnd.dot(_cabVEnd);
-  let periapsisInArc = (rvStart < 0 && rvEnd > 0);    // radial-velocity sign flip
-  if (eps < 0) {                                      // bound: does the step span ≥ one period?
-    const a = -mu / (2 * eps);
-    const period = 2 * Math.PI * Math.sqrt((a * a * a) / mu);
-    if (Math.abs(dt) >= period) periapsisInArc = true;
-  }
+  const tPeri = timeToPeriapsis(mu, r0, rvStart, h, eps);
+  const periapsisInArc = tPeri <= Math.abs(dt);
   const minRad = periapsisInArc ? rPeri : Math.min(r0, rEndMag);
   if (minRad < rSafe(refBody)) return false;
 
