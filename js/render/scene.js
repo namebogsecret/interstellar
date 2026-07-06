@@ -4,7 +4,7 @@ import { RenderPass } from '../../lib/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../../lib/jsm/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from '../../lib/jsm/postprocessing/ShaderPass.js';
 import { CopyShader } from '../../lib/jsm/shaders/CopyShader.js';
-import { createRelativisticPass, SOURCE_FOV } from './relativisticPass.js';
+import { createRelativisticPass, SOURCE_FOV, CUBEMAP_ABERRATION, CUBE_FACE_SIZE } from './relativisticPass.js';
 
 // Renderer tuned for weak hardware: log depth buffer (essential for the
 // metre-to-trillion-metre range), capped pixel ratio, filmic tone mapping for
@@ -97,12 +97,27 @@ export function createBloom(renderer, scene, camera) {
   // propagates to children with no extra per-frame sync needed here.
   const sourceCamera = new THREE.PerspectiveCamera(SOURCE_FOV, camera.aspect, 0.05, 1e14);
   camera.add(sourceCamera);
-  const renderPass = new RenderPass(scene, sourceCamera);
+  // In cube mode the base RenderPass renders through the DISPLAY (60°) camera:
+  // the relativistic pass replaces every pixel by cube-sampling, and a plain
+  // 60° base means even if the pass were bypassed we get correct framing, never
+  // a 90° stretch (ГРАБЛИ #2). In the default extended-FOV path it renders the
+  // wide sourceCamera as before (main.js swaps to `camera` when relFx is off).
+  const renderPass = new RenderPass(scene, CUBEMAP_ABERRATION ? camera : sourceCamera);
   composer.addPass(renderPass);
   // Relativistic aberration + Doppler, BEFORE bloom so blueshifted/beamed
   // bright stars ahead also pick up the glow.
-  const relativistic = createRelativisticPass(window.innerWidth, window.innerHeight);
+  const relativistic = createRelativisticPass(window.innerWidth, window.innerHeight, CUBEMAP_ABERRATION);
   composer.addPass(relativistic);
+  // Cube path resources: a resolution-independent 6-face render target + a
+  // CubeCamera at the floating origin (= the ship). Rendered each frame by
+  // main.js ONLY when relFx is on. Left null in the default extended-FOV path.
+  let cubeCamera = null, cubeRT = null;
+  if (CUBEMAP_ABERRATION) {
+    cubeRT = new THREE.WebGLCubeRenderTarget(CUBE_FACE_SIZE, { type: THREE.HalfFloatType });
+    cubeCamera = new THREE.CubeCamera(0.05, 1e14, cubeRT);   // matches display near/far
+    cubeCamera.position.set(0, 0, 0);                        // floating origin
+    relativistic.uniforms.uCube.value = cubeRT.texture;      // stable ref, set once
+  }
   const bloom = new UnrealBloomPass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
     0.7,   // strength
@@ -123,6 +138,9 @@ export function createBloom(renderer, scene, camera) {
   // 60° framing) whenever the relativistic pass is toggled.
   composer.sourceCamera = sourceCamera;
   composer.renderPass = renderPass;
+  // main.js checks composer.cubeCamera truthiness to pick the render path.
+  composer.cubeCamera = cubeCamera;
+  composer.cubeRT = cubeRT;
   return { composer, bloom, relativistic };
 }
 

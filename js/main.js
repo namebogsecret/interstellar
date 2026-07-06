@@ -214,11 +214,13 @@ const controls = new FlightControls(ship, canvas, {
   const l = loadToggle('iss_labels'); if (typeof l === 'boolean') { sim.showLabels = l; overlay.root.style.display = l ? 'block' : 'none'; }
   const g = loadToggle('iss_glow');   if (typeof g === 'boolean') sim.bloom = g;   // applied via bloom.enabled in loop
   const r = loadToggle('iss_relfx');  if (typeof r === 'boolean') sim.relFx = r;   // applied via relativistic.enabled in loop
-  // Base RenderPass camera must match relFx from the very first frame: ON uses
-  // the wide sourceCamera (aberration headroom), OFF uses the display camera
-  // (correct 60° framing) — otherwise a restored OFF value would render the
-  // first frame at 90° until the loop below corrects it.
-  composer.renderPass.camera = sim.relFx ? composer.sourceCamera : camera;
+  // Base RenderPass camera must match relFx from the very first frame: in the
+  // extended-FOV path, ON uses the wide sourceCamera (aberration headroom) and
+  // OFF uses the display camera (correct 60° framing) — otherwise a restored
+  // OFF value would render the first frame at 90° until the loop corrects it.
+  // In the cube path the base is ALWAYS the 60° display camera (the pass
+  // cube-samples every pixel), so the wide source is never used.
+  composer.renderPass.camera = (!composer.cubeCamera && sim.relFx) ? composer.sourceCamera : camera;
   const m = loadToggle('iss_mode');   if (m === 'arcade' || m === 'realistic') ship.mode = m;
 }
 
@@ -402,10 +404,23 @@ function frame(now) {
   // zoom-out). Swap here — the single place sim.relFx actually drives the
   // pass's enabled state — rather than duplicating this in onRelFx, so both
   // the O key toggle and the persisted-toggle startup path stay in sync.
-  composer.renderPass.camera = sim.relFx ? composer.sourceCamera : camera;
-  if (sim.relFx) {
-    const qInv = _qInv.copy(camera.quaternion).invert();
-    updateRelativisticPass(relativistic, ship.v, qInv, camera, 1.0);
+  if (composer.cubeCamera) {
+    // Cube path: base render stays the plain 60° display camera (cheap, correct
+    // fallback framing); when relFx is on, render the scene into the 6-face cube
+    // (~6× scene cost — see CUBEMAP_ABERRATION note) and the pass replaces every
+    // pixel by direction-sampling the cube. relFx off ⇒ plain 60° view, no cube.
+    composer.renderPass.camera = camera;
+    if (sim.relFx) {
+      composer.cubeCamera.update(renderer, scene);
+      const qInv = _qInv.copy(camera.quaternion).invert();   // unused by cube pass; kept for signature
+      updateRelativisticPass(relativistic, ship.v, qInv, camera, 1.0);
+    }
+  } else {
+    composer.renderPass.camera = sim.relFx ? composer.sourceCamera : camera;
+    if (sim.relFx) {
+      const qInv = _qInv.copy(camera.quaternion).invert();
+      updateRelativisticPass(relativistic, ship.v, qInv, camera, 1.0);
+    }
   }
   // Render: always through the composer (a final copy pass writes to screen),
   // toggling the heavy bloom pass on/off rather than bypassing post-processing,
