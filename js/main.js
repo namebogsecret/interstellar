@@ -11,6 +11,7 @@ import { updateRelativisticPass } from './render/relativisticPass.js';
 import { BodyView } from './render/bodies.js';
 import { FlightControls } from './render/controls.js';
 import { SystemMap } from './render/map.js';
+import { TargetList } from './render/targetlist.js';
 import { updateHUD } from './render/hud.js';
 import { Overlay } from './render/overlay.js';
 import { TouchControls } from './render/touch.js';
@@ -63,7 +64,7 @@ const ship = new Ship();
 const sim = { time: 0, warp: 1, warpTarget: 1, warpCap: Infinity, warpIdx: 0,
               target: null, targetIdx: -1, targetDist: 0, paused: false,
               fps: 60, bloom: true, relFx: true, showOrbits: true, showLabels: true,
-              warpLimited: false, showMap: false };
+              warpLimited: false, showMap: false, showTargetList: false };
 
 const positions = new Map();
 function computePositions(t) {
@@ -119,6 +120,19 @@ overlay.event(t('ev.online'));
 // by V (onMap hook below), drawn only while sim.showMap is true.
 const systemMap = new SystemMap(BODIES, byName);
 
+// Proximity-sorted target-selection LIST (js/render/targetlist.js): a mouse-
+// clickable / digit-selectable alternative to the Tab/Shift+Tab cycle, which
+// it does not touch. Own pure-DOM overlay, toggled by T (onTargetList hook
+// below), zero per-frame cost — see targetlist.js's house comment.
+const targetList = new TargetList(BODIES, {
+  onSelect(body) {
+    sim.target = body;
+    sim.targetIdx = BODIES.indexOf(body);   // keep Tab cycling consistent afterward
+    overlay.event(t('ev.target', { name: bodyName(body.name) }));
+  },
+  onOpenChange(isOpen) { sim.showTargetList = isOpen; },
+});
+
 // ---- persisted toggles (localStorage) -------------------------------------
 // Mirror the getLang/setLang persistence pattern. All reads are defensive:
 // absent/corrupt values are ignored so a wiped store just falls back to defaults.
@@ -162,6 +176,7 @@ const controls = new FlightControls(ship, canvas, {
   onRelFx() { sim.relFx = !sim.relFx; saveToggle('iss_relfx', sim.relFx); overlay.event(t('ev.relfx', { s: t(sim.relFx ? 'w.on' : 'w.off') })); },
   onPause() { sim.paused = !sim.paused; overlay.event(t(sim.paused ? 'ev.pause' : 'ev.resume')); },
   onMap() { sim.showMap = systemMap.toggle(); },
+  onTargetList() { targetList.toggle(positions, ship); },
   onCircularize() {
     // Snap to a circular orbit around the dominant body. Ignore while landed
     // (simplest safe choice — no lift-off first).
