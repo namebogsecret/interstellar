@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { BODIES, byName } from './data/bodies.js';
-import { absolutePosition, orbitEllipse, spinAxis, spinAngle, surfaceRotationVelocity, circularizeVelocity, bodyVelocity } from './physics/orbits.js';
+import { absolutePosition, orbitEllipse, spinAxis, spinAngle, circularizeVelocity, bodyVelocity, groundVelocity } from './physics/orbits.js';
 import { dominantBody } from './physics/gravity.js';
 import { tryAnalyticCoast } from './physics/cabotage.js';
 import { Ship, MODES } from './physics/ship.js';
@@ -218,9 +218,13 @@ const controls = new FlightControls(ship, canvas, {
 function touchdown() {
   const b = ship.refBody;
   const bp = positions.get(b.name);
-  const bvel = bodyVelocity(b, sim.time, byName, new THREE.Vector3());
+  // Impact is measured against the ACTUAL ground velocity (body orbital + ω×r) —
+  // the same co-rotating frame the landed-block uses — NOT bare bodyVelocity.
+  // Compute BEFORE snapping ship.pos below (ω×r depends on the touchdown point).
+  const bvel = bodyVelocity(b, sim.time, byName, new THREE.Vector3());   // fresh, local
+  const gvel = groundVelocity(b, ship.pos, bp, bvel, bvel);   // bvel ← ground vel (in place; fresh ⇒ safe)
   const up = _dir.subVectors(ship.pos, bp).normalize();
-  const impact = _tmp.subVectors(ship.v, bvel).length();   // speed rel. to surface
+  const impact = _tmp.subVectors(ship.v, gvel).length();   // speed rel. to CO-ROTATING ground
 
   ship.pos.copy(bp).addScaledVector(up, b.radius + 1);
   // Store the offset in the body-FIXED frame (undo the body's current spin) so
@@ -228,7 +232,7 @@ function touchdown() {
   // under it. Re-applied each landed frame with +spinAngle.
   ship.landedOffset.copy(ship.pos).sub(bp)
     .applyAxisAngle(spinAxis(b, _axis), -spinAngle(b, sim.time));
-  ship.v.copy(bvel); momentumFromV(bvel, ship.w);
+  ship.v.copy(gvel); momentumFromV(gvel, ship.w);   // rest RELATIVE TO GROUND (matches landed-block)
   ship.landed = true; ship.landedBody = b.name; ship.throttle = 0;
   ship.touchdownSpeed = impact;
   ship.crashed = impact > 50;
@@ -322,9 +326,9 @@ function frame(now) {
     const inertialOff = _landOff.copy(ship.landedOffset)
       .applyAxisAngle(spinAxis(b, _axis), spinAngle(b, sim.time));
     ship.pos.copy(bp).add(inertialOff);
-    // Ground velocity = body's orbital velocity + surface rotation at this point.
-    ship.v.copy(bodyVelocity(b, sim.time, byName, _landVel))
-      .add(surfaceRotationVelocity(b, ship.pos, bp, _landSurf));
+    // Ground velocity = body's orbital velocity + surface rotation at this point
+    // (same groundVelocity helper as touchdown — single source of truth).
+    groundVelocity(b, ship.pos, bp, bodyVelocity(b, sim.time, byName, _landVel), ship.v);
     momentumFromV(ship.v, ship.w);
     ship.lastAccel.set(0, 0, 0);
     // Lift off the moment the pilot applies thrust — keep v (it already carries
@@ -447,7 +451,6 @@ const _qInv = new THREE.Quaternion();
 const _axis = new THREE.Vector3();
 const _landOff = new THREE.Vector3();
 const _landVel = new THREE.Vector3();
-const _landSurf = new THREE.Vector3();
 // HUD nav scratch (item 2) — dedicated, never reused by the hot loop.
 const _navRefPos = new THREE.Vector3();
 const _navRefVel = new THREE.Vector3();

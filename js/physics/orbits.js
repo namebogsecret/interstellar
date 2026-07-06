@@ -111,6 +111,17 @@ export function surfaceRotationVelocity(b, shipPos, bodyPos, out = new THREE.Vec
   return out.crossVectors(_spinAxis, _r);
 }
 
+// Actual velocity (m/s, world frame) of the ground point directly under the ship:
+// the body's orbital velocity (bodyVel) PLUS its surface rotation ω×r. SINGLE
+// SOURCE OF TRUTH for "how fast is the ground moving" — used by both touchdown()
+// (impact = |v − groundVelocity|) and the landed-block ride-along, so both agree
+// on the co-rotating frame. Dedicated scratch (_gvSurf), consumed transiently.
+// bodyVel is only READ; `out` MAY alias bodyVel (touchdown reuses it in place).
+const _gvSurf = new THREE.Vector3();
+export function groundVelocity(b, shipPos, bodyPos, bodyVel, out = new THREE.Vector3()) {
+  return out.copy(bodyVel).add(surfaceRotationVelocity(b, shipPos, bodyPos, _gvSurf));
+}
+
 // Relative velocity (m/s) for a circular orbit at the current radius,
 // preserving the orbital plane and prograde sense of the given state vector.
 // mu = standard gravitational parameter (b.GM) of the body being orbited.
