@@ -12,7 +12,7 @@ import { FlightControls } from './render/controls.js';
 import { updateHUD } from './render/hud.js';
 import { Overlay } from './render/overlay.js';
 import { TouchControls } from './render/touch.js';
-import { t, bodyName, fmtSpeed, applyStatic, setLang, getLang } from './i18n.js';
+import { t, bodyName, fmtSpeed, applyStatic, setLang } from './i18n.js';
 
 applyStatic();   // localize all static UI text on load
 
@@ -157,7 +157,7 @@ const controls = new FlightControls(ship, canvas, {
   onLabels() { sim.showLabels = !sim.showLabels; overlay.root.style.display = sim.showLabels ? 'block' : 'none'; saveToggle('iss_labels', sim.showLabels); overlay.event(t('ev.labels', { s: t(sim.showLabels ? 'w.on' : 'w.off') })); },
   onBloom() { sim.bloom = !sim.bloom; saveToggle('iss_glow', sim.bloom); overlay.event(t('ev.bloom', { s: t(sim.bloom ? 'w.on' : 'w.off') })); },
   onRelFx() { sim.relFx = !sim.relFx; saveToggle('iss_relfx', sim.relFx); overlay.event(t('ev.relfx', { s: t(sim.relFx ? 'w.on' : 'w.off') })); },
-  onPause() { sim.paused = !sim.paused; overlay.event(sim.paused ? (getLang() === 'ru' ? 'Пауза' : 'Paused') : (getLang() === 'ru' ? 'Продолжено' : 'Resumed')); },
+  onPause() { sim.paused = !sim.paused; overlay.event(t(sim.paused ? 'ev.pause' : 'ev.resume')); },
   onCircularize() {
     // Snap to a circular orbit around the dominant body. Ignore while landed
     // (simplest safe choice — no lift-off first).
@@ -170,7 +170,7 @@ const controls = new FlightControls(ship, canvas, {
     const vVec = new THREE.Vector3().subVectors(ship.v, bVel);   // fresh: relative velocity
     const relV = circularizeVelocity(b.GM, rVec, vVec, new THREE.Vector3());
     ship.v.copy(bVel).add(relV); momentumFromV(ship.v, ship.w);
-    overlay.event((getLang() === 'ru' ? 'Орбита скруглена вокруг ' : 'Circularized around ') + bodyName(b.name));
+    overlay.event(t('ev.circularize', { name: bodyName(b.name) }));
   },
 });
 
