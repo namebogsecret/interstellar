@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BODIES, byName } from './data/bodies.js';
 import { absolutePosition, orbitEllipse, spinAxis, spinAngle, surfaceRotationVelocity, circularizeVelocity, bodyVelocity } from './physics/orbits.js';
 import { dominantBody } from './physics/gravity.js';
-import { cabotageEngaged, tryAnalyticCoast } from './physics/cabotage.js';
+import { tryAnalyticCoast } from './physics/cabotage.js';
 import { Ship, MODES } from './physics/ship.js';
 import { momentumFromV } from './physics/relativity.js';
 import { G0 } from './physics/constants.js';
@@ -307,12 +307,17 @@ function frame(now) {
       ship.pos.addScaledVector(up, 50);          // unstick from the surface
       overlay.event(t('ev.liftoff', { name: bodyName(ship.landedBody) }));
     }
-  } else if (cabotageEngaged(ship, refB, refAlt, effWarp, BODIES, byName, sim.time)
-             && tryAnalyticCoast(ship, refB, BODIES, byName, sim.time, simDt)) {
+  } else if (effWarp > 1 && tryAnalyticCoast(ship, refB, BODIES, byName, sim.time, simDt)) {
     // Kepler cabotage: the whole warp frame was advanced analytically along the
-    // two-body conic (zero secular drift). All-or-nothing — tryAnalyticCoast
-    // committed a SAFE step (above atmosphere, no SOI crossing) or mutated
-    // nothing and returned false, falling through to the numeric loop below.
+    // two-body conic (zero secular drift). tryAnalyticCoast's frozen 6-arg
+    // signature has no effWarp slot (it internally re-gates via cabotageEngaged
+    // with a fixed >1 sentinel — see cabotage.js), so `effWarp > 1` here is the
+    // ONE place that enforces ТЗ §2 clause 3 ("no analytic gain at real-time");
+    // it is a cheap scalar check, not a redundant full predicate call, so the
+    // expensive all-body dominance evaluation runs once per frame, not twice.
+    // All-or-nothing — tryAnalyticCoast committed a SAFE step (above atmosphere,
+    // no SOI crossing) or mutated nothing and returned false, falling through
+    // to the numeric loop below.
     sim.time += simDt;
     computePositions(sim.time);          // refresh shared Map at the new time (as numeric does)
   } else {
@@ -379,11 +384,11 @@ function frame(now) {
     refBody: navBody || null,
     refPos: navBody ? _navRefPos.copy(positions.get(navBody.name)) : null,
     refVel: navBody
-      ? (navBody === refB && refVel ? _navRefVel.copy(refVel) : bodyVelocity(navBody, sim.time, _navRefVel))
+      ? (navBody === refB && refVel ? _navRefVel.copy(refVel) : bodyVelocity(navBody, sim.time, byName, _navRefVel))
       : null,
     targetBody: sim.target || null,
     targetPos: sim.target ? _navTgtPos.copy(positions.get(sim.target.name)) : null,
-    targetVel: sim.target ? bodyVelocity(sim.target, sim.time, _navTgtVel) : null,
+    targetVel: sim.target ? bodyVelocity(sim.target, sim.time, byName, _navTgtVel) : null,
   };
   updateHUD(ship, sim, nav);
 
