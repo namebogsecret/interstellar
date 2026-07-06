@@ -153,3 +153,146 @@ export function orbitFromState(mu, rVec, vVec) {
   }
   return { a, e, rPeri: a * (1 - e), rApo: a * (1 + e) };
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UNIVERSAL-VARIABLE KEPLER PROPAGATOR (Vallado "KEPLER" / Curtis Alg. 3.4).
+// Advances a two-body RELATIVE state along its conic. Valid for ALL conics —
+// ellipse (α>0), parabola (α≈0), hyperbola (α<0) and near-parabolic (e≈1) —
+// because the Stumpff functions C(ψ), S(ψ) never form a/e/(1−e), which blow up
+// at the parabola. Used by the analytic warp-coast (cabotage.js).
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Stumpff functions. Near ψ=0 the closed forms are 0/0, so a Maclaurin series
+// takes over (C→1/2, S→1/6 at ψ=0) — this IS why universal variables are valid
+// through the parabolic case with no e-specific branch.
+export function stumpffC(psi) {
+  if (psi > 1e-6) {
+    const s = Math.sqrt(psi);
+    return (1 - Math.cos(s)) / psi;
+  } else if (psi < -1e-6) {
+    const s = Math.sqrt(-psi);
+    return (Math.cosh(s) - 1) / (-psi);
+  }
+  // 1/2! − ψ/4! + ψ²/6! − ψ³/8! + ψ⁴/10!
+  const p2 = psi * psi;
+  return 1 / 2 - psi / 24 + p2 / 720 - p2 * psi / 40320 + p2 * p2 / 3628800;
+}
+
+export function stumpffS(psi) {
+  if (psi > 1e-6) {
+    const s = Math.sqrt(psi);
+    return (s - Math.sin(s)) / (s * s * s);
+  } else if (psi < -1e-6) {
+    const s = Math.sqrt(-psi);
+    return (Math.sinh(s) - s) / (s * s * s);
+  }
+  // 1/3! − ψ/5! + ψ²/7! − ψ³/9! + ψ⁴/11!
+  const p2 = psi * psi;
+  return 1 / 6 - psi / 120 + p2 / 5040 - p2 * psi / 362880 + p2 * p2 / 39916800;
+}
+
+// Module scratch for the propagator result (allocation-free hot path). Never
+// touched by any other function — the outputs are built here, then copied to the
+// caller's rOut/vOut LAST so aliasing (rOut===r0Vec) is safe.
+const _pR = new THREE.Vector3();
+const _pV = new THREE.Vector3();
+
+// Advance the relative state (r0Vec,v0Vec) about a body of parameter mu forward
+// by dt along its conic. Writes new position→rOut, velocity→vOut. Returns TRUE
+// on convergence; FALSE (rOut/vOut UNMODIFIED, never NaN, never partial) if the
+// input is degenerate or Newton fails to converge in 50 iters → caller falls
+// back to numeric. ALIASING-SAFE: rOut may === r0Vec, vOut may === v0Vec.
+export function propagateUniversal(mu, r0Vec, v0Vec, dt, rOut, vOut) {
+  if (!(mu > 0) || !Number.isFinite(mu) || !Number.isFinite(dt)) return false;
+  const r0 = r0Vec.length();
+  if (!(r0 > 0) || !Number.isFinite(r0)) return false;
+  const v0sq = v0Vec.lengthSq();
+  if (!Number.isFinite(v0sq)) return false;
+
+  const sqrtmu = Math.sqrt(mu);
+  const rdotv = r0Vec.dot(v0Vec);
+  const alpha = 2 / r0 - v0sq / mu;             // 1/a: >0 ellipse, ≈0 parabola, <0 hyperbola
+  const smudt = sqrtmu * dt;
+
+  // Initial guess for the universal anomaly χ (per-conic, Vallado).
+  let chi;
+  if (alpha > 1e-9) {
+    chi = smudt * alpha;                        // ellipse: exact linear (mean) part
+  } else if (alpha < -1e-9) {
+    const a = 1 / alpha;                        // negative
+    const sgn = dt >= 0 ? 1 : -1;
+    const num = -2 * mu * alpha * dt;
+    const den = rdotv + sgn * Math.sqrt(-mu * a) * (1 - r0 * alpha);
+    chi = sgn * Math.sqrt(-a) * Math.log(num / den);
+    if (!Number.isFinite(chi)) chi = smudt / r0; // fallback if the log arg degenerates
+  } else {
+    chi = smudt / r0;                           // (near-)parabolic: matches Barker scale
+  }
+
+  // Newton–Raphson on the universal Kepler equation.
+  let converged = false;
+  for (let it = 0; it < 50; it++) {
+    const chi2 = chi * chi;
+    const psi = alpha * chi2;
+    const C = stumpffC(psi);
+    const S = stumpffS(psi);
+    if (!Number.isFinite(C) || !Number.isFinite(S)) return false;
+    const chi3 = chi2 * chi;
+    const term = rdotv / sqrtmu;
+    const F = term * chi2 * C + (1 - alpha * r0) * chi3 * S + r0 * chi - smudt;
+    const dF = term * chi * (1 - psi * S) + (1 - alpha * r0) * chi2 * C + r0;
+    if (!Number.isFinite(F) || !Number.isFinite(dF) || dF === 0) return false;
+    const dchi = F / dF;
+    chi -= dchi;
+    if (Math.abs(F) <= 1e-10 * (Math.abs(smudt) + 1) ||
+        Math.abs(dchi) <= 1e-9 * (Math.abs(chi) + 1)) { converged = true; break; }
+  }
+  if (!converged) return false;
+
+  // f, g and their dots at the converged χ → build result in scratch, copy last.
+  const chi2 = chi * chi;
+  const psi = alpha * chi2;
+  const C = stumpffC(psi);
+  const S = stumpffS(psi);
+  if (!Number.isFinite(C) || !Number.isFinite(S)) return false;
+  const chi3 = chi2 * chi;
+
+  const f = 1 - (chi2 / r0) * C;
+  const g = dt - (1 / sqrtmu) * chi3 * S;
+  _pR.copy(r0Vec).multiplyScalar(f).addScaledVector(v0Vec, g);
+  const rNewMag = _pR.length();
+  if (!(rNewMag > 0) || !Number.isFinite(rNewMag)) return false;
+
+  // Enforce the Wronskian f·ġ − ḟ·g = 1 EXACTLY (not just to round-off): this is
+  // what makes the specific angular momentum h = r×v = W·h0 bit-conserved. Solve
+  // for whichever of ġ/ḟ divides by the better-conditioned denominator — |f| is
+  // small only near a quarter-orbit (where |g| is large) and vice-versa, so one
+  // of the two is always well away from zero.
+  let fdot, gdot;
+  if (Math.abs(f) >= 0.1) {
+    fdot = (sqrtmu / (rNewMag * r0)) * chi * (psi * S - 1);
+    gdot = (1 + g * fdot) / f;
+  } else {
+    gdot = 1 - (chi2 / rNewMag) * C;
+    fdot = (f * gdot - 1) / g;
+  }
+  _pV.copy(r0Vec).multiplyScalar(fdot).addScaledVector(v0Vec, gdot);
+
+  if (!Number.isFinite(_pR.x + _pR.y + _pR.z + _pV.x + _pV.y + _pV.z)) return false;
+  rOut.copy(_pR);
+  vOut.copy(_pV);
+  return true;
+}
+
+// Heliocentric velocity (m/s, world frame) of a body at time t by central finite
+// difference (h=60 s) of its absolute position. Pure — RELOCATED here from
+// main.js so the physics layer owns it (main.js imports it). Scratch is module-
+// private and consumed transiently, never read across calls.
+const _bvA = new THREE.Vector3();
+const _bvC = new THREE.Vector3();
+export function bodyVelocity(b, t, byName, out = new THREE.Vector3()) {
+  const h = 60;
+  absolutePosition(b, t + h, byName, _bvA);
+  absolutePosition(b, t - h, byName, _bvC);
+  return out.subVectors(_bvA, _bvC).multiplyScalar(1 / (2 * h));
+}
