@@ -25,7 +25,7 @@ export class FlightControls {
   constructor(ship, domElement, hooks = {}) {
     this.ship = ship;
     this.dom = domElement;
-    this.hooks = hooks;            // { onModeToggle, onTarget, onFastTravel, onWarp, onReset, onPause, onCircularize, onMap, onTargetList }
+    this.hooks = hooks;            // { onModeToggle, onTarget, onFastTravel, onWarp, onReset, onPause, onCircularize, onMap, onTargetList, onMissions }
     this.keys = new Set();
     this.mouseSens = 0.0022;
     this.rollRate = 1.2;           // rad/s
@@ -60,6 +60,7 @@ export class FlightControls {
       else if (k === 'k') this.hooks.onCircularize?.();  // circularize orbit
       else if (k === 'v') this.hooks.onMap?.();          // toggle top-down system map
       else if (k === 't') this.hooks.onTargetList?.();   // toggle proximity-sorted target list
+      else if (k === 'j') this.hooks.onMissions?.();     // toggle student missions panel
       else if (k === 'backspace') this.hooks.onReset?.();
       else if (/^[0-9]$/.test(k)) this.ship.throttle = k === '0' ? 0 : powerToThrottle(Number(k), this.ship);
     });

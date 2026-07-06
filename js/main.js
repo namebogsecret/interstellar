@@ -12,6 +12,7 @@ import { BodyView } from './render/bodies.js';
 import { FlightControls } from './render/controls.js';
 import { SystemMap } from './render/map.js';
 import { TargetList } from './render/targetlist.js';
+import { MissionTracker } from './missions.js';
 import { updateHUD } from './render/hud.js';
 import { Overlay } from './render/overlay.js';
 import { TouchControls } from './render/touch.js';
@@ -64,7 +65,7 @@ const ship = new Ship();
 const sim = { time: 0, warp: 1, warpTarget: 1, warpCap: Infinity, warpIdx: 0,
               target: null, targetIdx: -1, targetDist: 0, paused: false,
               fps: 60, bloom: true, relFx: true, showOrbits: true, showLabels: true,
-              warpLimited: false, showMap: false, showTargetList: false };
+              warpLimited: false, showMap: false, showTargetList: false, showMissions: false };
 
 const positions = new Map();
 function computePositions(t) {
@@ -133,6 +134,13 @@ const targetList = new TargetList(BODIES, {
   onOpenChange(isOpen) { sim.showTargetList = isOpen; },
 });
 
+// Student missions layer (js/missions.js): a short catalogue of checkable
+// objectives (orbit/flyby/landing) evaluated each frame from ship/sim state,
+// persisted to localStorage so completion survives reload. Own pure-DOM
+// overlay, toggled by J (onMissions hook below), same house pattern as
+// systemMap/targetList above.
+const missions = new MissionTracker(t);
+
 // ---- persisted toggles (localStorage) -------------------------------------
 // Mirror the getLang/setLang persistence pattern. All reads are defensive:
 // absent/corrupt values are ignored so a wiped store just falls back to defaults.
@@ -182,6 +190,7 @@ const controls = new FlightControls(ship, canvas, {
   onPause() { sim.paused = !sim.paused; overlay.event(t(sim.paused ? 'ev.pause' : 'ev.resume')); },
   onMap() { sim.showMap = systemMap.toggle(); },
   onTargetList() { targetList.toggle(positions, ship); },
+  onMissions() { sim.showMissions = missions.toggle(); },
   onCircularize() {
     // Snap to a circular orbit around the dominant body. Ignore while landed
     // (simplest safe choice — no lift-off first).
@@ -408,6 +417,13 @@ function frame(now) {
   const tgtRel = sim.target ? _rel2.subVectors(positions.get(sim.target.name), ship.pos) : null;
   if (sim.showLabels) overlay.update(camera, views, ship, sim.target, tgtRel);
   updateStatusAndEvents();
+
+  // Student missions: cheap scalar/vector checks, no allocation — evaluated
+  // every frame (see missions.js house comment); fires at most once per
+  // mission id, ever (persisted completions are skipped internally).
+  for (const m of missions.update({ ship, sim, positions, byName })) {
+    overlay.event(t('mission.event.complete', { name: t(m.titleKey) }));
+  }
 
   // HUD navigation context — built with DEDICATED scratch (never _tmp/_rel/_dir,
   // which the landed block + floating-origin loop clobber). refVel stays read-only.

@@ -76,6 +76,18 @@ const DICT = {
     // --- target list (T) ---
     'tlist.title': 'SELECT TARGET',
     'tlist.hint': 'Click a row or press 1-9 · Esc / T to close',
+    // --- missions (J) ---
+    'mission.panel.title': 'MISSIONS',
+    'mission.hint': 'Press J to close',
+    'mission.status.done': '✓ done',
+    'mission.status.pending': 'pending',
+    'mission.event.complete': '🎯 Mission complete: {name}',
+    'mission.marsOrbit.title': 'Circularize at Mars',
+    'mission.marsOrbit.desc': 'Achieve a near-circular orbit (e < 0.05) around Mars.',
+    'mission.jupiterFlyby.title': 'Gravity assist at Jupiter',
+    'mission.jupiterFlyby.desc': 'Fly a close hyperbolic pass by Jupiter that measurably changes your heliocentric speed.',
+    'mission.moonLanding.title': 'Land on the Moon',
+    'mission.moonLanding.desc': 'Touch down softly (no crash) on the Moon.',
     'help.html': `<b>CONTROLS</b> &nbsp;·&nbsp; <span>X</span> = STOP (brake) &nbsp;·&nbsp; <span>H</span> full help
       <div class="keys"><span>Mouse</span> look &nbsp; <span>W/S</span> forward/back &nbsp; <span>A D R F</span> slide &nbsp; <span>Q/E</span> roll &nbsp; <span>1–9/0</span> power (log, 1≈1g…9≈1000g arcade; realistic ≈3–15g) &nbsp; <span>[ ]</span> trim &nbsp; <span>Tab</span> target &nbsp; <span>G</span> jump &nbsp; <span>,/.</span> time &nbsp; <span>P</span> pause &nbsp; <span>K</span> circularize &nbsp; <span>M</span> fuel &nbsp; <span>⌫</span> reset &nbsp; <span>O/L/B/C</span> orbits/labels/glow/relativity</div>`,
     // units
@@ -142,6 +154,18 @@ const DICT = {
     // --- список целей (T) ---
     'tlist.title': 'ВЫБОР ЦЕЛИ',
     'tlist.hint': 'Клик по строке или 1-9 · Esc / T — закрыть',
+    // --- миссии (J) ---
+    'mission.panel.title': 'МИССИИ',
+    'mission.hint': 'J — закрыть',
+    'mission.status.done': '✓ выполнено',
+    'mission.status.pending': 'в процессе',
+    'mission.event.complete': '🎯 Миссия выполнена: {name}',
+    'mission.marsOrbit.title': 'Круговая орбита у Марса',
+    'mission.marsOrbit.desc': 'Выйдите на почти круговую орбиту (e < 0.05) вокруг Марса.',
+    'mission.jupiterFlyby.title': 'Гравитационный манёвр у Юпитера',
+    'mission.jupiterFlyby.desc': 'Пролетите близко гиперболической траекторией мимо Юпитера так, чтобы заметно изменить гелиоцентрическую скорость.',
+    'mission.moonLanding.title': 'Посадка на Луну',
+    'mission.moonLanding.desc': 'Совершите мягкую посадку (без крушения) на Луну.',
     'help.html': `<b>УПРАВЛЕНИЕ</b> &nbsp;·&nbsp; <span>X</span> = СТОП (тормоз) &nbsp;·&nbsp; <span>H</span> вся справка
       <div class="keys"><span>Мышь</span> обзор &nbsp; <span>W/S</span> вперёд/назад &nbsp; <span>A D R F</span> сдвиг &nbsp; <span>Q/E</span> крен &nbsp; <span>1–9/0</span> мощность (лог., 1≈1g…9≈1000g аркада; реализм ≈3–15g) &nbsp; <span>[ ]</span> подстройка &nbsp; <span>Tab</span> цель &nbsp; <span>G</span> прыжок &nbsp; <span>,/.</span> время &nbsp; <span>P</span> пауза &nbsp; <span>K</span> круговая орбита &nbsp; <span>M</span> топливо &nbsp; <span>⌫</span> сброс &nbsp; <span>O/L/B/C</span> орбиты/подписи/свечение/релятивизм</div>`,
     'u.m': ' м', 'u.km': ' км', 'u.AU': ' а.е.', 'u.ly': ' св.лет', 'u.ms': ' м/с', 'u.kms': ' км/с',
