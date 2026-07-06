@@ -133,27 +133,44 @@ export class Ship {
     }
 
     // 5) Integrate specific momentum (relativistic), then position.
-    // Thrust + drag are FELT proper-force terms and get the honest 4-force
-    // decomposition: the transverse proper acceleration equals gamma*(dw/dt)_perp,
-    // so the perpendicular part of dw/dt divides by gamma. GRAVITY is a geometric
-    // (geodesic) term — NOT decomposed; decomposing centripetal gravity would
-    // break circular orbits. (With thrust || v and no drag, aPerp = 0 so
-    // dwFelt = aThrust, and dw/dt = aGrav + aThrust — identical to the old aTot.)
+    // Two SEPARATE contributions to w = gamma*v, each with its own geometry:
+    //  • FELT (thrust+drag) proper force: the honest 4-force decomposition — the
+    //    transverse proper acceleration equals gamma*(dw/dt)_perp, so the
+    //    perpendicular part of dw/dt divides by gamma; the LONGITUDINAL part does
+    //    NOT (guarded by tests/longitudinal.regression.test.mjs — NEVER WEAKEN).
+    //  • GRAVITY (weak-field geodesic term): the coordinate 3-acceleration of a
+    //    fast test particle is a_perp = (1+β²)·g_perp, a_par = (1−3β²)·g_par
+    //    (β→0 ⇒ both →1 ⇒ Newtonian). Mapped into w-space (δv_perp = δw_perp/γ,
+    //    δv_par = δw_par/γ³) the added momentum is
+    //      dwGrav = γ³(1−3β²)·g_par + γ(1+β²)·g_perp.
+    //    Adding aGrav to w UNDIVIDED (the old bug) suppressed the transverse
+    //    coordinate acceleration by 1/γ (×0.14 at β=0.99 instead of ×1.98).
+    // With thrust || v, no drag, no gravity: aPerp=0 ⇒ dwFelt=aThrust, dwGrav=0.
     const aFelt = _aFelt.copy(aThrust).add(aDrag);
     const g = gammaFromW(this.w);
     const speed = this.v.length();
-    let dwFelt;
+    let dwFelt, dwGrav;
     if (speed > 1) {                                     // |v| > 1 m/s
       const vhat = _vhat.copy(this.v).multiplyScalar(1 / speed);
+      const beta2 = (speed * speed) / C2;
+      // FELT: longitudinal undivided, transverse ÷γ (UNCHANGED — guarded).
       const aParMag = aFelt.dot(vhat);
       const aPar = _aPar.copy(vhat).multiplyScalar(aParMag);
       const aPerp = _aPerp.subVectors(aFelt, aPar);      // aFelt - aPar
       dwFelt = _dwFelt.copy(aPar).addScaledVector(aPerp, 1 / g);
+      // GRAVITY: geodesic decomposition into w-space (dedicated scratch; aGrav is
+      // only READ — dot / subVectors — never mutated). vhat is read-only here too.
+      const gPar = _gPar.copy(vhat).multiplyScalar(aGrav.dot(vhat));
+      const gPerp = _gPerp.subVectors(aGrav, gPar);      // aGrav - gPar
+      const parFac  = g * g * g * (1 - 3 * beta2);
+      const perpFac = g * (1 + beta2);
+      dwGrav = _dwGrav.copy(gPar).multiplyScalar(parFac).addScaledVector(gPerp, perpFac);
     } else {
       dwFelt = _dwFelt.copy(aFelt);
+      dwGrav = _dwGrav.copy(aGrav);                      // β→0: identity (aGrav·dt)
     }
-    this.w.addScaledVector(aGrav, dt).addScaledVector(dwFelt, dt);  // gravity undivided
-    this.lastAccel.copy(aFelt);                // g-meter = true felt proper accel
+    this.w.addScaledVector(dwFelt, dt).addScaledVector(dwGrav, dt);
+    this.lastAccel.copy(aFelt);                // g-meter = true felt proper accel (NO gravity)
     velocityFromW(this.w, this.v);
     this.pos.addScaledVector(this.v, dt);
 
@@ -181,3 +198,8 @@ const _vhat = new THREE.Vector3();
 const _aPar = new THREE.Vector3();
 const _aPerp = new THREE.Vector3();
 const _dwFelt = new THREE.Vector3();
+// Gravity: dedicated scratch for the geodesic ∥/⊥ decomposition (must NOT reuse
+// the felt-path _aPar/_aPerp/_dwFelt — different term, read in the same step).
+const _gPar = new THREE.Vector3();
+const _gPerp = new THREE.Vector3();
+const _dwGrav = new THREE.Vector3();
