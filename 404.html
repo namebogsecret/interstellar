@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, follow">
+<title>404 — Page not found · Interstellar</title>
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: #f6f7f9; color: #1a1d23;
+    font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Ubuntu, sans-serif;
+  }
+  .card { max-width: 30rem; width: 100%; text-align: center; }
+  .code {
+    font-size: clamp(4rem, 18vw, 7rem); font-weight: 800; line-height: 1;
+    letter-spacing: -.04em; margin: 0 0 .25rem;
+    background: linear-gradient(135deg, #4f7df3, #8b5cf6);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  h1 { font-size: 1.35rem; margin: 0 0 .6rem; font-weight: 650; }
+  p { margin: 0 0 1.6rem; color: #5b6270; }
+  .actions { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: center; }
+  a.btn {
+    display: inline-block; padding: .62rem 1.15rem; border-radius: .55rem;
+    text-decoration: none; font-weight: 550; font-size: .95rem; border: 1px solid transparent;
+    transition: transform .12s ease, opacity .12s ease;
+  }
+  a.btn:hover { transform: translateY(-1px); opacity: .9; }
+  a.primary { background: #4f7df3; color: #fff; }
+  a.ghost { border-color: #cdd3dd; color: #3a4150; }
+  .site { margin-top: 1.8rem; font-size: .82rem; color: #8b93a3; }
+  .site a { color: inherit; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #12141a; color: #e8eaef; }
+    p { color: #99a1b3; }
+    a.ghost { border-color: #333a49; color: #c3c9d6; }
+    .site { color: #6e7688; }
+  }
+</style>
+</head>
+<body>
+  <main class="card">
+    <div class="code">404</div>
+    <h1>Page not found</h1>
+    <p>This page doesn’t exist — the link may be outdated or the address mistyped.</p>
+    <div class="actions">
+      <a class="btn primary" href="/">Go to homepage</a>
+      <a class="btn ghost" href="https://podlevskikh.com/">All projects</a>
+    </div>
+    <div class="site">Interstellar</div>
+  </main>
+</body>
+</html>
