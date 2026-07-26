@@ -1,6 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<!-- Перехватчик JS-ошибок: ПЕРВЫМ и без defer, иначе падение старта
+     страницы в отчёт не попадёт. Канон: ~/js-error-autofix/widget/. -->
+<script>window.__fbConfig={"base": "https://stats.podlevskikh.com"};window.__fbErrors=[];(function(){function p(e){try{if(window.__fbErrors.length<25)window.__fbErrors.push(e)}catch(x){}}
+window.addEventListener("error",function(ev){var el=ev.target;if(el&&el!==window&&(el.tagName==="IMG"||el.tagName==="SCRIPT"||el.tagName==="LINK")){p({type:"resource",message:el.tagName+" failed: "+String(el.src||el.href||"").slice(0,300)});return}
+p({type:"error",message:String(ev.message||"error").slice(0,500),source:String(ev.filename||"").slice(0,300),line:ev.lineno,col:ev.colno,stack:String((ev.error&&ev.error.stack)||"").slice(0,1500),early:true})},true);
+window.addEventListener("unhandledrejection",function(ev){var r=ev.reason;p({type:"unhandledrejection",message:String((r&&(r.message||r))||"rejection").slice(0,500),stack:String((r&&r.stack)||"").slice(0,1500),early:true})})})();</script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Interstellar — Relativistic Solar System Flight</title>
@@ -86,5 +92,7 @@
   s.src="https://stats.podlevskikh.com/rr/static/recorder.js";s.onerror=function(){};
   document.body.appendChild(s);
 }catch(e){}});</script>
+  <!-- Кнопка «Что-то не работает?»: само нажатие отправляет полный отчёт. -->
+  <script src="https://stats.podlevskikh.com/fb/static/feedback-widget.js?v=1" defer></script>
 </body>
 </html>
