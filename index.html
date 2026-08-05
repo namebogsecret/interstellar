@@ -78,7 +78,56 @@ window.addEventListener("unhandledrejection",function(ev){var r=ev.reason;p({typ
 
   <div id="help" class="panel" data-i18n-html="help.html"></div>
 
-  <script type="module" src="js/main.js"></script>
+  <!-- Гейт WebGL. Без контекста three.js падает первой же строкой
+       (Uncaught Error: Error creating WebGL context) — симуляция не стартует,
+       человек видит ЧЁРНЫЙ ЭКРАН без единого слова (жалоба 2026-07-30).
+       Проверяем сами: есть контекст — грузим симуляцию, нет — объясняем. -->
+  <script>
+  (function () {
+    var ok = false;
+    try {
+      var c = document.createElement('canvas');
+      ok = !!(window.WebGLRenderingContext &&
+        (c.getContext('webgl2') || c.getContext('webgl') || c.getContext('experimental-webgl')));
+    } catch (e) { ok = false; }
+
+    if (ok) {
+      var s = document.createElement('script');
+      s.type = 'module';
+      s.src = 'js/main.js';
+      document.body.appendChild(s);
+      return;
+    }
+
+    var ru = (navigator.language || 'en').slice(0, 2) === 'ru';
+    var ss = document.getElementById('startscreen');
+    if (ss) ss.style.display = 'none';
+
+    var box = document.createElement('div');
+    box.id = 'nowebgl';
+    box.setAttribute('role', 'alert');
+    box.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;' +
+      'justify-content:center;padding:24px;background:#05070f;color:#dfe6f5;' +
+      'font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;z-index:9999';
+    box.innerHTML =
+      '<div style="max-width:520px">' +
+        '<h1 style="margin:0 0 12px;font-size:22px;letter-spacing:.04em">INTERSTELLAR</h1>' +
+        '<p style="margin:0 0 12px">' +
+          (ru ? 'Симуляция рисуется через <b>WebGL</b>, а этот браузер его сейчас не даёт — поэтому вместо полёта был бы чёрный экран.'
+              : 'The simulation renders with <b>WebGL</b>, which this browser is not providing right now — that is why the screen would stay black.') +
+        '</p>' +
+        '<p style="margin:0 0 12px;color:#9fb0cc">' +
+          (ru ? 'Что обычно помогает: включить аппаратное ускорение в настройках браузера, обновить драйвер видеокарты или открыть страницу в свежем Chrome / Firefox / Safari на устройстве с GPU.'
+              : 'What usually helps: enable hardware acceleration in browser settings, update the GPU driver, or open the page in an up-to-date Chrome / Firefox / Safari on a machine with a GPU.') +
+        '</p>' +
+        '<p style="margin:0;color:#9fb0cc;font-size:14px">' +
+          (ru ? 'Проверить поддержку: ' : 'Check support: ') +
+          '<a href="https://get.webgl.org/" style="color:#7fb3ff">get.webgl.org</a>' +
+        '</p>' +
+      '</div>';
+    document.body.appendChild(box);
+  })();
+  </script>
 
   <script>window.addEventListener("load",function(){try{window.goatcounter=window.goatcounter||{};window.goatcounter.path=function(p){return location.host+(p==="/"?"/index":p)};var s=document.createElement("script");s.async=true;s.src="https://stats.podlevskikh.com/count.js";s.setAttribute("data-goatcounter","https://stats.podlevskikh.com/count");s.onerror=function(){};document.body.appendChild(s)}catch(e){}});</script>
   <script>document.addEventListener("click",function(ev){try{var a=ev.target.closest("a");if(!a||!a.href)return;var href=a.href,name=null;if(/t\.me\/yerevan_afisha_bot/.test(href))name="telegram-afisha";else if(/t\.me\/podlevskikh_consult_bot/.test(href))name="telegram-consult";else if(/t\.me\/VladimirPodlevskikh/.test(href))name="telegram-personal";else if(/calendly\.com/.test(href))name="calendly";else if(/tutor\.podlevskikh\.com/.test(href)&&location.host!=="tutor.podlevskikh.com")name="to-tutor";var path;if(name){path="/cta-"+name;}else if(a.hostname&&a.hostname!==location.hostname&&(a.protocol==="http:"||a.protocol==="https:")){path="/out-"+a.hostname;}else return;var u="https://stats.podlevskikh.com/count?p="+encodeURIComponent(location.host+path)+"&e=true";if(navigator.sendBeacon){navigator.sendBeacon(u)}else{(new Image()).src=u}}catch(e){}},true);</script>
