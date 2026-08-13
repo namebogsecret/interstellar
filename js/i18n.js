@@ -33,7 +33,8 @@ const DICT = {
       <div class="cline"><b>N</b> — <b>autopilot</b>: fly the engine for you into a round orbit. &nbsp; <b>Shift+N</b> — transfer to your target's orbit radius. Any control you touch switches it off; press <b>N</b> again to cancel.</div>
       <div class="cline"><b>Tab</b> — pick somewhere to go (Sun / planet / moon). &nbsp; <b>G</b> — instantly jump next to it.</div>
       <div class="cline"><b>.</b> / <b>,</b> — speed up / slow down time (to watch planets move or cross huge distances). &nbsp; <b>P</b> — pause.</div>
-      <div class="cline"><b>M</b> — switch unlimited ↔ realistic limited fuel. &nbsp; <b>⌫ Backspace</b> — start over at Earth.</div>`,
+      <div class="cline"><b>M</b> — switch unlimited ↔ realistic limited fuel. &nbsp; <b>⌫ Backspace</b> — start over at Earth.</div>
+      <div class="cline"><b>I</b> — cockpit frame on/off (off by default; simplifies itself on a slow machine). &nbsp; <b>Z</b> — sound on/off (engine hum, cockpit clicks, impacts — off by default).</div>`,
     'start.tip': `<b>Never flown before? Try this:</b> press <b>Tab</b> until the
       target says the Moon, then press <b>G</b> to jump beside it. Or aim at Earth,
       hold <b>W</b>, and watch the clocks: near light speed your ship-clock ticks
@@ -68,6 +69,7 @@ const DICT = {
     'ev.reset': 'Reset to Earth', 'ev.orbits': 'Orbit lines {s}', 'ev.labels': 'Labels {s}',
     'ev.bloom': 'Glow {s}', 'ev.relfx': 'Relativistic optics {s}', 'ev.liftoff': 'Lift-off from {name}',
     'ev.cube': 'Cube aberration {s}',
+    'ev.sound': 'Sound {s}',
     'ev.cubeAuto': 'Cube aberration off — low FPS. Press U to re-enable.',
     'ev.cockpit': 'Cockpit frame {s}',
     'ev.cockpitAuto': 'Cockpit frame off — low FPS. Press I to re-enable.',
@@ -132,7 +134,7 @@ const DICT = {
     'onboard.hint2.touch': 'Tap <b>⤓ jump</b> for an instant close-up',
     'onboard.skip': 'skip',
     'help.html': `<b>CONTROLS</b> &nbsp;·&nbsp; <span>X</span> = STOP (brake) &nbsp;·&nbsp; <span>H</span> full help
-      <div class="keys"><span>Mouse</span> look &nbsp; <span>W/S</span> forward/back &nbsp; <span>A D R F</span> slide &nbsp; <span>Q/E</span> roll &nbsp; <span>1–9/0</span> power (log, 1≈1g…9≈1000g arcade; realistic ≈3–15g) &nbsp; <span>[ ]</span> trim &nbsp; <span>Tab</span> target &nbsp; <span>G</span> jump &nbsp; <span>,/.</span> time &nbsp; <span>P</span> pause &nbsp; <span>K</span> circularize &nbsp; <span>N</span> autopilot (Shift+N transfer) &nbsp; <span>M</span> fuel &nbsp; <span>⌫</span> reset &nbsp; <span>O/L/B/C</span> orbits/labels/glow/relativity &nbsp; <span>U</span> cube aberration (~6-7× frame cost — may auto-disable on a slow machine) &nbsp; <span>I</span> cockpit frame (off by default — may auto-simplify on a slow machine)</div>`,
+      <div class="keys"><span>Mouse</span> look &nbsp; <span>W/S</span> forward/back &nbsp; <span>A D R F</span> slide &nbsp; <span>Q/E</span> roll &nbsp; <span>1–9/0</span> power (log, 1≈1g…9≈1000g arcade; realistic ≈3–15g) &nbsp; <span>[ ]</span> trim &nbsp; <span>Tab</span> target &nbsp; <span>G</span> jump &nbsp; <span>,/.</span> time &nbsp; <span>P</span> pause &nbsp; <span>K</span> circularize &nbsp; <span>N</span> autopilot (Shift+N transfer) &nbsp; <span>M</span> fuel &nbsp; <span>⌫</span> reset &nbsp; <span>O/L/B/C</span> orbits/labels/glow/relativity &nbsp; <span>U</span> cube aberration (~6-7× frame cost — may auto-disable on a slow machine) &nbsp; <span>I</span> cockpit frame (off by default — may auto-simplify on a slow machine) &nbsp; <span>Z</span> sound (off by default)</div>`,
     // units
     'u.m': ' m', 'u.km': ' km', 'u.AU': ' AU', 'u.ly': ' ly', 'u.ms': ' m/s', 'u.kms': ' km/s',
     'u.s': ' s', 'u.min': ' min', 'u.h': ' h', 'u.d': ' d', 'u.yr': ' yr',
@@ -156,7 +158,8 @@ const DICT = {
       <div class="cline"><b>N</b> — <b>автопилот</b>: сам отработает двигателем и выведет на круговую орбиту. &nbsp; <b>Shift+N</b> — перелёт на радиус орбиты вашей цели. Любое ваше касание управления его выключает; повторное <b>N</b> — отмена.</div>
       <div class="cline"><b>Tab</b> — выбрать, куда лететь (Солнце / планета / луна). &nbsp; <b>G</b> — мгновенно перенестись к ней.</div>
       <div class="cline"><b>.</b> / <b>,</b> — ускорить / замедлить время (смотреть, как движутся планеты, или покрывать огромные расстояния). &nbsp; <b>P</b> — пауза.</div>
-      <div class="cline"><b>M</b> — переключить бесконечное ↔ реальное ограниченное топливо. &nbsp; <b>⌫ Backspace</b> — начать заново у Земли.</div>`,
+      <div class="cline"><b>M</b> — переключить бесконечное ↔ реальное ограниченное топливо. &nbsp; <b>⌫ Backspace</b> — начать заново у Земли.</div>
+      <div class="cline"><b>I</b> — рамка кокпита вкл/выкл (по умолчанию выключена; на слабой машине упрощается сама). &nbsp; <b>Z</b> — звук вкл/выкл (гул двигателя, щелчки приборов, удары — по умолчанию выключен).</div>`,
     'start.tip': `<b>Никогда не летали? Попробуйте так:</b> нажимайте <b>Tab</b>, пока
       цель не станет «Луна», затем <b>G</b> — перенесётесь к ней. Или наведитесь на
       Землю, держите <b>W</b> и следите за часами: у скорости света ваши часы идут
@@ -189,6 +192,7 @@ const DICT = {
     'ev.reset': 'Сброс к Земле', 'ev.orbits': 'Линии орбит {s}', 'ev.labels': 'Подписи {s}',
     'ev.bloom': 'Свечение {s}', 'ev.relfx': 'Релятивистская оптика {s}', 'ev.liftoff': 'Взлёт с {name}',
     'ev.cube': 'Кубическая аберрация {s}',
+    'ev.sound': 'Звук {s}',
     'ev.cubeAuto': 'Кубическая аберрация выключена — низкий FPS. Нажмите U, чтобы вернуть.',
     'ev.cockpit': 'Рамка кокпита {s}',
     'ev.cockpitAuto': 'Рамка кокпита выключена — низкий FPS. Нажмите I, чтобы вернуть.',
@@ -253,7 +257,7 @@ const DICT = {
     'onboard.hint2.touch': 'Нажмите <b>⤓ jump</b> — мгновенное сближение',
     'onboard.skip': 'пропустить',
     'help.html': `<b>УПРАВЛЕНИЕ</b> &nbsp;·&nbsp; <span>X</span> = СТОП (тормоз) &nbsp;·&nbsp; <span>H</span> вся справка
-      <div class="keys"><span>Мышь</span> обзор &nbsp; <span>W/S</span> вперёд/назад &nbsp; <span>A D R F</span> сдвиг &nbsp; <span>Q/E</span> крен &nbsp; <span>1–9/0</span> мощность (лог., 1≈1g…9≈1000g аркада; реализм ≈3–15g) &nbsp; <span>[ ]</span> подстройка &nbsp; <span>Tab</span> цель &nbsp; <span>G</span> прыжок &nbsp; <span>,/.</span> время &nbsp; <span>P</span> пауза &nbsp; <span>K</span> круговая орбита &nbsp; <span>N</span> автопилот (Shift+N перелёт) &nbsp; <span>M</span> топливо &nbsp; <span>⌫</span> сброс &nbsp; <span>O/L/B/C</span> орбиты/подписи/свечение/релятивизм &nbsp; <span>U</span> кубическая аберрация (~6-7× цена кадра — может выключиться сама на слабой машине) &nbsp; <span>I</span> рамка кокпита (по умолчанию выкл. — может упроститься сама на слабой машине)</div>`,
+      <div class="keys"><span>Мышь</span> обзор &nbsp; <span>W/S</span> вперёд/назад &nbsp; <span>A D R F</span> сдвиг &nbsp; <span>Q/E</span> крен &nbsp; <span>1–9/0</span> мощность (лог., 1≈1g…9≈1000g аркада; реализм ≈3–15g) &nbsp; <span>[ ]</span> подстройка &nbsp; <span>Tab</span> цель &nbsp; <span>G</span> прыжок &nbsp; <span>,/.</span> время &nbsp; <span>P</span> пауза &nbsp; <span>K</span> круговая орбита &nbsp; <span>N</span> автопилот (Shift+N перелёт) &nbsp; <span>M</span> топливо &nbsp; <span>⌫</span> сброс &nbsp; <span>O/L/B/C</span> орбиты/подписи/свечение/релятивизм &nbsp; <span>U</span> кубическая аберрация (~6-7× цена кадра — может выключиться сама на слабой машине) &nbsp; <span>I</span> рамка кокпита (по умолчанию выкл. — может упроститься сама на слабой машине) &nbsp; <span>Z</span> звук (по умолчанию выключен)</div>`,
     'u.m': ' м', 'u.km': ' км', 'u.AU': ' а.е.', 'u.ly': ' св.лет', 'u.ms': ' м/с', 'u.kms': ' км/с',
     'u.s': ' с', 'u.min': ' мин', 'u.h': ' ч', 'u.d': ' дн', 'u.yr': ' лет',
   },

@@ -54,7 +54,12 @@ export class FlightControls {
   _noteInput() { this.inputSeq++; }
 
   _bind() {
-    this.dom.addEventListener('click', () => this.dom.requestPointerLock());
+    // Both listeners below are real user gestures — the natural place to lift
+    // the browser's autoplay suspension on a sound context that may already
+    // want to be on (e.g. a persisted iss_sound=true restored at page load,
+    // before any gesture happened). onGesture is a cheap, self-guarded no-op
+    // whenever there is nothing to resume — see js/audio/audio.js.
+    this.dom.addEventListener('click', () => { this.dom.requestPointerLock(); this.hooks.onGesture?.(); });
     document.addEventListener('mousemove', (e) => {
       if (document.pointerLockElement !== this.dom) return;
       this.pitchYawFromMouse.x += -e.movementY * this.mouseSens; // pitch
@@ -68,6 +73,7 @@ export class FlightControls {
       // sturdier than exempting the 'n' key (an exemption a future key would
       // silently need too).
       this._noteInput();
+      this.hooks.onGesture?.();
       const k = e.key.toLowerCase();
       this.keys.add(k);
       // Discrete actions.
@@ -83,6 +89,7 @@ export class FlightControls {
       else if (k === 'c') this.hooks.onRelFx?.();       // toggle relativistic optics
       else if (k === 'u') this.hooks.onCubeAberr?.();    // toggle cubemap aberration path
       else if (k === 'i') this.hooks.onCockpit?.();      // toggle cockpit frame overlay
+      else if (k === 'z') this.hooks.onSound?.();        // toggle procedural sound (off by default)
       else if (k === 'p') this.hooks.onPause?.();        // pause / warp-0
       else if (k === 'k') this.hooks.onCircularize?.();  // circularize orbit
       else if (k === 'n') this.hooks.onAutopilot?.(e.shiftKey ? 'hohmann' : 'circularize'); // autopilot on/off
