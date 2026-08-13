@@ -17,6 +17,8 @@ const DICT = {
   en: {
     // --- start screen ---
     'start.sub': 'Relativistic first-person flight · real solar system',
+    'start.short': `You start in <b>orbit around Earth</b>. Move the mouse to look, hold <b>W</b> to fly — everything else you'll pick up as you go (press <b>H</b> anytime for the full rundown).`,
+    'start.details.summary': 'All the controls, spelled out',
     'start.intro': `You start in <b>orbit around Earth</b>. Space has no air and no
       "down". Your ship coasts on its own — fire the engine and it keeps going
       until you fire the other way. To slow down you turn around and thrust, or
@@ -107,6 +109,8 @@ const DICT = {
 
   ru: {
     'start.sub': 'Релятивистский полёт от первого лица · настоящая Солнечная система',
+    'start.short': `Вы на орбите вокруг <b>Земли</b>. Двигайте мышью, чтобы осмотреться, держите <b>W</b>, чтобы лететь — остальное освоите по ходу (полная справка — в любой момент по <b>H</b>).`,
+    'start.details.summary': 'Всё управление подробно',
     'start.intro': `Вы начинаете на <b>орбите вокруг Земли</b>. В космосе нет воздуха
       и нет «низа». Корабль летит сам по инерции — дали тягу, и он летит, пока вы
       не дадите тягу в другую сторону. Чтобы затормозить — развернитесь и дайте
@@ -193,7 +197,14 @@ const DICT = {
   },
 };
 
-let lang = localStorage.getItem('iss_lang') || (navigator.language || 'en').slice(0, 2);
+// Defensive against localStorage/navigator being entirely inaccessible (some
+// private-mode browsers throw on ACCESS, not just on write; Node has neither
+// global at all). An unhandled exception here is top-level-module-fatal — it
+// takes down every importer (main.js dies on its first line) — so every touch
+// of these two host globals is wrapped.
+function safeGet(key) { try { return localStorage.getItem(key); } catch { return null; } }
+function safeNavLang() { try { return (typeof navigator !== 'undefined' && navigator.language) || 'en'; } catch { return 'en'; } }
+let lang = safeGet('iss_lang') || safeNavLang().slice(0, 2);
 if (!DICT[lang]) lang = 'en';
 
 export function getLang() { return lang; }
@@ -215,7 +226,9 @@ export function applyStatic() {
 
 export function setLang(l) {
   if (!DICT[l]) return;
-  lang = l; localStorage.setItem('iss_lang', l); applyStatic();
+  lang = l;
+  try { localStorage.setItem('iss_lang', l); } catch { /* storage disabled */ }
+  applyStatic();
 }
 
 // ---- localized formatters (shared by HUD + overlay) ----

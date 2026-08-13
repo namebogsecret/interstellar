@@ -266,6 +266,17 @@ const controls = new FlightControls(ship, canvas, {
   applyRenderPath(composer, camera, { relFx: sim.relFx, cubeWanted: sim.cubeAberr, cubeReady: false });
 }
 
+// Start-screen <details> (full controls rundown): same saveToggle/loadToggle
+// persistence pattern as the O/L/B/C/M toggles above — once opened, it stays
+// open on the next visit instead of re-hiding the controls every time.
+{
+  const details = document.getElementById('startdetails');
+  if (details) {
+    details.open = loadToggle('iss_startdetails') === true;
+    details.addEventListener('toggle', () => saveToggle('iss_startdetails', details.open));
+  }
+}
+
 // Ship reached a surface: pin to it, kill relative velocity, announce it.
 // Slow contact = landing; fast = crash. Either way you can thrust to fly off.
 function touchdown() {

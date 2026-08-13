@@ -33,9 +33,13 @@ window.addEventListener("unhandledrejection",function(ev){var r=ev.reason;p({typ
       <div id="langtoggle2"><span data-lang="en">English</span><span data-lang="ru">Русский</span></div>
       <h1>INTERSTELLAR</h1>
       <p class="sub" data-i18n="start.sub"></p>
-      <p data-i18n-html="start.intro"></p>
-      <div class="controls" data-i18n-html="start.controls"></div>
-      <p class="tip" data-i18n-html="start.tip"></p>
+      <p data-i18n-html="start.short"></p>
+      <details id="startdetails">
+        <summary data-i18n="start.details.summary"></summary>
+        <p data-i18n-html="start.intro"></p>
+        <div class="controls" data-i18n-html="start.controls"></div>
+        <p class="tip" data-i18n-html="start.tip"></p>
+      </details>
       <button id="startbtn" data-i18n="start.launch"></button>
       <p class="cta" data-i18n-html="start.cta"></p>
     </div>

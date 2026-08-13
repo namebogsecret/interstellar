@@ -432,6 +432,28 @@ def main():
                 "() => { const c=document.querySelector('canvas'); return !!c && c.width>0 && c.height>0; }")
             if not has_canvas:
                 errors.append("no sized <canvas> found (WebGL init likely failed)")
+
+            # Short-viewport regression check (item 3b): on a very short
+            # viewport (390x600 — a small/older phone in landscape) the start
+            # screen must stay reachable via scroll, not run off-page. Fresh
+            # page + Launch NOT clicked, so #startscreen (and its <details>,
+            # closed by default) is what's on screen.
+            short_page = browser.new_page(viewport={"width": 390, "height": 600})
+            short_page.goto(url, wait_until="load", timeout=30000)
+            short_page.wait_for_timeout(1500)
+            btn = short_page.locator("#startbtn")
+            try:
+                btn.scroll_into_view_if_needed(timeout=5000)
+            except Exception as ex:
+                errors.append(f"short-viewport: #startbtn scroll_into_view_if_needed raised: {ex}")
+            if not btn.is_visible():
+                errors.append("short-viewport: #startbtn not visible after scroll_into_view_if_needed")
+            else:
+                box = btn.bounding_box()
+                if not box or box["y"] < 0 or (box["y"] + box["height"]) > 600:
+                    errors.append(f"short-viewport: #startbtn out of [0,600] bounds after scroll: {box}")
+            short_page.close()
+
             browser.close()
     finally:
         httpd.shutdown()

@@ -42,6 +42,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 6px 0; }
   align-items: center; justify-content: center;
   background: radial-gradient(circle at 50% 40%, rgba(10,20,30,0.82), rgba(0,0,0,0.94));
   backdrop-filter: blur(2px);
+  overflow-y: auto;
 }
 #startscreen .card {
   width: min(640px, 92vw); padding: 26px 30px;
@@ -49,7 +50,11 @@ hr { border: none; border-top: 1px solid var(--line); margin: 6px 0; }
   border-radius: 14px; color: #cfeefc;
   font: 13px/1.6 "SF Mono", Menlo, Consolas, monospace;
   box-shadow: 0 20px 80px rgba(0,0,0,0.6);
+  max-height: 92vh; overflow-y: auto;
 }
+#startscreen summary { cursor: pointer; color: var(--dim); font-size: 12px; padding: 6px 0; user-select: none; }
+#startscreen summary:hover { color: #cfeefc; }
+#startscreen details[open] summary { margin-bottom: 4px; }
 #startscreen h1 { font-size: 26px; letter-spacing: 0.18em; color: #bfeeff; font-weight: 700; }
 #startscreen .sub { color: var(--dim); margin: 2px 0 16px; letter-spacing: 0.05em; }
 #startscreen p { margin: 10px 0; color: #b9d8e6; }
