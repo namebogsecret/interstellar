@@ -4,7 +4,8 @@ import { RenderPass } from '../../lib/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from '../../lib/jsm/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from '../../lib/jsm/postprocessing/ShaderPass.js';
 import { CopyShader } from '../../lib/jsm/shaders/CopyShader.js';
-import { createRelativisticPass, SOURCE_FOV, CUBEMAP_ABERRATION, CUBE_FACE_SIZE } from './relativisticPass.js';
+import { createRelativisticPass, SOURCE_FOV, CUBE_FACE_SIZE } from './relativisticPass.js';
+import { resolveRenderPath } from './renderPolicy.js';
 
 // Renderer tuned for weak hardware: log depth buffer (essential for the
 // metre-to-trillion-metre range), capped pixel ratio, filmic tone mapping for
@@ -97,27 +98,32 @@ export function createBloom(renderer, scene, camera) {
   // propagates to children with no extra per-frame sync needed here.
   const sourceCamera = new THREE.PerspectiveCamera(SOURCE_FOV, camera.aspect, 0.05, 1e14);
   camera.add(sourceCamera);
-  // In cube mode the base RenderPass renders through the DISPLAY (60°) camera:
-  // the relativistic pass replaces every pixel by cube-sampling, and a plain
-  // 60° base means even if the pass were bypassed we get correct framing, never
-  // a 90° stretch (ГРАБЛИ #2). In the default extended-FOV path it renders the
-  // wide sourceCamera as before (main.js swaps to `camera` when relFx is off).
-  const renderPass = new RenderPass(scene, CUBEMAP_ABERRATION ? camera : sourceCamera);
+  // Base RenderPass always constructs in the SAFE 60°-framed state (display
+  // `camera`, not the wide sourceCamera): ground truth for which camera it
+  // actually uses each frame is set exclusively by applyRenderPath() below,
+  // including on the very first frame, never here (ГРАБЛИ #2).
+  const renderPass = new RenderPass(scene, camera);
   composer.addPass(renderPass);
-  // Relativistic aberration + Doppler, BEFORE bloom so blueshifted/beamed
-  // bright stars ahead also pick up the glow.
-  const relativistic = createRelativisticPass(window.innerWidth, window.innerHeight, CUBEMAP_ABERRATION);
-  composer.addPass(relativistic);
-  // Cube path resources: a resolution-independent 6-face render target + a
-  // CubeCamera at the floating origin (= the ship). Rendered each frame by
-  // main.js ONLY when relFx is on. Left null in the default extended-FOV path.
-  let cubeCamera = null, cubeRT = null;
-  if (CUBEMAP_ABERRATION) {
-    cubeRT = new THREE.WebGLCubeRenderTarget(CUBE_FACE_SIZE, { type: THREE.HalfFloatType });
-    cubeCamera = new THREE.CubeCamera(0.05, 1e14, cubeRT);   // matches display near/far
-    cubeCamera.position.set(0, 0, 0);                        // floating origin
-    relativistic.uniforms.uCube.value = cubeRT.texture;      // stable ref, set once
-  }
+  // Both relativistic passes are created up front — an extra idle ShaderPass
+  // is nearly free (its ShaderMaterial doesn't compile until first rendered,
+  // and EffectComposer pings between two RTs regardless of pass count; see
+  // EffectComposer.render() `continue` on a disabled pass above). Rebuilding
+  // composer.passes at runtime is rejected by design: the pass order
+  // (relativistic strictly BEFORE bloom, so blueshifted/beamed bright stars
+  // ahead also pick up the glow) is a silent invariant that must never be
+  // mutated in place. Which of the two is live (Pass defaults to enabled) is
+  // decided exclusively by applyRenderPath below, which the caller invokes
+  // before the very first render — see its own comment for why that keeps
+  // this a single source of truth instead of a second one here.
+  const relPass = createRelativisticPass(window.innerWidth, window.innerHeight, false);
+  composer.addPass(relPass);
+  const cubePass = createRelativisticPass(window.innerWidth, window.innerHeight, true);
+  composer.addPass(cubePass);
+  // Cube path GPU resources (1024² HalfFloat render target ≈ 50MB VRAM + a
+  // CubeCamera at the floating origin) are LAZY — allocated by
+  // ensureCubeResources() only when the cube path is actually requested, and
+  // freed by releaseCubeResources() the moment it isn't, so weak hardware
+  // never pays for them unasked.
   const bloom = new UnrealBloomPass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
     0.7,   // strength
@@ -131,17 +137,18 @@ export function createBloom(renderer, scene, camera) {
   const copy = new ShaderPass(CopyShader);
   composer.addPass(copy);
   // Stashed on the composer (rather than widening this function's return
-  // contract) so handleResize below can keep sourceCamera's aspect in sync
-  // without needing its own signature change. renderPass is stashed the same
-  // way so main.js can swap its camera between sourceCamera (relFx on, wide
-  // FOV for aberration headroom) and the display camera (relFx off, correct
-  // 60° framing) whenever the relativistic pass is toggled.
+  // contract) so handleResize below can keep sourceCamera's aspect in sync,
+  // and so applyRenderPath/ensureCubeResources/releaseCubeResources below
+  // (main.js's only entry points into this wiring) can reach every piece
+  // without their own signature changes. cubeCamera/cubeRT start null — see
+  // ensureCubeResources.
   composer.sourceCamera = sourceCamera;
   composer.renderPass = renderPass;
-  // main.js checks composer.cubeCamera truthiness to pick the render path.
-  composer.cubeCamera = cubeCamera;
-  composer.cubeRT = cubeRT;
-  return { composer, bloom, relativistic };
+  composer.relPass = relPass;
+  composer.cubePass = cubePass;
+  composer.cubeCamera = null;
+  composer.cubeRT = null;
+  return { composer, bloom };
 }
 
 export function handleResize(renderer, camera, composer) {
@@ -155,4 +162,53 @@ export function handleResize(renderer, camera, composer) {
     renderer.setSize(window.innerWidth, window.innerHeight);
     composer?.setSize(window.innerWidth, window.innerHeight);
   });
+}
+
+// ── Render-path wiring (js/render/renderPolicy.js owns the pure decision) ──
+//
+// applyRenderPath is the SINGLE place in the codebase that assigns the base
+// render pass's camera and toggles which relativistic pass is live (see the
+// structural fitness-function grep in this repo's dev-gate — ГРАБЛИ #2: two
+// independent "which camera/pass is live" decisions is exactly how the FOV
+// regression happened before). Callers (main.js) never assign those fields
+// directly; only the three statements in the function body below do.
+export function applyRenderPath(composer, camera, flags) {
+  const r = resolveRenderPath(flags);
+  composer.relPass.enabled = r.relEnabled;
+  composer.cubePass.enabled = r.cubeEnabled;
+  composer.renderPass.camera = r.useSourceCamera ? composer.sourceCamera : camera;
+  return r.path;
+}
+
+// Lazily allocates the cube path's GPU resources (1024² HalfFloat render
+// target + CubeCamera) and wires them into composer.cubePass. Idempotent —
+// safe to call every frame the cube path is wanted; a second call while
+// resources already exist is a no-op that still returns true. Allocation is
+// wrapped in try/catch because a ~50MB render-target alloc can fail silently
+// on constrained GPUs (no guaranteed exception, sometimes just a lost
+// context) — callers must check the return value, not assume success.
+export function ensureCubeResources(composer) {
+  if (composer.cubeCamera) return true;
+  try {
+    const cubeRT = new THREE.WebGLCubeRenderTarget(CUBE_FACE_SIZE, { type: THREE.HalfFloatType });
+    const cubeCamera = new THREE.CubeCamera(0.05, 1e14, cubeRT);   // matches display near/far
+    cubeCamera.position.set(0, 0, 0);                              // floating origin
+    composer.cubePass.uniforms.uCube.value = cubeRT.texture;
+    composer.cubeRT = cubeRT;
+    composer.cubeCamera = cubeCamera;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Idempotent inverse of ensureCubeResources — frees the render target and
+// drops the references so a weak-hardware demotion (or the user turning the
+// toggle back off) actually gives the VRAM back rather than leaking it.
+export function releaseCubeResources(composer) {
+  if (!composer.cubeCamera) return;
+  composer.cubeRT?.dispose();
+  composer.cubeRT = null;
+  composer.cubeCamera = null;
+  composer.cubePass.uniforms.uCube.value = null;
 }

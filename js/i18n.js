@@ -63,6 +63,8 @@ const DICT = {
     'ev.warp': 'Time speed {x}×', 'ev.drift': 'Stopped — matched {name}', 'ev.stopped': 'Stopped',
     'ev.reset': 'Reset to Earth', 'ev.orbits': 'Orbit lines {s}', 'ev.labels': 'Labels {s}',
     'ev.bloom': 'Glow {s}', 'ev.relfx': 'Relativistic optics {s}', 'ev.liftoff': 'Lift-off from {name}',
+    'ev.cube': 'Cube aberration {s}',
+    'ev.cubeAuto': 'Cube aberration off — low FPS. Press U to re-enable.',
     'ev.pause': 'Paused', 'ev.resume': 'Resumed', 'ev.circularize': 'Circularized around {name}',
     'ev.touchdown': '🛬 Touchdown on {name} · {spd} — press W / Space to take off',
     'ev.crash': '💥 CRASHED into {name} at {spd} — press W / Space to take off, ⌫ to reset',
@@ -89,7 +91,7 @@ const DICT = {
     'mission.moonLanding.title': 'Land on the Moon',
     'mission.moonLanding.desc': 'Touch down softly (no crash) on the Moon.',
     'help.html': `<b>CONTROLS</b> &nbsp;·&nbsp; <span>X</span> = STOP (brake) &nbsp;·&nbsp; <span>H</span> full help
-      <div class="keys"><span>Mouse</span> look &nbsp; <span>W/S</span> forward/back &nbsp; <span>A D R F</span> slide &nbsp; <span>Q/E</span> roll &nbsp; <span>1–9/0</span> power (log, 1≈1g…9≈1000g arcade; realistic ≈3–15g) &nbsp; <span>[ ]</span> trim &nbsp; <span>Tab</span> target &nbsp; <span>G</span> jump &nbsp; <span>,/.</span> time &nbsp; <span>P</span> pause &nbsp; <span>K</span> circularize &nbsp; <span>M</span> fuel &nbsp; <span>⌫</span> reset &nbsp; <span>O/L/B/C</span> orbits/labels/glow/relativity</div>`,
+      <div class="keys"><span>Mouse</span> look &nbsp; <span>W/S</span> forward/back &nbsp; <span>A D R F</span> slide &nbsp; <span>Q/E</span> roll &nbsp; <span>1–9/0</span> power (log, 1≈1g…9≈1000g arcade; realistic ≈3–15g) &nbsp; <span>[ ]</span> trim &nbsp; <span>Tab</span> target &nbsp; <span>G</span> jump &nbsp; <span>,/.</span> time &nbsp; <span>P</span> pause &nbsp; <span>K</span> circularize &nbsp; <span>M</span> fuel &nbsp; <span>⌫</span> reset &nbsp; <span>O/L/B/C</span> orbits/labels/glow/relativity &nbsp; <span>U</span> cube aberration (~6-7× frame cost — may auto-disable on a slow machine)</div>`,
     // units
     'u.m': ' m', 'u.km': ' km', 'u.AU': ' AU', 'u.ly': ' ly', 'u.ms': ' m/s', 'u.kms': ' km/s',
     'u.s': ' s', 'u.min': ' min', 'u.h': ' h', 'u.d': ' d', 'u.yr': ' yr',
@@ -141,6 +143,8 @@ const DICT = {
     'ev.warp': 'Скорость времени {x}×', 'ev.drift': 'Стоп — уравнялись с {name}', 'ev.stopped': 'Стоп',
     'ev.reset': 'Сброс к Земле', 'ev.orbits': 'Линии орбит {s}', 'ev.labels': 'Подписи {s}',
     'ev.bloom': 'Свечение {s}', 'ev.relfx': 'Релятивистская оптика {s}', 'ev.liftoff': 'Взлёт с {name}',
+    'ev.cube': 'Кубическая аберрация {s}',
+    'ev.cubeAuto': 'Кубическая аберрация выключена — низкий FPS. Нажмите U, чтобы вернуть.',
     'ev.pause': 'Пауза', 'ev.resume': 'Продолжено', 'ev.circularize': 'Орбита скруглена вокруг {name}',
     'ev.touchdown': '🛬 Посадка на {name} · {spd} — нажмите W / Space для взлёта',
     'ev.crash': '💥 КРУШЕНИЕ о {name} на {spd} — нажмите W / Space для взлёта, ⌫ для сброса',
@@ -167,7 +171,7 @@ const DICT = {
     'mission.moonLanding.title': 'Посадка на Луну',
     'mission.moonLanding.desc': 'Совершите мягкую посадку (без крушения) на Луну.',
     'help.html': `<b>УПРАВЛЕНИЕ</b> &nbsp;·&nbsp; <span>X</span> = СТОП (тормоз) &nbsp;·&nbsp; <span>H</span> вся справка
-      <div class="keys"><span>Мышь</span> обзор &nbsp; <span>W/S</span> вперёд/назад &nbsp; <span>A D R F</span> сдвиг &nbsp; <span>Q/E</span> крен &nbsp; <span>1–9/0</span> мощность (лог., 1≈1g…9≈1000g аркада; реализм ≈3–15g) &nbsp; <span>[ ]</span> подстройка &nbsp; <span>Tab</span> цель &nbsp; <span>G</span> прыжок &nbsp; <span>,/.</span> время &nbsp; <span>P</span> пауза &nbsp; <span>K</span> круговая орбита &nbsp; <span>M</span> топливо &nbsp; <span>⌫</span> сброс &nbsp; <span>O/L/B/C</span> орбиты/подписи/свечение/релятивизм</div>`,
+      <div class="keys"><span>Мышь</span> обзор &nbsp; <span>W/S</span> вперёд/назад &nbsp; <span>A D R F</span> сдвиг &nbsp; <span>Q/E</span> крен &nbsp; <span>1–9/0</span> мощность (лог., 1≈1g…9≈1000g аркада; реализм ≈3–15g) &nbsp; <span>[ ]</span> подстройка &nbsp; <span>Tab</span> цель &nbsp; <span>G</span> прыжок &nbsp; <span>,/.</span> время &nbsp; <span>P</span> пауза &nbsp; <span>K</span> круговая орбита &nbsp; <span>M</span> топливо &nbsp; <span>⌫</span> сброс &nbsp; <span>O/L/B/C</span> орбиты/подписи/свечение/релятивизм &nbsp; <span>U</span> кубическая аберрация (~6-7× цена кадра — может выключиться сама на слабой машине)</div>`,
     'u.m': ' м', 'u.km': ' км', 'u.AU': ' а.е.', 'u.ly': ' св.лет', 'u.ms': ' м/с', 'u.kms': ' км/с',
     'u.s': ' с', 'u.min': ' мин', 'u.h': ' ч', 'u.d': ' дн', 'u.yr': ' лет',
   },

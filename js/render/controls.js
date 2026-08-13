@@ -56,6 +56,7 @@ export class FlightControls {
       else if (k === 'l') this.hooks.onLabels?.();      // toggle labels
       else if (k === 'b') this.hooks.onBloom?.();       // toggle bloom
       else if (k === 'c') this.hooks.onRelFx?.();       // toggle relativistic optics
+      else if (k === 'u') this.hooks.onCubeAberr?.();    // toggle cubemap aberration path
       else if (k === 'p') this.hooks.onPause?.();        // pause / warp-0
       else if (k === 'k') this.hooks.onCircularize?.();  // circularize orbit
       else if (k === 'v') this.hooks.onMap?.();          // toggle top-down system map

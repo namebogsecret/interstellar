@@ -1,10 +1,16 @@
 // J2000 mean-anomaly contract (bodies.js j2000MeanAnomaly). Pure helper only —
 // NO assertions on live body.M0 (date-dependent). Fixed timestamps throughout.
-import { j2000MeanAnomaly } from '../js/data/bodies.js';
+import { j2000MeanAnomaly, J2000_EPOCH_UNIX } from '../js/data/bodies.js';
 import { approxAbs, angDist } from './helpers.mjs';
 import assert from 'node:assert/strict';
 
-const J2000 = 946728000;         // epoch, Unix seconds
+// Epoch (Unix seconds) is imported from the source of truth, not re-derived
+// here: J2000.0 = 2000-01-01 12:00:00 TT, which is 64.184s before 12:00 UTC.
+// A prior version of this file hardcoded its own copy of the literal
+// (946728000 = 12:00 UTC, no TT offset) and so silently agreed with a bug in
+// bodies.js instead of catching it -- duplicating the constant is itself the
+// defect this test now avoids.
+const J2000 = J2000_EPOCH_UNIX;
 const DEG = Math.PI / 180;
 const DAY = 86400;
 const wrap = (x) => ((x % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);

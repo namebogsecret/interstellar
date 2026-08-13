@@ -6,8 +6,10 @@ import { tryAnalyticCoast } from './physics/cabotage.js';
 import { Ship, MODES } from './physics/ship.js';
 import { momentumFromV } from './physics/relativity.js';
 import { G0 } from './physics/constants.js';
-import { createRenderer, createScene, createCamera, createBloom, handleResize } from './render/scene.js';
+import { createRenderer, createScene, createCamera, createBloom, handleResize,
+         applyRenderPath, ensureCubeResources, releaseCubeResources } from './render/scene.js';
 import { updateRelativisticPass } from './render/relativisticPass.js';
+import { cubeAutoStep } from './render/renderPolicy.js';
 import { BodyView } from './render/bodies.js';
 import { FlightControls } from './render/controls.js';
 import { SystemMap } from './render/map.js';
@@ -29,7 +31,7 @@ const renderer = createRenderer(canvas);
 const camera = createCamera();
 const loader = new THREE.TextureLoader();
 const { scene, sunLight } = createScene(loader, 'assets/textures/2k_stars_milky_way.jpg');
-const { composer, bloom, relativistic } = createBloom(renderer, scene, camera);
+const { composer, bloom } = createBloom(renderer, scene, camera);
 handleResize(renderer, camera, composer);
 
 // Body views.
@@ -65,7 +67,15 @@ const ship = new Ship();
 const sim = { time: 0, warp: 1, warpTarget: 1, warpCap: Infinity, warpIdx: 0,
               target: null, targetIdx: -1, targetDist: 0, paused: false,
               fps: 60, bloom: true, relFx: true, showOrbits: true, showLabels: true,
-              warpLimited: false, showMap: false, showTargetList: false, showMissions: false };
+              warpLimited: false, showMap: false, showTargetList: false, showMissions: false,
+              cubeAberr: false, cubeReady: false, cubeBlocked: false, cubeForced: false,
+              renderPath: 'wide', baseFov: 60 };
+
+// A failed ~50MB cube-render-target allocation is silent on many GPUs (no
+// guaranteed exception — see ensureCubeResources); a lost WebGL context is
+// the other way constrained hardware can drop the cube path out from under
+// us. Force it off and block re-entry so the reconciler falls back to 'wide'.
+canvas.addEventListener('webglcontextlost', () => { sim.cubeBlocked = true; sim.cubeAberr = false; });
 
 const positions = new Map();
 function computePositions(t) {
@@ -187,6 +197,21 @@ const controls = new FlightControls(ship, canvas, {
   onLabels() { sim.showLabels = !sim.showLabels; overlay.root.style.display = sim.showLabels ? 'block' : 'none'; saveToggle('iss_labels', sim.showLabels); overlay.event(t('ev.labels', { s: t(sim.showLabels ? 'w.on' : 'w.off') })); },
   onBloom() { sim.bloom = !sim.bloom; saveToggle('iss_glow', sim.bloom); overlay.event(t('ev.bloom', { s: t(sim.bloom ? 'w.on' : 'w.off') })); },
   onRelFx() { sim.relFx = !sim.relFx; saveToggle('iss_relfx', sim.relFx); overlay.event(t('ev.relfx', { s: t(sim.relFx ? 'w.on' : 'w.off') })); },
+  onCubeAberr() {
+    // Only touches sim — mutating GL resources from inside a keydown handler
+    // is unsafe; the next frame's reconciler (allocate/release + camera/pass
+    // wiring) picks the new sim.cubeAberr value up and does the actual GPU work.
+    sim.cubeAberr = !sim.cubeAberr;
+    saveToggle('iss_cube', sim.cubeAberr);
+    if (sim.cubeAberr) {
+      // Re-enabling overrides any previous auto-demotion: give the user's
+      // explicit choice priority over the auto-demoter's earlier verdict.
+      sim.cubeForced = true;
+      sim.cubeBlocked = false;
+      saveToggle('iss_cube_forced', true);
+    }
+    overlay.event(t('ev.cube', { s: t(sim.cubeAberr ? 'w.on' : 'w.off') }));
+  },
   onPause() { sim.paused = !sim.paused; overlay.event(t(sim.paused ? 'ev.pause' : 'ev.resume')); },
   onMap() { sim.showMap = systemMap.toggle(); },
   onTargetList() { targetList.toggle(positions, ship); },
@@ -213,15 +238,18 @@ const controls = new FlightControls(ship, canvas, {
   const o = loadToggle('iss_orbits'); if (typeof o === 'boolean') { sim.showOrbits = o; orbitGroup.visible = o; }
   const l = loadToggle('iss_labels'); if (typeof l === 'boolean') { sim.showLabels = l; overlay.root.style.display = l ? 'block' : 'none'; }
   const g = loadToggle('iss_glow');   if (typeof g === 'boolean') sim.bloom = g;   // applied via bloom.enabled in loop
-  const r = loadToggle('iss_relfx');  if (typeof r === 'boolean') sim.relFx = r;   // applied via relativistic.enabled in loop
-  // Base RenderPass camera must match relFx from the very first frame: in the
-  // extended-FOV path, ON uses the wide sourceCamera (aberration headroom) and
-  // OFF uses the display camera (correct 60° framing) — otherwise a restored
-  // OFF value would render the first frame at 90° until the loop corrects it.
-  // In the cube path the base is ALWAYS the 60° display camera (the pass
-  // cube-samples every pixel), so the wide source is never used.
-  composer.renderPass.camera = (!composer.cubeCamera && sim.relFx) ? composer.sourceCamera : camera;
+  const r = loadToggle('iss_relfx');  if (typeof r === 'boolean') sim.relFx = r;   // applied via applyRenderPath in loop
+  const cb = loadToggle('iss_cube'); if (typeof cb === 'boolean') sim.cubeAberr = cb;
+  if (loadToggle('iss_cube_forced') === true) sim.cubeForced = true;
   const m = loadToggle('iss_mode');   if (m === 'arcade' || m === 'realistic') ship.mode = m;
+  // Base RenderPass camera/pass wiring must match the restored toggles from
+  // the very first frame — otherwise a restored ON value would render the
+  // first frame at the wrong FOV until the loop corrects it (ГРАБЛИ #2).
+  // cubeReady is deliberately false here: cube GPU resources are never
+  // allocated at startup even if iss_cube was persisted true — the frame
+  // loop's reconciler allocates them on the first real frame, so this call
+  // correctly degrades to 'wide' for that one frame instead of a black cube.
+  applyRenderPath(composer, camera, { relFx: sim.relFx, cubeWanted: sim.cubeAberr, cubeReady: false });
 }
 
 // Ship reached a surface: pin to it, kill relative velocity, announce it.
@@ -281,6 +309,7 @@ function updateStatusAndEvents() {
 // ---- main loop ------------------------------------------------------------
 let last = performance.now();
 let fpsAccum = 0, fpsFrames = 0, lowFpsTime = 0;
+let cubeActiveTime = 0, cubeLowTime = 0;
 
 function frame(now) {
   let realDt = (now - last) / 1000; last = now;
@@ -370,7 +399,7 @@ function frame(now) {
     for (let i = 0; i < nSub; i++) {
       sim.time += subDt;
       computePositions(sim.time);
-      ship.step(subDt, BODIES, positions, tdir || _zero, refVel);   // refVel READ-ONLY (step copies)
+      ship.step(subDt, BODIES, positions, tdir || _zero, refVel, refB);   // refVel READ-ONLY (step copies); refB pairs atomically with refVel
       if (ship.refBody && ship.altitude <= 0) { touchdown(); break; }
     }
     computePositions(sim.time);
@@ -395,32 +424,27 @@ function frame(now) {
   }
   sunLight.position.copy(_rel.subVectors(positions.get('Sun'), ship.pos));
 
-  // Relativistic aberration / Doppler from the ship's velocity in view space.
-  relativistic.enabled = sim.relFx;
-  // The relativistic pass is the ONLY thing that crops the wide-FOV source
-  // render back to the display's 60° frame (see relativisticPass SOURCE_FOV).
-  // When it's off, the base RenderPass must render through the display camera
-  // directly, or the full 90° source gets stretched onto the screen (visible
-  // zoom-out). Swap here — the single place sim.relFx actually drives the
-  // pass's enabled state — rather than duplicating this in onRelFx, so both
-  // the O key toggle and the persisted-toggle startup path stay in sync.
-  if (composer.cubeCamera) {
-    // Cube path: base render stays the plain 60° display camera (cheap, correct
-    // fallback framing); when relFx is on, render the scene into the 6-face cube
-    // (~6× scene cost — see CUBEMAP_ABERRATION note) and the pass replaces every
-    // pixel by direction-sampling the cube. relFx off ⇒ plain 60° view, no cube.
-    composer.renderPass.camera = camera;
-    if (sim.relFx) {
-      composer.cubeCamera.update(renderer, scene);
-      const qInv = _qInv.copy(camera.quaternion).invert();   // unused by cube pass; kept for signature
-      updateRelativisticPass(relativistic, ship.v, qInv, camera, 1.0);
-    }
-  } else {
-    composer.renderPass.camera = sim.relFx ? composer.sourceCamera : camera;
-    if (sim.relFx) {
-      const qInv = _qInv.copy(camera.quaternion).invert();
-      updateRelativisticPass(relativistic, ship.v, qInv, camera, 1.0);
-    }
+  // ── Render path reconciliation ────────────────────────────────────────
+  // Resource lifecycle first (allocate/free the cube path's ~50MB GPU
+  // footprint from sim.cubeAberr — set by the U-key hook, which deliberately
+  // never touches GL itself); then applyRenderPath (js/render/scene.js) is
+  // the SINGLE place that decides the base pass's camera and which
+  // relativistic pass is live (ГРАБЛИ #2 — see the structural grep in the
+  // gate). Only the pass matching the resolved path gets its uniforms
+  // updated each frame.
+  if (sim.cubeAberr && sim.relFx && !sim.cubeReady) sim.cubeReady = ensureCubeResources(composer);
+  if (!sim.cubeAberr && sim.cubeReady) { releaseCubeResources(composer); sim.cubeReady = false; cubeActiveTime = 0; }
+  const path = applyRenderPath(composer, camera, { relFx: sim.relFx, cubeWanted: sim.cubeAberr, cubeReady: sim.cubeReady });
+  sim.renderPath = path;
+  sim.baseFov = composer.renderPass.camera.fov;   // test seam: a live truth table of the crop invariant
+  cubeActiveTime = path === 'cube' ? cubeActiveTime + realDt : 0;
+  if (path === 'cube') {
+    composer.cubeCamera.update(renderer, scene);
+    const qInv = _qInv.copy(camera.quaternion).invert();   // unused by cube pass; kept for signature
+    updateRelativisticPass(composer.cubePass, ship.v, qInv, camera, 1.0);
+  } else if (path === 'wide') {
+    const qInv = _qInv.copy(camera.quaternion).invert();
+    updateRelativisticPass(composer.relPass, ship.v, qInv, camera, 1.0);
   }
   // Render: always through the composer (a final copy pass writes to screen),
   // toggling the heavy bloom pass on/off rather than bypassing post-processing,
@@ -465,6 +489,21 @@ function frame(now) {
     sim.fps = fpsFrames / fpsAccum; fpsAccum = 0; fpsFrames = 0;
     if (sim.bloom && sim.fps < 24) { lowFpsTime += 0.5; if (lowFpsTime > 3) { sim.bloom = false; overlay.event(t('ev.bloomAuto')); } }
     else lowFpsTime = 0;
+
+    // Cube-aberration auto-demotion (js/render/renderPolicy.js::cubeAutoStep):
+    // honest signal only while the cube path is ACTUALLY the one rendering
+    // this window — see that module's header for why there is no promotion.
+    const res = cubeAutoStep({
+      active: sim.renderPath === 'cube', sinceActivate: cubeActiveTime,
+      lowTime: cubeLowTime, blocked: sim.cubeBlocked, userForced: sim.cubeForced,
+      bloomOn: sim.bloom, visible: !document.hidden,
+    }, sim.fps, 0.5);
+    cubeLowTime = res.lowTime;
+    if (res.action === 'demote') {
+      sim.cubeAberr = false; sim.cubeBlocked = true;
+      saveToggle('iss_cube', false);
+      overlay.event(t('ev.cubeAuto'));
+    }
   }
 
   requestAnimationFrame(frame);

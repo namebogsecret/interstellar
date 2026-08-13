@@ -51,10 +51,18 @@ export function updateHUD(ship, sim, nav = {}) {
   if (nav.refBody && nav.refPos && nav.refVel) {
     _r.subVectors(ship.pos, nav.refPos);
     _v.subVectors(ship.v, nav.refVel);
-    const { e, rPeri, rApo } = orbitFromState(nav.refBody.GM, _r, _v);
+    const { rPeri, rApo } = orbitFromState(nav.refBody.GM, _r, _v);
     const radius = nav.refBody.radius;
-    setText('periapsis', fmtDist(rPeri - radius) + (rPeri < radius ? ` (${t('nav.impact')})` : ''));
-    setText('apoapsis', e >= 1 ? t('nav.escape') : fmtDist(rApo - radius));
+    // Classify by the SAME finiteness the classifier itself produces (rApo is
+    // exactly Infinity when unbound), not by a separately-computed e >= 1 —
+    // e comes from a second, independently-rounded expression and can land a
+    // few ULPs on either side of 1 right at escape velocity, which would try
+    // to fmtDist(Infinity - radius) here. Guard periapsis the same way since
+    // it's cheap and rPeri could in principle be non-finite too.
+    setText('periapsis', Number.isFinite(rPeri)
+      ? fmtDist(rPeri - radius) + (rPeri < radius ? ` (${t('nav.impact')})` : '')
+      : t('nav.escape'));
+    setText('apoapsis', Number.isFinite(rApo) ? fmtDist(rApo - radius) : t('nav.escape'));
   } else {
     setText('periapsis', '—'); setText('apoapsis', '—');
   }

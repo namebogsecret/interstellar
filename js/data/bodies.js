@@ -8,8 +8,12 @@ import { AU, DAY, DEG } from '../physics/constants.js';
 
 const tex = (f) => `assets/textures/${f}`;
 
-// J2000.0 epoch (2000-01-01 12:00 TT), expressed in Unix seconds.
-const J2000_EPOCH_UNIX = 946728000;
+// TT - UTC at the J2000 epoch: 32 leap seconds (TAI-UTC on 2000-01-01) + 32.184 s (TT-TAI).
+const TT_MINUS_UTC_AT_J2000 = 64.184;
+// J2000.0 epoch = 2000-01-01 12:00:00 TT, expressed in Unix seconds (Unix time is UTC-based,
+// so the TT instant lands 64.184 s before UTC noon). Residual UTC/TT slop in Date.now() is
+// ~1e-5 rad of mean anomaly at this sim's fidelity -- negligible for a visual sim.
+export const J2000_EPOCH_UNIX = Date.UTC(2000, 0, 1, 12, 0, 0) / 1000 - TT_MINUS_UTC_AT_J2000;
 
 function wrap(rad) {
   return ((rad % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);

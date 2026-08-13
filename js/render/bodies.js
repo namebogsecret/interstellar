@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { MIN_PIXEL_SIZE } from '../physics/constants.js';
-import { spinAngle } from '../physics/orbits.js';
+import { spinAngle, bodyOrientation } from '../physics/orbits.js';
+
+// Dedicated scratch for the per-BodyView orientation quaternion (house
+// pattern — see orbits.js/ship.js module-level temps). Consumed transiently
+// each update(), never read across calls.
+const _q = new THREE.Quaternion();
 
 // --- Fresnel atmosphere shell: brightens toward the limb (air glow / haze). --
 function atmosphereMaterial(color) {
@@ -62,7 +67,11 @@ export class BodyView {
     }
     this.mesh = new THREE.Mesh(geo, mat);
     this.spinGroup.add(this.mesh);
-    this.spinGroup.rotation.z = body.tilt || 0;
+    // Tilt + spin are applied together as ONE quaternion in update() via
+    // bodyOrientation() — NOT as two independent Euler components on this
+    // Object3D (that composition rotates the spin term around the world Y
+    // axis instead of the body's own tilted pole, letting a tilted pole
+    // sweep a cone across the frame).
 
     // Sun: layered corona + broad halo so it reads as a star at any distance.
     if (body.emissive) {
@@ -115,7 +124,11 @@ export class BodyView {
 
   update(relPos, t, camera) {
     this.group.position.copy(relPos);
-    this.spinGroup.rotation.y = spinAngle(this.body, t);
+    this.spinGroup.quaternion.copy(bodyOrientation(this.body, t, _q));
+    // Clouds sit INSIDE spinGroup (added to it in the constructor), so their
+    // local Y axis already IS the body's tilted spin axis after the line
+    // above — this local rotation just adds the clouds' own (slightly
+    // faster) drift relative to the ground, unchanged from before.
     if (this.clouds) this.clouds.rotation.y = spinAngle(this.body, t) * 0.9;
 
     const dist = relPos.length();

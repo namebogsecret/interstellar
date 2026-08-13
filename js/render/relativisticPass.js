@@ -42,15 +42,44 @@ export const SOURCE_FOV = 90;
 // PERF: a CubeCamera renders the scene 6× per frame (~6–7× scene-geometry
 // cost vs the single wide render). On the weak-hardware / school-projector
 // target this is a large FPS regression, so the cube path ships DISABLED by
-// default — the proven extended-FOV-90° scheme stays the default — and is
-// gated behind this compile-time flag. Flip it to true to render with the
-// cubemap (documented fallback, explicitly allowed by the task). The path is
-// fully implemented and really sampled; it is not a stub.
-export const CUBEMAP_ABERRATION = false;
-
+// default — the proven extended-FOV-90° scheme stays the default. This used
+// to be a compile-time flag; it no longer is — the runtime default now lives
+// in js/render/renderPolicy.js::CUBE_DEFAULT_ON, and js/render/renderPolicy.js
+// ::resolveRenderPath / cubeAutoStep own whether the cube path is actually
+// selected for a given frame. The path itself is fully implemented and really
+// sampled below; it is not a stub.
+//
 // Cube face resolution. 1024 bounds the 6× cost while staying crisp enough for
 // a forward-bunched high-β field; drop to 512 for more headroom on weak GPUs.
 export const CUBE_FACE_SIZE = 1024;
+
+// Shared GLSL aberration core, interpolated into BOTH fragment shaders below
+// so the formula physically exists in exactly one place instead of two
+// copies that could silently drift apart (the risk this file's own header
+// comment warns about — cross-language divergence with aberratedCos() in
+// js/physics/relativity.js is not caught by any test).
+//
+// The core expression (cp - beta) / (1.0 - beta * cp) is byte-for-byte the
+// same as aberratedCos() in js/physics/relativity.js — keep it that way.
+//
+// rayDir and velDir must both already be unit vectors, in whatever space the
+// caller works in (view space for the 2D pass, world space for the cube
+// pass). Azimuth AROUND the velocity axis is preserved; only the polar angle
+// to the velocity axis changes (θ' -> θ). The returned vector is unit by
+// construction (cT² + sT² = 1), so callers that need extra float-drift
+// insurance before a cubemap sample may wrap the call in normalize() — that
+// is a no-op in exact math, not a behavior change.
+export const ABERRATION_GLSL = `
+vec3 aberrate(vec3 rayDir, vec3 velDir, float beta) {
+  float cp = dot(rayDir, velDir);                  // cos θ' (observed / ship frame)
+  float cT = (cp - beta) / (1.0 - beta * cp);       // cos θ (rest frame)
+  vec3 perp = rayDir - cp * velDir;
+  float pl = length(perp);
+  vec3 perpHat = pl > 1e-6 ? perp / pl : vec3(0.0);
+  float sT = sqrt(max(0.0, 1.0 - cT * cT));
+  return cT * velDir + sT * perpHat;
+}
+`;
 
 const RelativisticShader = {
   name: 'RelativisticShader',
@@ -79,6 +108,8 @@ const RelativisticShader = {
     uniform float uStrength;
     varying vec2 vUv;
 
+    ${ABERRATION_GLSL}
+
     // Project a view-space ray (forward = -z) into the WIDE source texture's
     // UV space (source camera uses uSrcTanHalf, not the display's uViewTanHalf).
     vec2 projectToSourceUV(vec3 r) {
@@ -104,16 +135,10 @@ const RelativisticShader = {
       if (eff < 1e-4) { gl_FragColor = orig; return; }
       float beta = clamp(uBeta, 0.0, 0.999999);
 
-      float cp = dot(ray, uDir);                       // cos θ' (observed / ship frame)
+      float cp = dot(ray, uDir);                       // cos θ' (observed / ship frame), reused below for Doppler
 
       // Inverse aberration -> rest-frame direction we actually rendered.
-      // mirror of aberratedCos() in js/physics/relativity.js — keep identical
-      float cT = (cp - beta) / (1.0 - beta * cp);      // cos θ (rest frame)
-      vec3 perp = ray - cp * uDir;
-      float pl = length(perp);
-      vec3 perpHat = pl > 1e-6 ? perp / pl : vec3(0.0);
-      float sT = sqrt(max(0.0, 1.0 - cT * cT));
-      vec3 rayRest = cT * uDir + sT * perpHat;
+      vec3 rayRest = aberrate(ray, uDir, beta);
 
       // Re-project the aberrated rest-frame ray into the same wide source UV
       // space, then blend against the un-aberrated baseline by effect strength.
@@ -170,6 +195,17 @@ const RelativisticCubeShader = {
     uniform float uStrength;
     varying vec2 vUv;
 
+    ${ABERRATION_GLSL}
+
+    // Sample-direction helper: applies the cube's X-sign convention. Sign is
+    // +1.0 today (behavior unchanged) — this is a pre-wired knob in case an
+    // upcoming Playwright mirror-check finds the cube path left/right-flipped
+    // vs the wide-2D path. If that happens, flip ONLY CUBE_X_SIGN here — do
+    // NOT "fix" mirroring by flipping uViewToWorld or uDirWorld, which would
+    // rotate the aberration axis itself instead of just mirroring the sample.
+    #define CUBE_X_SIGN 1.0
+    vec3 cubeDir(vec3 d) { return vec3(CUBE_X_SIGN * d.x, d.y, d.z); }
+
     void main() {
       // Display-frame ray for this pixel (camera looks down -z), built from the
       // DISPLAY fov — this is θ' (ship / observed frame) — then rotated into the
@@ -181,30 +217,25 @@ const RelativisticCubeShader = {
       // Rest (un-aberrated) baseline: sample the cube straight along the display
       // ray. At β→0 this IS the plain 60° first-person view (identity), so the
       // effect is continuous through β→0 with no zoom (ГРАБЛИ #5).
-      vec4 orig = textureCube(uCube, rayWorld);
+      vec4 orig = textureCube(uCube, cubeDir(rayWorld));
 
       // Ease the effect in just above orbital speeds; off => exact pass-through.
       float eff = uStrength * smoothstep(0.003, 0.05, uBeta);
       if (eff < 1e-4) { gl_FragColor = orig; return; }
       float beta = clamp(uBeta, 0.0, 0.999999);
 
-      float cp = dot(rayWorld, uDirWorld);             // cos θ' (observed / ship frame)
+      float cp = dot(rayWorld, uDirWorld);             // cos θ' (observed / ship frame), reused below for Doppler
 
       // Inverse aberration -> rest-frame direction we actually rendered.
-      // mirror of aberratedCos() in js/physics/relativity.js — keep identical
-      float cT = (cp - beta) / (1.0 - beta * cp);      // cos θ (rest frame)
-      // Azimuth AROUND the velocity axis is preserved; only the polar angle to
-      // the velocity axis changes (θ' -> θ).
-      vec3 perp = rayWorld - cp * uDirWorld;
-      float pl = length(perp);
-      vec3 perpHat = pl > 1e-6 ? perp / pl : vec3(0.0);
-      float sT = sqrt(max(0.0, 1.0 - cT * cT));
-      vec3 rayRest = normalize(cT * uDirWorld + sT * perpHat);   // aberrated WORLD dir
+      // normalize() guards against float drift before the cubemap sample —
+      // aberrate() already returns a unit vector algebraically, so this is a
+      // no-op in exact math (unchanged from before this refactor).
+      vec3 rayRest = normalize(aberrate(rayWorld, uDirWorld, beta));   // aberrated WORLD dir
 
       // Blend the sample DIRECTION from the rest baseline to fully aberrated by
       // effect strength — keeps β→0 continuous (no pop). No FOV clamp anywhere.
       vec3 sampleDir = normalize(mix(rayWorld, rayRest, eff));
-      vec3 col = textureCube(uCube, sampleDir).rgb;
+      vec3 col = textureCube(uCube, cubeDir(sampleDir)).rgb;
 
       // Doppler factor along the observed line of sight.
       float D = sqrt(max(1e-6, 1.0 - beta * beta)) / max(1e-3, 1.0 - beta * cp);
@@ -223,7 +254,7 @@ const RelativisticCubeShader = {
     }`,
 };
 
-export function createRelativisticPass(width, height, useCubemap = CUBEMAP_ABERRATION) {
+export function createRelativisticPass(width, height, useCubemap = false) {
   if (useCubemap) {
     const pass = new ShaderPass(RelativisticCubeShader);
     pass.isCube = true;                       // update path branches on this

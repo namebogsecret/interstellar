@@ -76,7 +76,14 @@ export class Ship {
   // refBodyVel: heliocentric ORBITAL velocity of the dominant body (Vector3) or
   //   null. Treated READ-ONLY (it is main.js's shared _refVel — mutating it would
   //   corrupt the warp-cap); we only copy it into scratch.
-  step(dt, bodies, positions, thrustDir, refBodyVel = null) {
+  // refBody: OPTIONAL explicit reference body. When passed (not null/undefined),
+  //   this.refBody becomes EXACTLY that object — dominantBody() is not consulted
+  //   — and BOTH the atmosphere/altitude lookup and surfaceRotationVelocity() for
+  //   drag are computed from that same body, so (refBody, refBodyVel) stay an
+  //   atomic pair chosen together by the caller (main.js, once per frame) and can
+  //   never disagree about which body's atmosphere is moving at which velocity.
+  //   Omitted -> unchanged fallback: this.refBody = dominantBody(...).
+  step(dt, bodies, positions, thrustDir, refBodyVel = null, refBody = null) {
     // 1) Orientation update from angular-rate commands (simple body-rate).
     if (this.angRate.lengthSq() > 0) {
       const dq = new THREE.Quaternion();
@@ -105,7 +112,9 @@ export class Ship {
     }
 
     // 4) Reference body, altitude, atmospheric drag.
-    this.refBody = dominantBody(this.pos, bodies, positions);
+    this.refBody = (refBody !== null && refBody !== undefined)
+      ? refBody
+      : dominantBody(this.pos, bodies, positions);
     const aDrag = _aDrag.set(0, 0, 0);
     this.atmoDensity = 0;
     if (this.refBody) {

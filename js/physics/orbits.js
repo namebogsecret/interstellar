@@ -96,6 +96,27 @@ export function spinAxis(b, out = new THREE.Vector3()) {
   return out.set(0, 1, 0).applyAxisAngle(X_AXIS, b.tilt || 0);
 }
 
+// World orientation of a body's spin group at time t, as a SINGLE quaternion
+// (not two independently-set Euler components on the same Object3D — that
+// composition rotates the spin term around the WORLD Y axis instead of the
+// body's own tilted pole, letting a tilted pole sweep a cone over time).
+// q = qTilt ⊗ qSpin: tilt first (about X_AXIS, same convention as spinAxis
+// above), then spin about the body's OWN (now-tilted) Y axis in that rotated
+// frame. Consequently q·(0,1,0) === spinAxis(b) for all t (the pole is fixed
+// and the spin term never moves it), and at tilt=0 this reduces exactly to
+// Quaternion.setFromAxisAngle(Y_AXIS, spinAngle(b,t)) (back-compat).
+// Dedicated module scratch (_qTilt/_qSpin) — never reused by any other
+// function, per the repo's scratch-aliasing rule (ГРАБЛИ.md, "алиасинг
+// модульных scratch-векторов").
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+const _qTilt = new THREE.Quaternion();
+const _qSpin = new THREE.Quaternion();
+export function bodyOrientation(b, t, outQuat = new THREE.Quaternion()) {
+  _qTilt.setFromAxisAngle(X_AXIS, b.tilt || 0);
+  _qSpin.setFromAxisAngle(Y_AXIS, spinAngle(b, t));
+  return outQuat.copy(_qTilt).multiply(_qSpin);
+}
+
 // Velocity (m/s, world frame) of the point on a rotating body at `shipPos`
 // due to that body's spin: v = omega x r, omega = spinAxis(b) * (2*pi/rotPeriod)
 // (SIGNED -- a negative rotPeriod is retrograde, matching spinAngle's sign
@@ -129,7 +150,14 @@ const _h = new THREE.Vector3();
 const _dir = new THREE.Vector3();
 export function circularizeVelocity(mu, rVec, vVec, out = new THREE.Vector3()) {
   const r = rVec.length();
-  const speed = Math.sqrt(mu / r);
+  // Degenerate-radius guard: below this |r| the target circular speed
+  // sqrt(mu/r) blows up (and the direction collapses to the zero vector,
+  // 0*Infinity = NaN). No defined circular orbit exists there -- no-op
+  // (return the relative velocity unchanged) rather than poison ship.v.
+  const R_EPS = 1e-6; // metres
+  const muOverR = mu / r;
+  if (!(r > R_EPS) || !Number.isFinite(muOverR)) return out.copy(vVec);
+  const speed = Math.sqrt(muOverR);
   _h.crossVectors(rVec, vVec);
   if (_h.lengthSq() > 1e-12) {
     _dir.crossVectors(_h, rVec).normalize();
@@ -140,11 +168,17 @@ export function circularizeVelocity(mu, rVec, vVec, out = new THREE.Vector3()) {
     if (_dir.lengthSq() < 1e-12) _dir.set(0, -rVec.z, rVec.y);
     _dir.normalize();
   }
-  return out.copy(_dir).multiplyScalar(speed);
+  out.copy(_dir).multiplyScalar(speed);
+  // Final finiteness backstop -- catches any other degenerate combination
+  // (e.g. non-finite mu) that the radius check above didn't already rule out.
+  if (!Number.isFinite(out.x) || !Number.isFinite(out.y) || !Number.isFinite(out.z)) {
+    return out.copy(vVec);
+  }
+  return out;
 }
 
 // Classic two-body orbital elements from a state vector (rVec, vVec) about a
-// body with gravitational parameter mu. Returns { a, e, rPeri, rApo }.
+// body with gravitational parameter mu. Returns { a, e, rPeri, rApo, bound }.
 // NOTE: rVec/vVec are typically formed by subtracting two heliocentric
 // double-precision positions (~1e11 m each); the subtraction leaves ~1e3 m of
 // floating-point residual error. Fine for a HUD readout, NOT for physics.
@@ -158,11 +192,25 @@ export function orbitFromState(mu, rVec, vVec) {
   const ey = ((v2 - mu / r) * rVec.y - rv * vVec.y) / mu;
   const ez = ((v2 - mu / r) * rVec.z - rv * vVec.z) / mu;
   const e = Math.sqrt(ex * ex + ey * ey + ez * ez);
-  if (e >= 1) {
-    // Hyperbolic/parabolic -- unbound. rPeri is still meaningful; rApo is not.
-    return { a, e, rPeri: a * (1 - e), rApo: Infinity };
+
+  // Semi-latus rectum p = h²/mu (h = specific angular momentum |r x v|).
+  // rPeri/rApo are built from p instead of a(1∓e) so they stay finite right
+  // through e==1 exactly (parabola), where a blows up to ±Infinity and
+  // a*(1-e) degenerates to Inf*0 = NaN.
+  _h.crossVectors(rVec, vVec);
+  const h = _h.length();
+  const p = (h * h) / mu;                         // 0 for the radial-fall case (h≈0)
+  const rPeri = p / (1 + e);                       // finite for all e, incl. e==1 -> p/2
+  if (eps >= 0) {
+    // Hyperbolic/parabolic -- unbound (specific orbital energy >= 0). rPeri
+    // is still meaningful; rApo is not. Classify on eps rather than e>=1: e
+    // comes from a second, independently-rounded expression (the eccentricity
+    // vector) and can land a few ULPs on either side of 1 at exact escape
+    // velocity, whereas eps is the same quantity `a` is already built from
+    // and hits its zero-crossing exactly at escape speed.
+    return { a, e, rPeri, rApo: Infinity, bound: false };
   }
-  return { a, e, rPeri: a * (1 - e), rApo: a * (1 + e) };
+  return { a, e, rPeri, rApo: p / (1 - e), bound: true };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
