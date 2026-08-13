@@ -36,6 +36,7 @@ const DICT = {
       hold <b>W</b>, and watch the clocks: near light speed your ship-clock ticks
       slower than the system clock — that's real physics.`,
     'start.launch': '▶ Launch (click to capture the mouse)',
+    'start.cta': 'The physics under the hood — orbits, gravity, special relativity — is the same physics taught in IB, AP and SAT courses. I\'m the physicist who built this and who teaches it: <a href="https://tutor.podlevskikh.com" target="_blank" rel="noopener" style="color:#7fb3ff;text-decoration:none;border-bottom:1px dotted rgba(127,179,255,.5)">tutor.podlevskikh.com</a>',
 
     // --- HUD labels ---
     'hud.speed': 'SPEED', 'hud.gamma': 'γ (time-stretch)', 'hud.dilation': 'TIME DILATION',
@@ -90,6 +91,13 @@ const DICT = {
     'mission.jupiterFlyby.desc': 'Fly a close hyperbolic pass by Jupiter that measurably changes your heliocentric speed.',
     'mission.moonLanding.title': 'Land on the Moon',
     'mission.moonLanding.desc': 'Touch down softly (no crash) on the Moon.',
+    'mission.cta': 'That was real orbital mechanics, not a cutscene. If you want to actually understand the equations behind it, I teach IB / AP / SAT physics and maths: <a href="https://tutor.podlevskikh.com" target="_blank" rel="noopener" style="color:#7fb3ff;text-decoration:none;border-bottom:1px dotted rgba(127,179,255,.5)">tutor.podlevskikh.com</a>',
+    // --- onboarding (first 30s) ---
+    'onboard.hint1.desktop': 'Move the mouse to look around · hold <b>W</b> to fly',
+    'onboard.hint1.touch': 'Drag anywhere to look around · push the stick to fly',
+    'onboard.hint2.desktop': 'Press <b>G</b> to jump beside your target — an instant close-up',
+    'onboard.hint2.touch': 'Tap <b>⤓ jump</b> for an instant close-up',
+    'onboard.skip': 'skip',
     'help.html': `<b>CONTROLS</b> &nbsp;·&nbsp; <span>X</span> = STOP (brake) &nbsp;·&nbsp; <span>H</span> full help
       <div class="keys"><span>Mouse</span> look &nbsp; <span>W/S</span> forward/back &nbsp; <span>A D R F</span> slide &nbsp; <span>Q/E</span> roll &nbsp; <span>1–9/0</span> power (log, 1≈1g…9≈1000g arcade; realistic ≈3–15g) &nbsp; <span>[ ]</span> trim &nbsp; <span>Tab</span> target &nbsp; <span>G</span> jump &nbsp; <span>,/.</span> time &nbsp; <span>P</span> pause &nbsp; <span>K</span> circularize &nbsp; <span>M</span> fuel &nbsp; <span>⌫</span> reset &nbsp; <span>O/L/B/C</span> orbits/labels/glow/relativity &nbsp; <span>U</span> cube aberration (~6-7× frame cost — may auto-disable on a slow machine)</div>`,
     // units
@@ -118,6 +126,7 @@ const DICT = {
       Землю, держите <b>W</b> и следите за часами: у скорости света ваши часы идут
       медленнее «мировых» — это настоящая физика.`,
     'start.launch': '▶ Старт (клик — захватить мышь)',
+    'start.cta': 'Физика под капотом — орбиты, гравитация, специальная теория относительности — та же, что в курсах IB, AP и SAT. Я физик, который это построил и который её преподаёт: <a href="https://tutor.podlevskikh.com" target="_blank" rel="noopener" style="color:#7fb3ff;text-decoration:none;border-bottom:1px dotted rgba(127,179,255,.5)">tutor.podlevskikh.com</a>',
 
     'hud.speed': 'СКОРОСТЬ', 'hud.gamma': 'γ (растяжение времени)', 'hud.dilation': 'ЗАМЕДЛЕНИЕ ВРЕМЕНИ',
     'hud.accel': 'ПЕРЕГРУЗКА', 'hud.mode': 'РЕЖИМ', 'hud.throttle': 'МОЩНОСТЬ',
@@ -170,6 +179,13 @@ const DICT = {
     'mission.jupiterFlyby.desc': 'Пролетите близко гиперболической траекторией мимо Юпитера так, чтобы заметно изменить гелиоцентрическую скорость.',
     'mission.moonLanding.title': 'Посадка на Луну',
     'mission.moonLanding.desc': 'Совершите мягкую посадку (без крушения) на Луну.',
+    'mission.cta': 'Это была настоящая небесная механика, а не заставка. Если хочется по-настоящему разобраться в уравнениях за этим — я преподаю физику и математику IB / AP / SAT: <a href="https://tutor.podlevskikh.com" target="_blank" rel="noopener" style="color:#7fb3ff;text-decoration:none;border-bottom:1px dotted rgba(127,179,255,.5)">tutor.podlevskikh.com</a>',
+    // --- онбординг (первые 30 сек) ---
+    'onboard.hint1.desktop': 'Двигайте мышью — осмотреться · держите <b>W</b> — лететь',
+    'onboard.hint1.touch': 'Проведите пальцем — осмотреться · толкните стик — лететь',
+    'onboard.hint2.desktop': 'Нажмите <b>G</b> — телепорт к цели, мгновенное сближение',
+    'onboard.hint2.touch': 'Нажмите <b>⤓ jump</b> — мгновенное сближение',
+    'onboard.skip': 'пропустить',
     'help.html': `<b>УПРАВЛЕНИЕ</b> &nbsp;·&nbsp; <span>X</span> = СТОП (тормоз) &nbsp;·&nbsp; <span>H</span> вся справка
       <div class="keys"><span>Мышь</span> обзор &nbsp; <span>W/S</span> вперёд/назад &nbsp; <span>A D R F</span> сдвиг &nbsp; <span>Q/E</span> крен &nbsp; <span>1–9/0</span> мощность (лог., 1≈1g…9≈1000g аркада; реализм ≈3–15g) &nbsp; <span>[ ]</span> подстройка &nbsp; <span>Tab</span> цель &nbsp; <span>G</span> прыжок &nbsp; <span>,/.</span> время &nbsp; <span>P</span> пауза &nbsp; <span>K</span> круговая орбита &nbsp; <span>M</span> топливо &nbsp; <span>⌫</span> сброс &nbsp; <span>O/L/B/C</span> орбиты/подписи/свечение/релятивизм &nbsp; <span>U</span> кубическая аберрация (~6-7× цена кадра — может выключиться сама на слабой машине)</div>`,
     'u.m': ' м', 'u.km': ' км', 'u.AU': ' а.е.', 'u.ly': ' св.лет', 'u.ms': ' м/с', 'u.kms': ' км/с',

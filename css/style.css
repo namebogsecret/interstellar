@@ -58,6 +58,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 6px 0; }
 #startscreen .cline { padding: 3px 0; color: #b9d8e6; border-bottom: 1px solid rgba(120,200,230,0.07); }
 #startscreen .cline b { color: #d7f6ff; }
 #startscreen .tip { background: rgba(40,90,120,0.18); border-left: 2px solid #4a8fb0; padding: 8px 12px; border-radius: 5px; color: #bfe6f4; }
+#startscreen .cta { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(120,200,230,0.12); font-size: 11.5px; line-height: 1.55; color: var(--dim); }
 #langtoggle2 { position: absolute; top: 18px; right: 22px; display: flex; gap: 4px; }
 #langtoggle2 span {
   cursor: pointer; padding: 3px 9px; border-radius: 6px; font-size: 11px;
@@ -146,6 +147,18 @@ hr { border: none; border-top: 1px solid var(--line); margin: 6px 0; }
 #eventlog div { animation: fade 6s forwards; }
 @keyframes fade { 0%,70% { opacity: 1; } 100% { opacity: 0.25; } }
 
+/* Onboarding hint (js/render/onboarding.js). Everything else about this
+   element is set inline by the JS (it owns its own DOM like missionpanel/
+   targetlist do) — top/font-size/max-width live here instead because they
+   need a real responsive override below, and an inline style always wins
+   over an external rule of any specificity short of !important, so a plain
+   media-query correction on a JS-set inline `top`/`font-size` would silently
+   do nothing. 272px clears both #hud and #nav's tallest content (#nav: 12
+   rows + 1 hr ≈ 249px tall from top:14px ⇒ bottom ≈ 263px) at the viewport
+   widths (~760–1000px) where the centered hint's box would otherwise
+   overlap either side panel horizontally. */
+#onboardhint { top: 272px; font-size: 12px; max-width: min(480px, 86vw); }
+
 /* ---- touch / mobile controls ---- */
 #touchui { display: none; }
 body.touch #touchui { display: block; }
@@ -196,4 +209,9 @@ body.touch #help { display: none; }            /* keyboard hints are irrelevant 
   #eventlog { top: 70px; font-size: 11px; width: 60%; }
   #status { bottom: 184px; font-size: 11px; }
   #startscreen .card { font-size: 12px; padding: 20px 18px; }
+  /* #hud/#nav shrink to top:8px + ~200px tall here (mobile font/padding) —
+     220px clears their bottom edge while staying well above the touch
+     joystick/buttons (fixed to the viewport BOTTOM, so they only get closer
+     as the screen gets shorter, never as it gets narrower). */
+  #onboardhint { top: 220px; font-size: 11px; max-width: 92vw; }
 }

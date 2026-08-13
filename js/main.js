@@ -15,6 +15,7 @@ import { FlightControls } from './render/controls.js';
 import { SystemMap } from './render/map.js';
 import { TargetList } from './render/targetlist.js';
 import { MissionTracker } from './missions.js';
+import { Onboarding } from './render/onboarding.js';
 import { updateHUD } from './render/hud.js';
 import { Overlay } from './render/overlay.js';
 import { TouchControls } from './render/touch.js';
@@ -151,6 +152,16 @@ const targetList = new TargetList(BODIES, {
 // systemMap/targetList above.
 const missions = new MissionTracker(t);
 
+// Coarse-pointer / touch detection, shared by the onboarding hint's copy
+// (mouse+W vs drag+stick wording) and the touch-controls bootstrap further
+// down — computed once up top instead of twice (was previously inlined only
+// at the touch-controls check below).
+const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+// First-30-seconds onboarding hint (js/render/onboarding.js): contextual,
+// self-dismissing nudge toward moving the ship and trying fast-travel (G).
+const onboarding = new Onboarding(t, isTouch);
+
 // ---- persisted toggles (localStorage) -------------------------------------
 // Mirror the getLang/setLang persistence pattern. All reads are defensive:
 // absent/corrupt values are ignored so a wiped store just falls back to defaults.
@@ -175,7 +186,7 @@ const controls = new FlightControls(ship, canvas, {
     overlay.event(t('ev.target', { name: bodyName(sim.target.name) }));
   },
   onFastTravel() {
-    if (sim.target) { spawnAt(sim.target.name, 4); overlay.event(t('ev.jumped', { name: bodyName(sim.target.name) })); }
+    if (sim.target) { spawnAt(sim.target.name, 4); overlay.event(t('ev.jumped', { name: bodyName(sim.target.name) })); onboarding.noteJump(); }
   },
   onWarp(dir) {
     sim.warpIdx = Math.max(0, Math.min(WARPS.length - 1, sim.warpIdx + dir));
@@ -315,6 +326,7 @@ function frame(now) {
   realDt = Math.min(realDt, 0.05);
 
   const thrustDir = controls.update(realDt);
+  if (thrustDir) onboarding.noteThrust();
 
   computePositions(sim.time);
 
@@ -567,6 +579,7 @@ requestAnimationFrame(frame);
 const startScreen = document.getElementById('startscreen');
 function launch() {
   startScreen.style.display = 'none';
+  onboarding.show();
   canvas.requestPointerLock?.();
 }
 document.getElementById('startbtn').addEventListener('click', launch);
@@ -585,7 +598,7 @@ document.querySelectorAll('[data-lang]').forEach((el) => {
 });
 
 // Touch / mobile controls on coarse-pointer devices (reuse the same hooks).
-if (matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window || navigator.maxTouchPoints > 0) {
+if (isTouch) {
   document.body.classList.add('touch');
   const openHelp = () => { document.exitPointerLock?.(); startScreen.style.display = 'flex'; };
   new TouchControls(controls, ship, canvas, openHelp);

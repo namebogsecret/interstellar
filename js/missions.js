@@ -280,6 +280,19 @@ export class MissionTracker {
     hint.style.cssText = 'color:var(--dim); margin-top:8px; font-size:11px;';
     hint.textContent = t('mission.hint');
     this.panel.appendChild(hint);
+
+    // Funnel CTA (C1): only once the player has actually achieved something
+    // (this.completed is non-empty) — never shown to someone who hasn't
+    // completed a single mission yet. innerHTML (not textContent) because
+    // t('mission.cta') carries a real <a href> the click-tracker in
+    // index.html (script, line ~139) recognizes by regex; nothing else in
+    // this file needs to touch that tracker.
+    if (this.completed.size > 0) {
+      const cta = document.createElement('div');
+      cta.style.cssText = 'padding-top:8px; margin-top:8px; border-top:1px solid var(--line); color:var(--dim); font-size:11px; line-height:1.5;';
+      cta.innerHTML = t('mission.cta');
+      this.panel.appendChild(cta);
+    }
   }
 }
 
