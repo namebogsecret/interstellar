@@ -38,7 +38,7 @@ export class FlightControls {
   constructor(ship, domElement, hooks = {}) {
     this.ship = ship;
     this.dom = domElement;
-    this.hooks = hooks;            // { onModeToggle, onTarget, onFastTravel, onWarp, onReset, onPause, onCircularize, onAutopilot, onMap, onTargetList, onMissions }
+    this.hooks = hooks;            // { onModeToggle, onTarget, onFastTravel, onWarp, onReset, onPause, onCircularize, onAutopilot, onMap, onTargetList, onMissions, onCockpit }
     this.keys = new Set();
     this.mouseSens = 0.0022;
     this.rollRate = 1.2;           // rad/s
@@ -82,6 +82,7 @@ export class FlightControls {
       else if (k === 'b') this.hooks.onBloom?.();       // toggle bloom
       else if (k === 'c') this.hooks.onRelFx?.();       // toggle relativistic optics
       else if (k === 'u') this.hooks.onCubeAberr?.();    // toggle cubemap aberration path
+      else if (k === 'i') this.hooks.onCockpit?.();      // toggle cockpit frame overlay
       else if (k === 'p') this.hooks.onPause?.();        // pause / warp-0
       else if (k === 'k') this.hooks.onCircularize?.();  // circularize orbit
       else if (k === 'n') this.hooks.onAutopilot?.(e.shiftKey ? 'hohmann' : 'circularize'); // autopilot on/off

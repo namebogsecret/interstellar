@@ -138,3 +138,66 @@ export function cubeAutoStep(s, fps, dt) {
   }
   return { lowTime: 0, action: 'hold', reason: 'ok' };
 }
+
+// ── Cockpit detail policy ───────────────────────────────────────────────────
+//
+// Cockpit-frame LOD (js/render/cockpit.js: 'full' | 'lite' | 'off'), reusing
+// the SAME FPS window and the SAME thresholds as the cube auto-demotion above
+// (CUBE_GRACE_S / CUBE_LOW_FPS / CUBE_LOW_HOLD_S / CUBE_FLOOR_FPS /
+// CUBE_FLOOR_HOLD_S) — a second, parallel degradation mechanism is explicitly
+// out of scope (ТЗ B2 §5). Same no-promotion rationale as cubeAutoStep's
+// header (rAF is vsync-quantized; a recovered fps reading doesn't honestly
+// distinguish "machine got faster" from "just idle this half-second" — only
+// demotion is an honest signal), except cockpitDetail has three ordered
+// levels instead of cube's binary on/off, so demotion is staged: 'full' only
+// ever steps down to 'lite' at the softer LOW threshold, while the harsher
+// FLOOR threshold can drop straight to 'off' from either level (an unusable
+// frame rate does not wait for the intermediate mitigation to be tried
+// first — mirrors cubeAutoStep's own "unusable tier ignores bloomOn" branch).
+//
+// s = { level, active, sinceActivate, lowTime, floorTime, userForced, visible }
+//   level        — the level being held BEFORE this call (never mutated).
+//   active       — the cockpit toggle (I key) is on and its GPU resources are
+//                   allocated; false means there is nothing to measure or
+//                   degrade (mirrors cubeAutoStep's own `active`).
+//   visible      — page/tab visibility (`!document.hidden`), NOT the cockpit
+//                   toggle — a backgrounded tab starves rAF and produces a
+//                   dishonest low-fps reading (mirrors cubeAutoStep's own
+//                   `visible`, which is the same page-visibility signal).
+//   userForced   — pins the level to 'full' unconditionally (screenshot /
+//                   explicit-override escape hatch) and resets both timers;
+//                   the ONE way a level can move back up, and it is an
+//                   explicit external request, not a promotion policy.
+// -> { level: 'full'|'lite'|'off', lowTime, floorTime, reason }
+export function cockpitDetail(s, fps, dt) {
+  if (!s.active || !s.visible) {
+    return { level: s.level, lowTime: 0, floorTime: 0, reason: 'inactive' };
+  }
+  if (s.userForced) {
+    return { level: 'full', lowTime: 0, floorTime: 0, reason: 'forced' };
+  }
+  if (s.level === 'off') {
+    // Terminal for this activation — no auto-recovery (see header). Only a
+    // fresh activation (caller resets sinceActivate/level) or userForced above
+    // can bring it back.
+    return { level: 'off', lowTime: 0, floorTime: 0, reason: 'off' };
+  }
+  if (s.sinceActivate < CUBE_GRACE_S) {
+    return { level: s.level, lowTime: s.lowTime, floorTime: s.floorTime, reason: 'grace' };
+  }
+  if (fps < CUBE_FLOOR_FPS) {
+    const floorTime = s.floorTime + dt;
+    if (floorTime >= CUBE_FLOOR_HOLD_S) {
+      return { level: 'off', lowTime: s.lowTime, floorTime, reason: 'unusable' };
+    }
+    return { level: s.level, lowTime: s.lowTime, floorTime, reason: 'unusable' };
+  }
+  if (fps < CUBE_LOW_FPS) {
+    const lowTime = s.lowTime + dt;
+    if (lowTime >= CUBE_LOW_HOLD_S && s.level === 'full') {
+      return { level: 'lite', lowTime, floorTime: 0, reason: 'slow' };
+    }
+    return { level: s.level, lowTime, floorTime: s.floorTime, reason: 'slow' };
+  }
+  return { level: s.level, lowTime: 0, floorTime: 0, reason: 'ok' };
+}
