@@ -225,7 +225,11 @@ const controls = new FlightControls(ship, canvas, {
   onPause() { sim.paused = !sim.paused; overlay.event(t(sim.paused ? 'ev.pause' : 'ev.resume')); },
   onMap() { sim.showMap = systemMap.toggle(); },
   onTargetList() { targetList.toggle(positions, ship); },
-  onMissions() { sim.showMissions = missions.toggle(); },
+  onMissions() {
+    const isOpen = missions.toggle();
+    sim.showMissions = isOpen;
+    if (isOpen) document.exitPointerLock?.();
+  },
   onCircularize() {
     // Snap to a circular orbit around the dominant body. Ignore while landed
     // (simplest safe choice — no lift-off first).

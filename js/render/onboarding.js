@@ -1,6 +1,9 @@
-// First-30-seconds onboarding hint (C3) — a single, small, self-dismissing
-// nudge for someone who has never flown before: (1) move/look, then (2) the
-// instant fast-travel "wow" (key G / touch ⤓ jump). Mirrors js/missions.js's
+// First-30-seconds onboarding hint (C3) — a single, small nudge for someone
+// who has never flown before: (1) move/look, then (2) the instant
+// fast-travel "wow" (key G / touch ⤓ jump). There is no timer — it dismisses
+// only on action (noteThrust()/noteJump()) or explicitly via the "Пропустить"
+// span or Escape (both call skip()), and stays gone for good via localStorage.
+// Mirrors js/missions.js's
 // MissionTracker house pattern: the class owns its own DOM overlay +
 // localStorage, `t` is injected by the caller (main.js) rather than this
 // module importing ./i18n.js itself — same reasoning as missions.js, though
@@ -30,6 +33,14 @@ export class Onboarding {
       text-shadow: 0 0 6px rgba(0,0,0,0.8); pointer-events: none; display: none;
     `;
     document.body.appendChild(this.el);
+    // Escape is the one input Pointer Lock never retargets (unlike click,
+    // which the browser redirects to the locked element while flying — see
+    // js/main.js's `H` handler and TouchControls' openHelp for the same
+    // reasoning). Wiring it to skip() gives "Пропустить" a path that works
+    // even if the mouse is locked and the player never presses G.
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.el.style.display === 'block') this.skip();
+    });
   }
 
   _done(key) { try { return localStorage.getItem(key) === '1'; } catch { return false; } }
