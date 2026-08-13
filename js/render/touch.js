@@ -43,6 +43,9 @@ export class TouchControls {
     const isUI = (el) => el && el.closest &&
       el.closest('#joy, .tbtn, #startscreen, #langtoggle, #langtoggle2, button, a');
     document.addEventListener('pointerdown', (e) => {
+      // A real touch gesture — same autoplay-resume role as the mouse click/
+      // keydown gestures in js/render/controls.js (see that file's comment).
+      this.controls.hooks.onGesture?.();
       if (e.pointerType === 'mouse' || isUI(e.target)) return;
       this._lookId = e.pointerId; this._lookX = e.clientX; this._lookY = e.clientY;
     });
@@ -107,6 +110,7 @@ export class TouchControls {
     // a keydown, so this is their only path to the pilot-intent counter that
     // the autopilot watches (see the FlightControls header).
     this.controls._noteInput();
+    this.controls.hooks.onGesture?.();   // autoplay-resume gesture, see _bind() above
     const h = this.controls.hooks;
     switch (name) {
       case 'kill':   h.onKill?.(); break;

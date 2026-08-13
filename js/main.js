@@ -20,6 +20,7 @@ import { Onboarding } from './render/onboarding.js';
 import { updateHUD } from './render/hud.js';
 import { Overlay } from './render/overlay.js';
 import { TouchControls } from './render/touch.js';
+import { SoundEngine } from './audio/audio.js';
 import { t, bodyName, fmtSpeed, fmtDist, applyStatic, setLang } from './i18n.js';
 
 applyStatic();   // localize all static UI text on load
@@ -71,7 +72,14 @@ const sim = { time: 0, warp: 1, warpTarget: 1, warpCap: Infinity, warpIdx: 0,
               fps: 60, bloom: true, relFx: true, showOrbits: true, showLabels: true,
               warpLimited: false, showMap: false, showTargetList: false, showMissions: false,
               cubeAberr: false, cubeReady: false, cubeBlocked: false, cubeForced: false,
-              renderPath: 'wide', baseFov: 60, ap: null };
+              renderPath: 'wide', baseFov: 60, ap: null,
+              sound: false };   // procedural audio (js/audio/) — OFF by default, see the Z-key hook below
+
+// Procedural audio engine (js/audio/audio.js — thin imperative layer over
+// js/audio/soundPolicy.js's pure parameters). Constructing it is free: no
+// AudioContext exists until sound is actually turned on (Z key / restored
+// iss_sound=true), matching the "off = zero work" invariant (ТЗ §B3).
+const sound = new SoundEngine();
 
 // ---- autopilot wiring (js/physics/autopilot.js owns EVERY decision) --------
 // main.js only feeds observations in and applies the command out: it never
@@ -163,6 +171,7 @@ const targetList = new TargetList(BODIES, {
   onSelect(body) {
     sim.target = body;
     sim.targetIdx = BODIES.indexOf(body);   // keep Tab cycling consistent afterward
+    sound.click();
     overlay.event(t('ev.target', { name: bodyName(body.name) }));
   },
   onOpenChange(isOpen) { sim.showTargetList = isOpen; },
@@ -201,11 +210,13 @@ const controls = new FlightControls(ship, canvas, {
     ship.mode = MODES[(MODES.indexOf(ship.mode) + 1) % MODES.length];
     ship.throttle = ship.maxThrustAccel > 0 ? Math.min(1, aOld / ship.maxThrustAccel) : 0;
     saveToggle('iss_mode', ship.mode);
+    sound.click();
     overlay.event(t('ev.mode', { m: t(ship.mode === 'arcade' ? 'mode.arcade' : 'mode.realistic') }));
   },
   onTarget(dir) {
     sim.targetIdx = (sim.targetIdx + dir + BODIES.length) % BODIES.length;
     sim.target = BODIES[sim.targetIdx];
+    sound.click();
     overlay.event(t('ev.target', { name: bodyName(sim.target.name) }));
   },
   onFastTravel() {
@@ -227,10 +238,21 @@ const controls = new FlightControls(ship, canvas, {
     } else { ship.w.set(0, 0, 0); ship.v.set(0, 0, 0); overlay.event(t('ev.stopped')); }
   },
   onReset() { sim.time = 0; spawnAt('Earth'); ship.w.set(0, 0, 0); ship.v.set(0, 0, 0); overlay.event(t('ev.reset')); },
-  onOrbits() { sim.showOrbits = !sim.showOrbits; orbitGroup.visible = sim.showOrbits; saveToggle('iss_orbits', sim.showOrbits); overlay.event(t('ev.orbits', { s: t(sim.showOrbits ? 'w.on' : 'w.off') })); },
-  onLabels() { sim.showLabels = !sim.showLabels; overlay.root.style.display = sim.showLabels ? 'block' : 'none'; saveToggle('iss_labels', sim.showLabels); overlay.event(t('ev.labels', { s: t(sim.showLabels ? 'w.on' : 'w.off') })); },
-  onBloom() { sim.bloom = !sim.bloom; saveToggle('iss_glow', sim.bloom); overlay.event(t('ev.bloom', { s: t(sim.bloom ? 'w.on' : 'w.off') })); },
-  onRelFx() { sim.relFx = !sim.relFx; saveToggle('iss_relfx', sim.relFx); overlay.event(t('ev.relfx', { s: t(sim.relFx ? 'w.on' : 'w.off') })); },
+  onOrbits() { sim.showOrbits = !sim.showOrbits; orbitGroup.visible = sim.showOrbits; saveToggle('iss_orbits', sim.showOrbits); sound.click(); overlay.event(t('ev.orbits', { s: t(sim.showOrbits ? 'w.on' : 'w.off') })); },
+  onLabels() { sim.showLabels = !sim.showLabels; overlay.root.style.display = sim.showLabels ? 'block' : 'none'; saveToggle('iss_labels', sim.showLabels); sound.click(); overlay.event(t('ev.labels', { s: t(sim.showLabels ? 'w.on' : 'w.off') })); },
+  onBloom() { sim.bloom = !sim.bloom; saveToggle('iss_glow', sim.bloom); sound.click(); overlay.event(t('ev.bloom', { s: t(sim.bloom ? 'w.on' : 'w.off') })); },
+  onRelFx() { sim.relFx = !sim.relFx; saveToggle('iss_relfx', sim.relFx); sound.click(); overlay.event(t('ev.relfx', { s: t(sim.relFx ? 'w.on' : 'w.off') })); },
+  onSound() {
+    // Z key — see js/audio/audio.js's header for the lazy-context + autoplay
+    // handling. This keydown IS itself a user gesture, so turning sound ON
+    // right here can safely create/resume the AudioContext synchronously.
+    sim.sound = !sim.sound;
+    saveToggle('iss_sound', sim.sound);
+    sound.setEnabled(sim.sound);
+    if (sim.sound) sound.click();   // audible confirmation now that it's actually live
+    overlay.event(t('ev.sound', { s: t(sim.sound ? 'w.on' : 'w.off') }));
+  },
+  onGesture() { sound.resumeIfNeeded(); },   // any real user gesture — lift the browser's autoplay suspension if needed
   onCubeAberr() {
     // Only touches sim — mutating GL resources from inside a keydown handler
     // is unsafe; the next frame's reconciler (allocate/release + camera/pass
@@ -243,6 +265,7 @@ const controls = new FlightControls(ship, canvas, {
     sim.cubeBlocked = next.cubeBlocked;
     saveToggle('iss_cube', sim.cubeAberr);
     saveToggle('iss_cube_forced', sim.cubeForced);
+    sound.click();
     overlay.event(t('ev.cube', { s: t(sim.cubeAberr ? 'w.on' : 'w.off') }));
   },
   onPause() { sim.paused = !sim.paused; overlay.event(t(sim.paused ? 'ev.pause' : 'ev.resume')); },
@@ -299,6 +322,13 @@ const controls = new FlightControls(ship, canvas, {
   const cb = loadToggle('iss_cube'); if (typeof cb === 'boolean') sim.cubeAberr = cb;
   if (loadToggle('iss_cube_forced') === true) sim.cubeForced = true;
   const m = loadToggle('iss_mode');   if (m === 'arcade' || m === 'realistic') ship.mode = m;
+  // Sound restores its persisted flag too, but this runs at page load with no
+  // user gesture yet — setEnabled(true) here only lazily creates the
+  // AudioContext (which comes up 'suspended' per browser autoplay policy);
+  // onGesture (wired above) resumes it the moment a real interaction happens.
+  // Default is OFF (sim.sound already false) when nothing was ever persisted.
+  const sd = loadToggle('iss_sound'); if (typeof sd === 'boolean') sim.sound = sd;
+  sound.setEnabled(sim.sound);
   // Base RenderPass camera/pass wiring must match the restored toggles from
   // the very first frame — otherwise a restored ON value would render the
   // first frame at the wrong FOV until the loop corrects it (ГРАБЛИ #2).
@@ -344,6 +374,7 @@ function touchdown() {
   ship.touchdownSpeed = impact;
   ship.crashed = impact > 50;
   orientLanded(up);
+  sound.impact(impact, ship.crashed);   // hull-borne thud/crash — self-guarded no-op while sound is off
 
   if (ship.crashed) overlay.event(t('ev.crash', { name: bodyName(b.name), spd: fmtSpeed(impact) }));
   else overlay.event(t('ev.touchdown', { name: bodyName(b.name), spd: fmtSpeed(impact) }));
@@ -545,6 +576,11 @@ function frame(now) {
   ap.lastSimDt = simDt;
   }   // end if (!sim.paused)
 
+  // Engine hum: guarded here, not inside SoundEngine, so a disabled session
+  // (the default) does zero work in the frame loop — no call in, no
+  // AudioParam writes, no allocation (ТЗ §B3 "zero work when off").
+  if (sim.sound) sound.updateEngine(ship.throttle, ship.mode, sim.warp);
+
   if (sim.target) sim.targetDist = positions.get(sim.target.name).distanceTo(ship.pos);
 
   // floating-origin render transforms.
@@ -725,4 +761,4 @@ if (isTouch) {
   new TouchControls(controls, ship, canvas, openHelp);
 }
 
-window.SIM = { ship, sim, BODIES, positions, spawnAt, controls };
+window.SIM = { ship, sim, BODIES, positions, spawnAt, controls, sound };
