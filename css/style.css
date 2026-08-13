@@ -209,9 +209,14 @@ body.touch #help { display: none; }            /* keyboard hints are irrelevant 
   #eventlog { top: 70px; font-size: 11px; width: 60%; }
   #status { bottom: 184px; font-size: 11px; }
   #startscreen .card { font-size: 12px; padding: 20px 18px; }
-  /* #hud/#nav shrink to top:8px + ~200px tall here (mobile font/padding) —
-     220px clears their bottom edge while staying well above the touch
-     joystick/buttons (fixed to the viewport BOTTOM, so they only get closer
-     as the screen gets shorter, never as it gets narrower). */
-  #onboardhint { top: 220px; font-size: 11px; max-width: 92vw; }
+  /* #hud/#nav shrink to top:8px here (mobile font/padding), but at narrow
+     widths (#nav: 150px on a 390px screen) the `.row` label/value pairs
+     (space-between) wrap onto two lines for long labels, so the panels run
+     taller than a flat rows×line-height estimate — measured (Playwright,
+     390x844, is_mobile+has_touch) #nav.bottom ≈ 269px, #hud.bottom ≈ 253px.
+     280px clears both with an ~11px margin while staying well above the
+     touch joystick/buttons (fixed to the viewport BOTTOM, so they only get
+     closer as the screen gets shorter, never as it gets narrower) and well
+     above #status (bottom:184px ⇒ top ≈ 615px on 844px-tall viewports). */
+  #onboardhint { top: 280px; font-size: 11px; max-width: 92vw; }
 }
