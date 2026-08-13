@@ -9,7 +9,7 @@ import { G0 } from './physics/constants.js';
 import { createRenderer, createScene, createCamera, createBloom, handleResize,
          applyRenderPath, ensureCubeResources, releaseCubeResources } from './render/scene.js';
 import { updateRelativisticPass } from './render/relativisticPass.js';
-import { cubeAutoStep } from './render/renderPolicy.js';
+import { cubeAutoStep, cubeToggleState, cubeResourceAction } from './render/renderPolicy.js';
 import { BodyView } from './render/bodies.js';
 import { FlightControls } from './render/controls.js';
 import { SystemMap } from './render/map.js';
@@ -201,15 +201,14 @@ const controls = new FlightControls(ship, canvas, {
     // Only touches sim — mutating GL resources from inside a keydown handler
     // is unsafe; the next frame's reconciler (allocate/release + camera/pass
     // wiring) picks the new sim.cubeAberr value up and does the actual GPU work.
-    sim.cubeAberr = !sim.cubeAberr;
+    // Edge-derived transition (js/render/renderPolicy.js::cubeToggleState) —
+    // see that module's header for why the OFF edge resets cubeForced too.
+    const next = cubeToggleState({ cubeAberr: sim.cubeAberr, cubeForced: sim.cubeForced, cubeBlocked: sim.cubeBlocked });
+    sim.cubeAberr = next.cubeAberr;
+    sim.cubeForced = next.cubeForced;
+    sim.cubeBlocked = next.cubeBlocked;
     saveToggle('iss_cube', sim.cubeAberr);
-    if (sim.cubeAberr) {
-      // Re-enabling overrides any previous auto-demotion: give the user's
-      // explicit choice priority over the auto-demoter's earlier verdict.
-      sim.cubeForced = true;
-      sim.cubeBlocked = false;
-      saveToggle('iss_cube_forced', true);
-    }
+    saveToggle('iss_cube_forced', sim.cubeForced);
     overlay.event(t('ev.cube', { s: t(sim.cubeAberr ? 'w.on' : 'w.off') }));
   },
   onPause() { sim.paused = !sim.paused; overlay.event(t(sim.paused ? 'ev.pause' : 'ev.resume')); },
@@ -321,9 +320,13 @@ function frame(now) {
 
   // FRESH dominant body + altitude from the current position (not last step's),
   // so the warp cap reacts the same frame and never overshoots by a step.
-  const refB = dominantBody(ship.pos, BODIES, positions);
+  // `let` (not `const`): the numeric sub-step loop below re-derives this pair
+  // every sub-step at warp (A3 kept the pair atomic but froze it for up to
+  // ~33h of model time inside one frame — see ГРАБЛИ.md; the loop now
+  // refreshes refB/refVel together each sub-step instead).
+  let refB = dominantBody(ship.pos, BODIES, positions);
   const refAlt = refB ? positions.get(refB.name).distanceTo(ship.pos) - refB.radius : Infinity;
-  const refVel = refB ? bodyVelocity(refB, sim.time, byName, _refVel) : null;
+  let refVel = refB ? bodyVelocity(refB, sim.time, byName, _refVel) : null;
 
   // When paused, freeze all physics + the sim clock. Rendering, HUD and input
   // (controls.update above) still run below. No dt accumulator to reset — `last`
@@ -399,6 +402,16 @@ function frame(now) {
     for (let i = 0; i < nSub; i++) {
       sim.time += subDt;
       computePositions(sim.time);
+      // Refresh the (refB, refVel) pair FROM SCRATCH every sub-step, from the
+      // ship's current position (still the previous sub-step's — ship.step
+      // below is what advances it) — exactly like the pre-A3 per-substep
+      // dominantBody() call, except refVel is derived from the SAME refB in
+      // the same breath so the pair can never disagree (A3's atomicity is
+      // kept; only the once-per-frame freeze is undone). _refVel is written
+      // here and consumed immediately by ship.step (which copies it) with no
+      // other reader in between — safe per ГРАБЛИ.md #1.
+      refB = dominantBody(ship.pos, BODIES, positions);
+      refVel = refB ? bodyVelocity(refB, sim.time, byName, _refVel) : null;
       ship.step(subDt, BODIES, positions, tdir || _zero, refVel, refB);   // refVel READ-ONLY (step copies); refB pairs atomically with refVel
       if (ship.refBody && ship.altitude <= 0) { touchdown(); break; }
     }
@@ -432,8 +445,30 @@ function frame(now) {
   // relativistic pass is live (ГРАБЛИ #2 — see the structural grep in the
   // gate). Only the pass matching the resolved path gets its uniforms
   // updated each frame.
-  if (sim.cubeAberr && sim.relFx && !sim.cubeReady) sim.cubeReady = ensureCubeResources(composer);
-  if (!sim.cubeAberr && sim.cubeReady) { releaseCubeResources(composer); sim.cubeReady = false; cubeActiveTime = 0; }
+  // Decision itself is a pure function (js/render/renderPolicy.js::
+  // cubeResourceAction) — it, not this call site, is what gates release on
+  // relFx too (turning relativistic optics off while the cube toggle stays
+  // on must not leak the render target) and caps retries via cubeBlocked.
+  switch (cubeResourceAction({ cubeAberr: sim.cubeAberr, relFx: sim.relFx, cubeReady: sim.cubeReady, cubeBlocked: sim.cubeBlocked })) {
+    case 'ensure':
+      sim.cubeReady = ensureCubeResources(composer);
+      if (!sim.cubeReady) {
+        // Allocation failed: latch cubeBlocked (cubeResourceAction never
+        // yields 'ensure' again while it's set — this IS the retry cap),
+        // turn the toggle back off, and tell the user via the existing
+        // auto-demotion event key (no new i18n key — i18n.js is out of scope).
+        sim.cubeAberr = false;
+        sim.cubeBlocked = true;
+        saveToggle('iss_cube', false);
+        overlay.event(t('ev.cubeAuto'));
+      }
+      break;
+    case 'release':
+      releaseCubeResources(composer);
+      sim.cubeReady = false;
+      cubeActiveTime = 0;
+      break;
+  }
   const path = applyRenderPath(composer, camera, { relFx: sim.relFx, cubeWanted: sim.cubeAberr, cubeReady: sim.cubeReady });
   sim.renderPath = path;
   sim.baseFov = composer.renderPass.camera.fov;   // test seam: a live truth table of the crop invariant

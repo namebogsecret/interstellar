@@ -194,9 +194,10 @@ export function orbitFromState(mu, rVec, vVec) {
   const e = Math.sqrt(ex * ex + ey * ey + ez * ez);
 
   // Semi-latus rectum p = h²/mu (h = specific angular momentum |r x v|).
-  // rPeri/rApo are built from p instead of a(1∓e) so they stay finite right
-  // through e==1 exactly (parabola), where a blows up to ±Infinity and
-  // a*(1-e) degenerates to Inf*0 = NaN.
+  // rPeri is built from p instead of a(1-e) so it stays finite right through
+  // e==1 exactly (parabola), where a blows up to ±Infinity and a*(1-e)
+  // degenerates to Inf*0 = NaN. Its denominator (1+e) never sees cancellation
+  // (e ranges over [0, ~something], so 1+e stays near/above 1).
   _h.crossVectors(rVec, vVec);
   const h = _h.length();
   const p = (h * h) / mu;                         // 0 for the radial-fall case (h≈0)
@@ -210,7 +211,16 @@ export function orbitFromState(mu, rVec, vVec) {
     // and hits its zero-crossing exactly at escape speed.
     return { a, e, rPeri, rApo: Infinity, bound: false };
   }
-  return { a, e, rPeri, rApo: p / (1 - e), bound: true };
+  // rApo is deliberately built from a*(1+e), NOT p/(1-e). On a near-radial
+  // BOUND trajectory both h and (1-e) independently underflow toward 0 as
+  // two separately-rounded quantities (h from r×v, e from the eccentricity
+  // vector) -- p/(1-e) then races 0/0 -> NaN or Infinity right where the
+  // orbit is most degenerate (see ГРАБЛИ.md / tests/orbits.radial.test.mjs).
+  // `a` has no such issue: eps<0 here (we're in the bound branch) makes
+  // a = -mu/(2*eps) a single well-conditioned finite quantity, so a*(1+e)
+  // stays finite and correct all the way to the fully-radial limit e->1,
+  // rApo->2a (a degenerate but physically real ellipse).
+  return { a, e, rPeri, rApo: a * (1 + e), bound: true };
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

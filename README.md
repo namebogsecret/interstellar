@@ -42,6 +42,7 @@ on launch (re-open anytime with **H**) written for people who've never flown.
 | **M** | toggle fuel model (arcade ↔ realistic) |
 | **O / L / B** | toggle orbit lines / labels / bloom glow |
 | **C** | toggle relativistic optics (aberration + Doppler) |
+| **U** | toggle cubemap aberration (full-sphere relativistic view, no frame-edge clamp) — off by default, costs ~6–7× the frame's geometry; auto-disables itself on a slow machine |
 | **⌫ Backspace** | reset to Earth |
 
 **On a phone / tablet** (touch screens) an on-screen layout appears automatically:

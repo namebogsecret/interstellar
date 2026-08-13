@@ -39,6 +39,51 @@ export function resolveRenderPath({ relFx, cubeWanted, cubeReady }) {
            relEnabled, cubeEnabled, useSourceCamera: relEnabled };
 }
 
+// ── Cube toggle wiring ───────────────────────────────────────────────────────
+//
+// s = { cubeAberr, cubeForced, cubeBlocked } -> a FRESH state object (s is not
+// mutated) reflecting the effect of one `u` keypress. The rest of the fields
+// are derived from the EDGE direction of the flip, not carried over blindly:
+//
+//   OFF -> ON : cubeAberr=true,  cubeForced=true,  cubeBlocked=false
+//     An explicit user choice overrides any earlier auto-demotion verdict
+//     (cubeBlocked) and re-arms the "user has spoken" latch that keeps
+//     cubeAutoStep's demoter from immediately fighting the user.
+//   ON  -> OFF: cubeAberr=false, cubeForced=false, cubeBlocked unchanged
+//     "The user has spoken" is a statement about the ON state only -- once
+//     the user turns the toggle back off there is nothing left to force, and
+//     leaving cubeForced=true here is exactly the bug that permanently
+//     disabled auto-demotion after a single touch of the toggle (it never
+//     got reset on this edge in the pre-fix code).
+export function cubeToggleState(s) {
+  const cubeAberr = !s.cubeAberr;
+  if (cubeAberr) return { cubeAberr: true, cubeForced: true, cubeBlocked: false };
+  return { cubeAberr: false, cubeForced: false, cubeBlocked: s.cubeBlocked };
+}
+
+// s = { cubeAberr, relFx, cubeReady, cubeBlocked } -> 'ensure' | 'release' | 'none'
+// Decides whether this frame's reconciler should allocate/free the cube
+// path's ~50MB GPU footprint (render target + camera).
+//   'ensure'  <=> cubeAberr && relFx && !cubeReady && !cubeBlocked
+//     Both toggles (cube AND the relativistic-optics master switch) must
+//     want the cube path, resources aren't already up, and the one-shot
+//     failure latch (cubeBlocked) hasn't tripped -- that latch is what caps
+//     the retry count: once allocation has failed and cubeBlocked is set,
+//     'ensure' never fires again for this session.
+//   'release' <=> cubeReady && !(cubeAberr && relFx)
+//     Mirrors resolveRenderPath's own cube gate (cubeWanted && relFx):
+//     resources are freed the instant either toggle stops wanting the cube
+//     path, not just when cubeAberr itself goes false -- turning relFx off
+//     while cubeAberr stays on must not leak the render target.
+//   else 'none'. The two branches are mutually exclusive by construction
+//   (ensure requires !cubeReady, release requires cubeReady).
+export function cubeResourceAction(s) {
+  const { cubeAberr, relFx, cubeReady, cubeBlocked } = s;
+  if (cubeAberr && relFx && !cubeReady && !cubeBlocked) return 'ensure';
+  if (cubeReady && !(cubeAberr && relFx)) return 'release';
+  return 'none';
+}
+
 // ── Cubemap auto-demotion policy ────────────────────────────────────────────
 //
 // There is deliberately no auto-PROMOTION policy, and there will not be one:
