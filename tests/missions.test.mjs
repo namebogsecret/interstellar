@@ -7,11 +7,13 @@
 //            eccentricity e < 0.05 (MARS_MAX_E).
 //   Moon   — ship.landed === true && ship.landedBody === 'Moon' && !ship.crashed.
 //   Jupiter— stateful reducer. SOI-ENTRY: refBody first becomes Jupiter while the
-//            ship's relative orbit about Jupiter is hyperbolic (e >= 1) with
-//            periapsis < 20 * Jupiter.radius (JUPITER_RPERI_RADII) -> arms,
-//            recording heliocentric |ship.v| as entrySpeed. SOI-EXIT: refBody
-//            stops being Jupiter while armed -> compares CURRENT heliocentric
-//            speed to entrySpeed; |Δspeed| >= 1000 m/s (JUPITER_MIN_DELTAV)
+//            ship's relative orbit about Jupiter is unbound (specific orbital
+//            energy >= 0 — the canonical bound/unbound classifier, not e >= 1)
+//            with periapsis strictly between Jupiter.radius and 20 * Jupiter.radius
+//            (JUPITER_RPERI_RADII) -> arms, recording heliocentric |ship.v| as
+//            entrySpeed. SOI-EXIT: refBody stops being Jupiter while armed ->
+//            compares CURRENT heliocentric speed to entrySpeed;
+//            |Δspeed| >= 1000 m/s (JUPITER_MIN_DELTAV)
 //            completes the mission. The runtime record resets to
 //            {armed:false, entrySpeed:null} on every exit, whether or not the
 //            delta-v gate was met.
