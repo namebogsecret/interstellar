@@ -70,6 +70,7 @@ export const R_TOL = 0.05;               // apsis must match the target radius w
 export const WAIT_LEAD_FRAMES = 4;       // warp cap keeps ≥ this many frames before ignition
 export const LATE_FRAC = 0.02;           // ignite up to 2% of a period LATE rather than wait a lap
 export const BURN_TIMEOUT_MIN = 120;     // s
+export const BURN_TIMEOUT_FRAMES = 8;    // ...and never fewer than this many caller frames
 export const MANOEUVRE_TIMEOUT_MAX = 1e6;// s
 export const MAX_WARP_CAP = 1e9;
 
@@ -233,17 +234,38 @@ export function estimateManoeuvreDv(goal, obs) {
   return Number.isFinite(total) ? total : Infinity;
 }
 
-// Working thrust level for this frame (ТЗ §3.2). Three limiters; the terminal
-// cone aTap is what makes overshoot STRUCTURALLY impossible at ANY dt:
-//   applied Δv = throttle·aAvail·dt ≤ a·dt ≤ dvRem·dt/max(TAPER_T,dt) ≤ dvRem.
-function _throttleFor(dvRemaining, aAvail, dt, trim) {
-  if (!(aAvail > 0) || !Number.isFinite(aAvail)) return 0;
+// Working acceleration for a frame of length dtEff (ТЗ §3.2). Three limiters;
+// the terminal cone aTap is what bounds the Δv one frame can apply:
+//   applied Δv = a·dtEff ≤ dvRem·dtEff/max(TAPER_T,dtEff) ≤ dvRem.
+function _workingAccel(dvRemaining, aAvail, dtEff, trim) {
   const tTarget = trim ? T_TRIM_TARGET : T_BURN_TARGET;
   const aCeil = Math.min(aAvail, trim ? A_TRIM_MAX : A_MAX);
   const aNom = clamp(dvRemaining / tTarget, trim ? 0 : A_MIN, aCeil);
-  const aTap = dvRemaining / Math.max(TAPER_T, dt);
-  const a = Math.min(aNom, aTap);
-  const th = clamp(a / aAvail, 0, 1);
+  const aTap = dvRemaining / Math.max(TAPER_T, dtEff);
+  return Math.min(aNom, aTap);
+}
+
+// Throttle for this frame.
+//
+// THE ENGINE DOES NOT LIGHT UNTIL A MODEL STEP HAS BEEN MEASURED (dt > 0).
+// §3.5 hands the FIRST step dt = 0 ("nothing integrated yet"), and the fatal
+// reading of that is "the next step is infinitely short", which lets the taper
+// authorise full nominal thrust for a frame of unknown length. A caller then
+// integrating a coarse frame (60 s under warp) applies aNom·60 — measured at
+// 7.4 km/s of Δv on a 989 m/s manoeuvre, which throws the ship onto an escape
+// trajectory the loop then spends the whole manoeuvre deadline chasing. It also
+// made invariant (vi) vacuous rather than protective: it is stated against the
+// dt passed IN (0), not the dt about to be integrated.
+// Unknown frame length ⇒ spend one frame measuring instead of guessing. Costs
+// ~16 ms in the real sim; makes the bound hold for any caller.
+//
+// dtEff = max(dt, dtReal): the previous MODEL step, but never less than the real
+// frame it was measured over (a caller reporting a long real frame is believed).
+function _throttleFor(dvRemaining, aAvail, dt, dtReal, trim) {
+  if (!(aAvail > 0) || !Number.isFinite(aAvail)) return 0;
+  if (!(dt > 0)) return 0;
+  const dtEff = Math.max(dt, Number.isFinite(dtReal) && dtReal > 0 ? dtReal : 0);
+  const th = clamp(_workingAccel(dvRemaining, aAvail, dtEff, trim) / aAvail, 0, 1);
   return Number.isFinite(th) ? th : 0;
 }
 
@@ -347,8 +369,11 @@ export function engageAutopilot(goal, obs) {
     base.burnEst0 = _burnEstimate(dvRem, safeObs.maxThrustAccel);
     base.info = _info(dvRem, Infinity, el.r, el.e, el.a);
   } else {
+    // WAIT from the very first frame publishes a REAL countdown: the HUD must
+    // never show "waiting · ∞" for a manoeuvre whose ignition time is known.
     base.phase = PHASES.WAIT;
-    base.info = _info(0, Infinity, g.targetRadius, el.r ? el.e : 0, el.a);
+    const plan = _ignitionPlan(base, safeObs, el, base.orbitPeriod0);
+    base.info = _info(0, plan.fail ? Infinity : plan.tIgn, g.targetRadius, el.e, el.a);
   }
   return base;
 }
@@ -367,10 +392,12 @@ function _deadline(goal, obs, el, period0) {
   return Math.min(MANOEUVRE_TIMEOUT_MAX, mt);
 }
 
-// Rough burn duration for centring the ignition and for BURN_TIMEOUT.
+// Rough burn duration for centring the ignition and for BURN_TIMEOUT. Uses the
+// NOMINAL schedule (a short frame, so TAPER_T governs) — this is a plan, not a
+// command, so the measure-a-step-first rule of _throttleFor does not apply.
 function _burnEstimate(dv, aAvail) {
-  const th = _throttleFor(dv, aAvail, 0, false);
-  const a = th * aAvail;
+  if (!(aAvail > 0) || !Number.isFinite(aAvail)) return 0;
+  const a = _workingAccel(dv, aAvail, 0, false);
   if (!(a > 0) || !Number.isFinite(a)) return 0;
   const t = dv / a;
   return Number.isFinite(t) ? t : 0;
@@ -382,6 +409,95 @@ function _blankObs() {
     maxThrustAccel: 0, dvBudget: 0, beta: 0, landed: false, atmoDensity: 0,
     dominance: 0, refBodyName: null, inputSeq: 0, dtReal: 1 / 60,
   };
+}
+
+// ── ignition planning (the ONE place that answers "which apsis, and when") ───
+// Shared by engageAutopilot and every entry into WAIT, so a WAIT command can
+// never publish a countdown nobody computed. `st` supplies .leg and .goal.
+// Returns { tToApsis, rApsis, burnEst, tIgn, noApsis, fail } — `fail` set only
+// when the circularization apsis cannot be reconciled with the target radius.
+function _ignitionPlan(st, o, el, T) {
+  const rdotv = o.rVec.dot(o.vVec);
+  const h = _apH.crossVectors(o.rVec, o.vVec).length();
+  const eps = 0.5 * o.vVec.lengthSq() - o.mu / el.r;
+  let tToApsis, rApsis;
+
+  if (st.leg === 'transfer') {
+    // Burn at the apsis OPPOSITE the target: raising ⇒ periapsis, lowering ⇒ apoapsis.
+    const raising = st.goal.targetRadius > el.r;
+    rApsis = raising ? el.rPeri : el.rApo;
+    tToApsis = raising ? timeToPeriapsis(o.mu, el.r, rdotv, h, eps)
+                       : timeToApoapsis(o.mu, el.r, rdotv, h, eps);
+  } else {
+    // Circularization leg: the apsis whose radius is closest to the target. If
+    // NEITHER lands within R_TOL the transfer came out wrong — say so rather
+    // than wait forever.
+    const dPeri = Math.abs(el.rPeri - st.goal.targetRadius) / st.goal.targetRadius;
+    const dApo = Math.abs(el.rApo - st.goal.targetRadius) / st.goal.targetRadius;
+    if (!(Math.min(dPeri, dApo) <= R_TOL)) return { fail: REASONS.NO_CONVERGENCE };
+    const usePeri = dPeri <= dApo;
+    rApsis = usePeri ? el.rPeri : el.rApo;
+    tToApsis = usePeri ? timeToPeriapsis(o.mu, el.r, rdotv, h, eps)
+                       : timeToApoapsis(o.mu, el.r, rdotv, h, eps);
+  }
+
+  // Burn length at that apsis, so ignition is CENTRED on it (halves the
+  // end-of-burn timing error compared with starting AT the apsis).
+  const vApsis = Number.isFinite(rApsis) && rApsis > 0 && Number.isFinite(el.a) && el.a !== 0
+    ? _speedAt(o.mu, rApsis, el.a) : NaN;
+  const dvLeg = Number.isFinite(vApsis)
+    ? (st.leg === 'transfer' ? _legDv(o.mu, rApsis, st.goal.targetRadius, vApsis)
+                             : Math.abs(Math.sqrt(o.mu / rApsis) - vApsis))
+    : 0;
+  const burnEst = _burnEstimate(dvLeg, o.maxThrustAccel);
+
+  // A (near-)circular orbit has no distinguishable apsis (timeToPeriapsis
+  // returns Infinity) — but EVERY point is one, so the countdown is zero.
+  const noApsis = !Number.isFinite(tToApsis);
+  const tIgn = noApsis ? 0 : Math.max(0, tToApsis - 0.5 * burnEst);
+  return { tToApsis, rApsis, burnEst, tIgn, noApsis, fail: null };
+}
+
+// One step of WAIT. Reached from the WAIT phase AND from the transfer-leg
+// cutoff, so both go through the same countdown — the leg switch used to hand
+// back a WAIT command with a placeholder tToIgnition of Infinity, i.e. a number
+// nobody had computed, straight into the HUD.
+function _waitStep(st, o, el, T, dtS, outDir, prevTIgn) {
+  const plan = _ignitionPlan(st, o, el, T);
+  if (plan.fail) {
+    const bad = _terminal(st, PHASES.FAILED, plan.fail,
+                          _info(0, Infinity, st.goal.targetRadius, el.e, el.a));
+    return _cmd(bad, 0, null, Infinity, 'ev.apFailed');
+  }
+  const sinceApsis = (!plan.noApsis && T > 0) ? T - plan.tToApsis : Infinity;
+  // Ignition is a WINDOW, never an equality on a discrete grid; and an apsis
+  // just missed is burnt LATE rather than waited out for a whole extra lap.
+  const ignite = plan.noApsis || plan.tIgn <= Math.max(0, dtS) ||
+                 (T > 0 && sinceApsis <= LATE_FRAC * T);
+  if (ignite) {
+    st.phase = PHASES.BURN;
+    st.phaseElapsed = 0;
+    st.burnEst0 = plan.burnEst;
+    st.lastTIgn = Infinity;
+    const targetRadius = st.leg === 'transfer' ? st.goal.targetRadius : el.r;
+    const dvNow = _deltaV(o, st.leg, targetRadius);
+    st.info = _info(dvNow, Infinity, targetRadius, el.e, el.a);
+    const th = _throttleFor(dvNow, o.maxThrustAccel, dtS, o.dtReal, false);
+    const ok = dvNow > 0 && th > 0 && _dirFromDv(outDir);
+    return _cmd(st, ok ? th : 0, ok ? outDir : null, 1, null);
+  }
+
+  // Still waiting. Cap the effective warp so at least WAIT_LEAD_FRAMES frames
+  // remain before ignition — the analytic coast still runs (throttle is 0) and
+  // advances EXACTLY along the conic, so waiting costs no accuracy.
+  const frame = Math.max(fin(o.dtReal, 1 / 60), 1 / 240);
+  const maxWarp = clamp(plan.tIgn / (WAIT_LEAD_FRAMES * frame), 1, MAX_WARP_CAP);
+  // A lap went by without igniting (frame freeze, or the warp cap lost the
+  // race): announce it rather than silently orbiting again.
+  const lapped = Number.isFinite(prevTIgn) && plan.tIgn > prevTIgn + 0.5 * (T || Infinity);
+  st.lastTIgn = plan.tIgn;
+  st.info = _info(0, plan.tIgn, st.goal.targetRadius, el.e, el.a);
+  return _cmd(st, 0, null, maxWarp, lapped ? 'ev.apEngaged' : null);
 }
 
 const TERMINAL = { DONE: 1, CANCELLED: 1, REFUSED: 1, FAILED: 1 };
@@ -471,9 +587,22 @@ export function autopilotStep(state, obs, dt, outDir) {
   }
   // Timeouts. BURN_TIMEOUT is per-burn; MANOEUVRE_TIMEOUT bounds the whole job
   // (12 orbits, or 1e6 s when the starting orbit was unbound).
-  const burnTimeout = Math.max(BURN_TIMEOUT_MIN, 8 * state.burnEst0);
+  //
+  // SUCCESS IS JUDGED BEFORE THE CLOCK. A step that has already met its cutoff
+  // is progress, not stagnation — reading the clock first lets a manoeuvre that
+  // has ACHIEVED its target be reported FAILED(timeout) (measured at dt = 60 s:
+  // e = 9.8e-5, a = 8.0099e6, target reached in 3 frames, killed on frame 3
+  // because 3 × 60 s > the 120 s burn deadline). A timeout must mean "this is
+  // not converging", never "it converged and I looked at my watch first".
+  //
+  // The deadline also can never be shorter than a handful of the CALLER's own
+  // frames: at a 60 s frame a 120 s deadline resolves to two samples, so it
+  // would be measuring the caller's granularity rather than non-convergence.
+  const eps0 = burning ? dvEps(o.mu, el.r) : 0;
+  const cutoffReached = burning && dvRemaining <= eps0;
+  const burnTimeout = Math.max(BURN_TIMEOUT_MIN, 8 * state.burnEst0, BURN_TIMEOUT_FRAMES * dtS);
   const manoeuvreTimeout = fin(state.manoeuvreTimeout, MANOEUVRE_TIMEOUT_MAX);
-  if ((burning && phaseElapsed > burnTimeout) || elapsed > manoeuvreTimeout) {
+  if (!cutoffReached && ((burning && phaseElapsed > burnTimeout) || elapsed > manoeuvreTimeout)) {
     const st = _terminal({ ...state, elapsed, phaseElapsed }, PHASES.FAILED, REASONS.TIMEOUT,
                          _info(0, Infinity, state.info.targetRadius, el.e, el.a));
     return _cmd(st, 0, null, Infinity, 'ev.apFailed');
@@ -481,92 +610,23 @@ export function autopilotStep(state, obs, dt, outDir) {
 
   const next = { ...state, elapsed, phaseElapsed };
 
-  // ── WAIT: hold thrust, cap the warp, ignite in a WINDOW (never an equality
-  // on a discrete grid), and never skip a lap in silence. ───────────────────
+  // ── WAIT ────────────────────────────────────────────────────────────────
   if (state.phase === PHASES.WAIT) {
-    // Which apsis, and how big will the burn there be?
-    let tToApsis, rApsis;
-    if (state.leg === 'transfer') {
-      const raising = state.goal.targetRadius > el.r;
-      rApsis = raising ? el.rPeri : el.rApo;
-      tToApsis = raising
-        ? timeToPeriapsis(o.mu, el.r, o.rVec.dot(o.vVec), _apH.crossVectors(o.rVec, o.vVec).length(), 0.5 * o.vVec.lengthSq() - o.mu / el.r)
-        : timeToApoapsis(o.mu, el.r, o.rVec.dot(o.vVec), _apH.crossVectors(o.rVec, o.vVec).length(), 0.5 * o.vVec.lengthSq() - o.mu / el.r);
-    } else {
-      // Circularization leg of a Hohmann: burn at whichever apsis is closest to
-      // the target radius. If NEITHER lands within R_TOL the transfer came out
-      // wrong — say so instead of waiting forever.
-      const dPeri = Math.abs(el.rPeri - state.goal.targetRadius) / state.goal.targetRadius;
-      const dApo = Math.abs(el.rApo - state.goal.targetRadius) / state.goal.targetRadius;
-      if (!(Math.min(dPeri, dApo) <= R_TOL)) {
-        const st = _terminal(next, PHASES.FAILED, REASONS.NO_CONVERGENCE,
-                             _info(0, Infinity, state.goal.targetRadius, el.e, el.a));
-        return _cmd(st, 0, null, Infinity, 'ev.apFailed');
-      }
-      const rdotv = o.rVec.dot(o.vVec);
-      const h = _apH.crossVectors(o.rVec, o.vVec).length();
-      const eps = 0.5 * o.vVec.lengthSq() - o.mu / el.r;
-      const usePeri = dPeri <= dApo;
-      rApsis = usePeri ? el.rPeri : el.rApo;
-      tToApsis = usePeri ? timeToPeriapsis(o.mu, el.r, rdotv, h, eps)
-                         : timeToApoapsis(o.mu, el.r, rdotv, h, eps);
-    }
-
-    // Burn duration estimate at that apsis, so ignition is CENTRED on it (halves
-    // the end-of-burn timing error compared with starting AT the apsis).
-    const vApsis = Number.isFinite(rApsis) && rApsis > 0 && Number.isFinite(el.a) && el.a !== 0
-      ? _speedAt(o.mu, rApsis, el.a) : NaN;
-    const dvLeg = Number.isFinite(vApsis)
-      ? (state.leg === 'transfer'
-          ? _legDv(o.mu, rApsis, state.goal.targetRadius, vApsis)
-          : Math.abs(Math.sqrt(o.mu / rApsis) - vApsis))
-      : 0;
-    const burnEst = _burnEstimate(dvLeg, o.maxThrustAccel);
-
-    // A (near-)circular orbit has no distinguishable apsis — timeToPeriapsis
-    // returns Infinity there — but EVERY point is an apsis, so ignite now.
-    const noApsis = !Number.isFinite(tToApsis);
-    const tIgn = noApsis ? 0 : tToApsis - 0.5 * burnEst;
-    const sinceApsis = (!noApsis && T > 0) ? T - tToApsis : Infinity;   // time since it passed
-
-    const ignite = noApsis || tIgn <= Math.max(0, dtS) || (T > 0 && sinceApsis <= LATE_FRAC * T);
-    if (ignite) {
-      next.phase = PHASES.BURN;
-      next.phaseElapsed = 0;
-      next.burnEst0 = burnEst;
-      next.lastTIgn = Infinity;
-      const dvNow = _deltaV(o, state.leg, targetRadius);
-      next.info = _info(dvNow, Infinity, state.leg === 'transfer' ? state.goal.targetRadius : el.r, el.e, el.a);
-      const th = _throttleFor(dvNow, o.maxThrustAccel, dtS, false);
-      const ok = dvNow > 0 && _dirFromDv(outDir);
-      return _cmd(next, ok ? th : 0, ok ? outDir : null, 1, null);
-    }
-
-    // Still waiting. Cap the effective warp so at least WAIT_LEAD_FRAMES frames
-    // remain before ignition — the analytic coast still runs (throttle is 0) and
-    // advances EXACTLY along the conic, so waiting costs no accuracy.
-    const frame = Math.max(fin(o.dtReal, 1 / 60), 1 / 240);
-    const maxWarp = clamp(tIgn / (WAIT_LEAD_FRAMES * frame), 1, MAX_WARP_CAP);
-    // A lap went by without ignition (a frame freeze, or the warp cap lost the
-    // race): announce it rather than silently orbiting again.
-    const lapped = Number.isFinite(state.lastTIgn) && tIgn > state.lastTIgn + 0.5 * (T || Infinity);
-    next.lastTIgn = tIgn;
-    next.info = _info(0, tIgn, state.goal.targetRadius, el.e, el.a);
-    return _cmd(next, 0, null, maxWarp, lapped ? 'ev.apEngaged' : null);
+    return _waitStep(next, o, el, T, dtS, outDir, state.lastTIgn);
   }
 
   // ── BURN / TRIM: one law, two thrust budgets ─────────────────────────────
-  const eps = dvEps(o.mu, el.r);
-  if (dvRemaining <= eps) {
+  if (cutoffReached) {
     // Cutoff reached — decided by the ACHIEVED STATE, not by a Δv counter.
     if (state.leg === 'transfer') {
-      // First leg done: coast to the far apsis, then circularize there.
+      // First leg done: coast to the far apsis, then circularize there. Routed
+      // through the SAME _waitStep as any other entry into WAIT so the published
+      // countdown is a computed number, not a placeholder.
       next.leg = 'circularize';
       next.phase = PHASES.WAIT;
       next.phaseElapsed = 0;
       next.lastTIgn = Infinity;
-      next.info = _info(0, Infinity, state.goal.targetRadius, el.e, el.a);
-      return _cmd(next, 0, null, 1, null);
+      return _waitStep(next, o, el, T, dtS, outDir, Infinity);
     }
     if (el.e <= E_TOL && el.bound === true) {
       next.phase = PHASES.DONE;
@@ -589,8 +649,8 @@ export function autopilotStep(state, obs, dt, outDir) {
   }
 
   const trim = state.phase === PHASES.TRIM;
-  const th = _throttleFor(dvRemaining, o.maxThrustAccel, dtS, trim);
-  const ok = _dirFromDv(outDir);
+  const th = _throttleFor(dvRemaining, o.maxThrustAccel, dtS, o.dtReal, trim);
+  const ok = th > 0 && _dirFromDv(outDir);
   next.info = _info(dvRemaining, Infinity, state.leg === 'transfer' ? state.goal.targetRadius : el.r, el.e, el.a);
   return _cmd(next, ok ? th : 0, ok ? outDir : null, 1, null);
 }
