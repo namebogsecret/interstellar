@@ -81,11 +81,13 @@ export function checkMoonLanding(ctx) {
 //   1. SOI ENTRY — the frame Jupiter FIRST becomes the ship's dominant
 //      gravity source (ship.refBody.name === 'Jupiter') while the ship's
 //      relative orbit about Jupiter (r = ship.pos - jupiterPos, v = ship.v -
-//      jupiterVel, mu = Jupiter.GM) is HYPERBOLIC (e >= 1) with a periapsis
-//      below JUPITER_RPERI_RADII (20) × Jupiter.radius — i.e. a genuinely
-//      close hyperbolic pass, not a grazing/near-parabolic SOI graze. At that
-//      frame we record the ship's HELIOCENTRIC speed (|ship.v|, since ship.v
-//      IS heliocentric coordinate velocity — see physics/ship.js) into the
+//      jupiterVel, mu = Jupiter.GM) is UNBOUND (specific orbital energy ≥ 0
+//      — the canonical classifier), with periapsis strictly between the
+//      planet's surface and JUPITER_RPERI_RADII (20) × Jupiter.radius — i.e.
+//      a genuinely close hyperbolic pass, not a grazing/near-parabolic SOI
+//      graze and not a radial plunge into the planet. At that frame we
+//      record the ship's HELIOCENTRIC speed (|ship.v|, since ship.v IS
+//      heliocentric coordinate velocity — see physics/ship.js) into the
 //      per-mission runtime record ("armed").
 //   2. SOI EXIT — the first frame Jupiter STOPS being dominant after being
 //      armed, we compare the CURRENT heliocentric speed against the recorded
@@ -124,9 +126,20 @@ export function stepJupiterFlyby(ctx, state) {
     _jupV.subVectors(ship.v, _jupVel);
     if (!(_jupR.lengthSq() > 1)) return { state, completed: false };   // degenerate
 
-    const { e, rPeri } = orbitFromState(jupiter.GM, _jupR, _jupV);
-    const closeHyperbolic = Number.isFinite(e) && e >= 1 &&
-      Number.isFinite(rPeri) && rPeri < JUPITER_RPERI_RADII * jupiter.radius;
+    // UNBOUND (specific orbital energy >= 0) — the canonical bound/unbound
+    // classifier of this repo (ГРАБЛИ 2026-08-14, physics/orbits; CLAUDE.md
+    // invariant). NOT `e >= 1`: for a two-body conic the two are the same
+    // statement, but `e` comes from a second, independently-rounded
+    // expression and can land a few ULPs on either side of 1 at exact escape
+    // energy, while eps hits its zero exactly.
+    // rPeri > radius: a FLYBY has to miss the planet — a radial plunge
+    // (h≈0 ⇒ p=0 ⇒ rPeri=0) is not a gravity assist, even though it
+    // satisfies "rPeri < 20 R_J".
+    const { bound, rPeri } = orbitFromState(jupiter.GM, _jupR, _jupV);
+    const closeHyperbolic = bound === false &&
+      Number.isFinite(rPeri) &&
+      rPeri > jupiter.radius &&
+      rPeri < JUPITER_RPERI_RADII * jupiter.radius;
     if (closeHyperbolic) {
       return { state: { armed: true, entrySpeed: ship.v.length() }, completed: false };
     }
