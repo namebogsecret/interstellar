@@ -10,7 +10,9 @@ import { G0 } from './physics/constants.js';
 import { createRenderer, createScene, createCamera, createBloom, handleResize,
          applyRenderPath, ensureCubeResources, releaseCubeResources } from './render/scene.js';
 import { updateRelativisticPass } from './render/relativisticPass.js';
-import { cubeAutoStep, cubeToggleState, cubeResourceAction } from './render/renderPolicy.js';
+import { cubeAutoStep, cubeToggleState, cubeResourceAction, cockpitDetail } from './render/renderPolicy.js';
+import { createCockpitState, ensureCockpitResources, releaseCockpitResources,
+         layoutCockpit, setCockpitLevel, drawCockpitOverlay } from './render/cockpit.js';
 import { BodyView } from './render/bodies.js';
 import { FlightControls } from './render/controls.js';
 import { SystemMap } from './render/map.js';
@@ -35,6 +37,14 @@ const loader = new THREE.TextureLoader();
 const { scene, sunLight } = createScene(loader, 'assets/textures/2k_stars_milky_way.jpg');
 const { composer, bloom } = createBloom(renderer, scene, camera);
 handleResize(renderer, camera, composer);
+
+// Cockpit frame overlay (js/render/cockpit.js) — a separate Scene drawn AFTER
+// the composer, so it is exempt from the relativistic-aberration passes and
+// the floating-origin scheme by construction (see that module's header).
+// Registered AFTER handleResize above so its own resize listener observes
+// camera.aspect already updated for the new window size, not the stale value.
+const cockpit = createCockpitState();
+window.addEventListener('resize', () => { if (cockpit.ready) layoutCockpit(cockpit, camera); });
 
 // Body views.
 const views = new Map();
@@ -71,6 +81,7 @@ const sim = { time: 0, warp: 1, warpTarget: 1, warpCap: Infinity, warpIdx: 0,
               fps: 60, bloom: true, relFx: true, showOrbits: true, showLabels: true,
               warpLimited: false, showMap: false, showTargetList: false, showMissions: false,
               cubeAberr: false, cubeReady: false, cubeBlocked: false, cubeForced: false,
+              cockpitOn: false, cockpitReady: false, cockpitLevel: 'full',
               renderPath: 'wide', baseFov: 60, ap: null };
 
 // ---- autopilot wiring (js/physics/autopilot.js owns EVERY decision) --------
@@ -245,6 +256,14 @@ const controls = new FlightControls(ship, canvas, {
     saveToggle('iss_cube_forced', sim.cubeForced);
     overlay.event(t('ev.cube', { s: t(sim.cubeAberr ? 'w.on' : 'w.off') }));
   },
+  onCockpit() {
+    // Only touches sim — the frame loop's reconciler (below) allocates/frees
+    // the cockpit's GPU resources and applies the level, same discipline as
+    // onCubeAberr above (mutating GL state from inside a keydown is unsafe).
+    sim.cockpitOn = !sim.cockpitOn;
+    saveToggle('iss_cockpit', sim.cockpitOn);
+    overlay.event(t('ev.cockpit', { s: t(sim.cockpitOn ? 'w.on' : 'w.off') }));
+  },
   onPause() { sim.paused = !sim.paused; overlay.event(t(sim.paused ? 'ev.pause' : 'ev.resume')); },
   onMap() { sim.showMap = systemMap.toggle(); },
   onTargetList() { targetList.toggle(positions, ship); },
@@ -298,6 +317,7 @@ const controls = new FlightControls(ship, canvas, {
   const r = loadToggle('iss_relfx');  if (typeof r === 'boolean') sim.relFx = r;   // applied via applyRenderPath in loop
   const cb = loadToggle('iss_cube'); if (typeof cb === 'boolean') sim.cubeAberr = cb;
   if (loadToggle('iss_cube_forced') === true) sim.cubeForced = true;
+  const co = loadToggle('iss_cockpit'); if (typeof co === 'boolean') sim.cockpitOn = co;   // applied via ensureCockpitResources in the frame loop
   const m = loadToggle('iss_mode');   if (m === 'arcade' || m === 'realistic') ship.mode = m;
   // Base RenderPass camera/pass wiring must match the restored toggles from
   // the very first frame — otherwise a restored ON value would render the
@@ -378,6 +398,7 @@ function updateStatusAndEvents() {
 let last = performance.now();
 let fpsAccum = 0, fpsFrames = 0, lowFpsTime = 0;
 let cubeActiveTime = 0, cubeLowTime = 0;
+let cockpitSinceActivate = 0, cockpitLowTime = 0, cockpitFloorTime = 0;
 
 function frame(now) {
   let realDt = (now - last) / 1000; last = now;
@@ -595,6 +616,26 @@ function frame(now) {
       cubeActiveTime = 0;
       break;
   }
+  // Cockpit resource lifecycle — same lazy allocate/free discipline as the
+  // cube path above, gated purely on the I-toggle (no dependence on relFx/
+  // cubeReady: the cockpit is a separate overlay, not a relativistic-optics
+  // path). A fresh 'ensure' resets the LOD timers/level so a just-reopened
+  // cockpit always starts at 'full' with a clean grace window, never
+  // inheriting a stale demotion from a previous session.
+  if (sim.cockpitOn && !sim.cockpitReady) {
+    sim.cockpitReady = ensureCockpitResources(cockpit, camera);
+    if (sim.cockpitReady) {
+      sim.cockpitLevel = 'full';
+      cockpitSinceActivate = 0; cockpitLowTime = 0; cockpitFloorTime = 0;
+    } else {
+      sim.cockpitOn = false;   // allocation failed (see ensureCockpitResources) — don't spin retrying every frame
+      saveToggle('iss_cockpit', false);
+    }
+  } else if (!sim.cockpitOn && sim.cockpitReady) {
+    releaseCockpitResources(cockpit);
+    sim.cockpitReady = false;
+  }
+
   const path = applyRenderPath(composer, camera, { relFx: sim.relFx, cubeWanted: sim.cubeAberr, cubeReady: sim.cubeReady });
   sim.renderPath = path;
   sim.baseFov = composer.renderPass.camera.fov;   // test seam: a live truth table of the crop invariant
@@ -612,6 +653,9 @@ function frame(now) {
   // so the relativistic effect survives even when bloom is auto-disabled.
   bloom.enabled = sim.bloom;
   composer.render();
+  // Drawn AFTER composer.render(), never through it — see js/render/cockpit.js
+  // header for why (exempt from the aberration passes + floating origin).
+  if (sim.cockpitReady && sim.cockpitLevel !== 'off') drawCockpitOverlay(renderer, cockpit, camera);
 
   // Overlays.
   const tgtRel = sim.target ? _rel2.subVectors(positions.get(sim.target.name), ship.pos) : null;
@@ -664,6 +708,24 @@ function frame(now) {
       sim.cubeAberr = false; sim.cubeBlocked = true;
       saveToggle('iss_cube', false);
       overlay.event(t('ev.cubeAuto'));
+    }
+
+    // Cockpit LOD (js/render/renderPolicy.js::cockpitDetail) — same window,
+    // same thresholds as the cube step above; see that function's header for
+    // why 'active' is the I-toggle and 'visible' is page/tab visibility, not
+    // the toggle again.
+    if (sim.cockpitReady) {
+      cockpitSinceActivate += 0.5;
+      const cp = cockpitDetail({
+        level: sim.cockpitLevel, active: sim.cockpitOn, sinceActivate: cockpitSinceActivate,
+        lowTime: cockpitLowTime, floorTime: cockpitFloorTime, userForced: false, visible: !document.hidden,
+      }, sim.fps, 0.5);
+      cockpitLowTime = cp.lowTime; cockpitFloorTime = cp.floorTime;
+      if (cp.level !== sim.cockpitLevel) {
+        sim.cockpitLevel = cp.level;
+        setCockpitLevel(cockpit, sim.cockpitLevel);
+        if (sim.cockpitLevel === 'off') overlay.event(t('ev.cockpitAuto'));
+      }
     }
   }
 
