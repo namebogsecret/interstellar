@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { G0 } from '../physics/constants.js';
 import { orbitFromState } from '../physics/orbits.js';
+// Only the phase→key MAPPING (the single such table in the project) — no
+// physics, no decisions: the HUD renders whatever the core already decided.
+import { autopilotHudKey } from '../physics/autopilot.js';
 import { t, bodyName, fmtDist, fmtSpeed, fmtTime } from '../i18n.js';
 
 const $ = (id) => document.getElementById(id);
@@ -66,6 +69,16 @@ export function updateHUD(ship, sim, nav = {}) {
   } else {
     setText('periapsis', '—'); setText('apoapsis', '—');
   }
+
+  // --- Autopilot status line. ---
+  // fmtTime(Infinity) never reaches the display: autopilotHudKey returns a key
+  // WITHOUT {t} for every phase except WAIT, so the substitution simply doesn't
+  // happen (and only WAIT has a finite tToIgnition).
+  setText('autopilot', sim.ap ? t(autopilotHudKey(sim.ap), {
+    t: fmtTime(sim.ap.info.tToIgnition), dv: fmtSpeed(sim.ap.info.dvRemaining),
+    r: fmtDist(sim.ap.info.targetRadius), e: sim.ap.info.e.toFixed(4),
+    n: sim.ap.trimCount, why: t('ap.reason.' + sim.ap.reason),
+  }) : '—');
 
   // --- Target: name, distance, honest ETA, closing speed, closest approach. ---
   $('target').textContent = nav.targetBody ? bodyName(nav.targetBody.name) : '—';

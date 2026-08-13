@@ -103,6 +103,10 @@ export class TouchControls {
   }
 
   _action(name) {
+    // Reporter #3 (the last one): tap-buttons reach the hooks directly, without
+    // a keydown, so this is their only path to the pilot-intent counter that
+    // the autopilot watches (see the FlightControls header).
+    this.controls._noteInput();
     const h = this.controls.hooks;
     switch (name) {
       case 'kill':   h.onKill?.(); break;
