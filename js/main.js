@@ -3,6 +3,7 @@ import { BODIES, byName } from './data/bodies.js';
 import { absolutePosition, orbitEllipse, spinAxis, spinAngle, circularizeVelocity, bodyVelocity, groundVelocity } from './physics/orbits.js';
 import { dominantBody } from './physics/gravity.js';
 import { tryAnalyticCoast } from './physics/cabotage.js';
+import { engageAutopilot, autopilotStep, buildObs } from './physics/autopilot.js';
 import { Ship, MODES } from './physics/ship.js';
 import { momentumFromV } from './physics/relativity.js';
 import { G0 } from './physics/constants.js';
@@ -19,7 +20,7 @@ import { Onboarding } from './render/onboarding.js';
 import { updateHUD } from './render/hud.js';
 import { Overlay } from './render/overlay.js';
 import { TouchControls } from './render/touch.js';
-import { t, bodyName, fmtSpeed, applyStatic, setLang } from './i18n.js';
+import { t, bodyName, fmtSpeed, fmtDist, applyStatic, setLang } from './i18n.js';
 
 applyStatic();   // localize all static UI text on load
 
@@ -70,7 +71,29 @@ const sim = { time: 0, warp: 1, warpTarget: 1, warpCap: Infinity, warpIdx: 0,
               fps: 60, bloom: true, relFx: true, showOrbits: true, showLabels: true,
               warpLimited: false, showMap: false, showTargetList: false, showMissions: false,
               cubeAberr: false, cubeReady: false, cubeBlocked: false, cubeForced: false,
-              renderPath: 'wide', baseFov: 60 };
+              renderPath: 'wide', baseFov: 60, ap: null };
+
+// ---- autopilot wiring (js/physics/autopilot.js owns EVERY decision) --------
+// main.js only feeds observations in and applies the command out: it never
+// decides "time to burn", "refuse" or "cancelled" — see the module header and
+// the structural gate (no PHASES./REASONS. outside physics/autopilot.js).
+//   state      — the autopilot's own state, or null when it isn't running.
+//   applied    — the LAST throttle value the autopilot wrote, so a terminal
+//                transition can drop its own throttle without stealing a fresh
+//                manual one (§3.4: main.js at throttle>0 with no direction
+//                thrusts along the nose, i.e. a stray throttle = free
+//                acceleration). NaN = "never wrote one".
+//   lastSimDt  — model seconds ACTUALLY integrated last frame; the autopilot
+//                runs before effWarp is known, and effWarp depends on the
+//                throttle the autopilot itself returns, so the causal loop is
+//                cut honestly by feeding it the previous frame's dt (§3.5).
+//   whatKey    — presentation only: which goal label the HUD event should use.
+const ap = { state: null, applied: NaN, lastSimDt: 0, whatKey: 'ap.goal.circular', whatR: '' };
+// Slew rate for pointing the nose along the autopilot's thrust vector. PURE
+// COSMETICS — thrust is applied along cmd.thrustDir regardless of attitude
+// (exactly like a manual A/D side-thrust), so the turn can never gate or spoil
+// a burn. Set to 0 to disable.
+const AP_SLEW_RATE = 0.5;   // rad/s
 
 // A failed ~50MB cube-render-target allocation is silent on many GPUs (no
 // guaranteed exception — see ensureCubeResources); a lost WebGL context is
@@ -244,6 +267,26 @@ const controls = new FlightControls(ship, canvas, {
     ship.v.copy(bVel).add(relV); momentumFromV(ship.v, ship.w);
     overlay.event(t('ev.circularize', { name: bodyName(b.name) }));
   },
+  onAutopilot(kind) {
+    // A SECOND press is already a cancel: the keydown bumped controls.inputSeq,
+    // so the autopilot's own override check turns it off on the next step (one
+    // counter, one condition — main.js does not compare anything).
+    if (ap.state) return;
+    const b = ship.refBody || dominantBody(ship.pos, BODIES, positions);
+    // targetRadius is an OBSERVATION ("what radius does the selected target
+    // orbit this body at"), not a verdict: an unusable target yields NaN and
+    // the refusal (target-unreachable) is the core's call, not ours.
+    const targetRadius = kind === 'hohmann'
+      ? ((sim.target && b && sim.target.parent === b.name) ? sim.target.a : NaN)
+      : undefined;
+    const obs = buildObs(ship, BODIES, positions, byName, sim.time, controls.inputSeq, 1 / 60);
+    ap.state = engageAutopilot({ kind, bodyName: b ? b.name : null, targetRadius }, obs);
+    ap.applied = NaN;
+    ap.lastSimDt = 0;
+    ap.whatR = Number.isFinite(targetRadius) ? fmtDist(targetRadius) : '—';
+    ap.whatKey = kind === 'hohmann' ? 'ap.goal.hohmann' : 'ap.goal.circular';
+    sim.ap = ap.state;
+  },
 });
 
 // Apply any persisted O/L/B/C/M toggles from a previous session, reflecting
@@ -359,6 +402,38 @@ function frame(now) {
   // (controls.update above) still run below. No dt accumulator to reset — `last`
   // is advanced every frame regardless, so unpausing never sees a dt spike.
   if (!sim.paused) {
+  // --- autopilot ----------------------------------------------------------
+  // Fixed position in the frame (ТЗ §2.4): AFTER controls.update (otherwise a
+  // cancel arrives a frame late) and BEFORE the warp calculation below (otherwise
+  // cmd.maxWarp arrives a frame late and a warped frame steps straight over
+  // the ignition point). Both halves of that ordering are load-bearing.
+  let tdirAuto = null, apMaxWarp = Infinity;
+  if (ap.state) {
+    // The observation is valid ONLY until the next buildObs (module scratch,
+    // ГРАБЛИ #1) — consumed here, in this frame, and never stored.
+    const obs = buildObs(ship, BODIES, positions, byName, sim.time, controls.inputSeq, realDt);
+    const cmd = autopilotStep(ap.state, obs, ap.lastSimDt, _apDir);
+    sim.ap = cmd.state;                       // HUD reads this (terminal lines stay visible)
+    if (cmd.event) {
+      overlay.event(t(cmd.event, {
+        what: t(ap.whatKey, { r: ap.whatR }), name: bodyName(cmd.state.goal?.bodyName),
+        why: t('ap.reason.' + cmd.state.reason),
+      }));
+    }
+    if (cmd.done) {
+      // Terminal: drop the throttle the autopilot itself left running, but only
+      // if nobody has touched it since (§3.4 — one rule, not two conditions).
+      if (ship.throttle === ap.applied) ship.throttle = 0;
+      ap.state = null;                        // stop stepping; sim.ap keeps the last line
+    } else {
+      ship.throttle = cmd.throttle;
+      ap.applied = cmd.throttle;
+      ap.state = cmd.state;
+      tdirAuto = cmd.thrustDir;
+      apMaxWarp = cmd.maxWarp;
+    }
+  }
+
   // --- proximity time-warp cap -------------------------------------------
   // The closer / faster you approach a body, the lower the safe time speed.
   // You keep full control UP TO that ceiling, and it climbs back as you leave.
@@ -374,17 +449,37 @@ function frame(now) {
       cap = Math.min(cap, Math.max(1, (0.1 * tImpact) / (1 / 60)));
     }
   }
+  // apMaxWarp enters the SAME min as the proximity cap — one expression, one
+  // min, monotone: the autopilot's ceiling and the proximity ceiling cannot
+  // contradict each other the way two independent assignments would (ГРАБЛИ #2).
+  // During a burn the existing throttle>0 rule already pins warp to 1; the
+  // autopilot's own maxWarp=1 agrees with it rather than competing.
   let effWarp;
   if (ship.landed) effWarp = target;                 // pinned to a surface: warp freely
   else if (ship.throttle > 0) effWarp = 1;           // real-time during an engine burn
-  else effWarp = Math.max(1, Math.min(target, cap));
+  else effWarp = Math.max(1, Math.min(target, cap, apMaxWarp));
   sim.warp = effWarp;
   sim.warpCap = cap;
   sim.warpLimited = effWarp < target - 1e-6;
   const simDt = realDt * effWarp;
 
-  let tdir = thrustDir;
+  // The autopilot outranks the stick ONLY while it is non-terminal (a terminal
+  // command reports thrustDir null, so control falls straight back to the pilot).
+  let tdir = tdirAuto ?? thrustDir;
   if (!tdir && ship.throttle > 0) tdir = ship.forward(_fwd);
+
+  // Cosmetic attitude slew toward the burn vector (AP_SLEW_RATE = 0 disables).
+  // The camera rides ship.quat, so this is what makes the autopilot's work
+  // VISIBLE. It never gates thrust — see the ap block's header.
+  if (tdirAuto && AP_SLEW_RATE > 0) {
+    _apUp.set(0, 1, 0);
+    if (Math.abs(tdirAuto.dot(_apUp)) > 0.999) _apUp.set(1, 0, 0);
+    // Same convention as spawnAt/orientLanded: lookAt(eye, target) puts the
+    // ship's forward (−Z) along target−eye, so eye=origin gives forward=tdirAuto.
+    _apMat.lookAt(_zero, tdirAuto, _apUp);
+    _apQuat.setFromRotationMatrix(_apMat);
+    ship.quat.rotateTowards(_apQuat, AP_SLEW_RATE * realDt);
+  }
 
   if (ship.landed) {
     // Sit on the surface and ride along with the planet's ROTATION (body-fixed
@@ -444,6 +539,10 @@ function frame(now) {
     }
     computePositions(sim.time);
   }
+  // Model time ACTUALLY integrated this frame — fed to the autopilot next frame
+  // as its dt (§3.5). Written after every branch (landed / analytic / numeric)
+  // so the value can never describe a step that did not happen.
+  ap.lastSimDt = simDt;
   }   // end if (!sim.paused)
 
   if (sim.target) sim.targetDist = positions.get(sim.target.name).distanceTo(ship.pos);
@@ -583,6 +682,13 @@ const _qInv = new THREE.Quaternion();
 const _axis = new THREE.Vector3();
 const _landOff = new THREE.Vector3();
 const _landVel = new THREE.Vector3();
+// Autopilot scratch — DEDICATED (ГРАБЛИ #1). _apDir is the thrust direction the
+// core writes into and the frame reads back as tdir; it must never be _dir/_tmp/
+// _rel, which the landed block and the floating-origin loop clobber later on.
+const _apDir = new THREE.Vector3();
+const _apUp = new THREE.Vector3();
+const _apMat = new THREE.Matrix4();
+const _apQuat = new THREE.Quaternion();
 // HUD nav scratch (item 2) — dedicated, never reused by the hot loop.
 const _navRefPos = new THREE.Vector3();
 const _navRefVel = new THREE.Vector3();

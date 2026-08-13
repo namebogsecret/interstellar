@@ -19,20 +19,39 @@ export function powerToThrottle(n, ship) {
 // First unthrottled thrust-key press should be gentle (~1g), not full power.
 function defaultThrottle(ship) { return powerToThrottle(1, ship); }
 
+// Keys that update() itself acts on — i.e. the ones that mean "the pilot is
+// flying the ship right now". Held state (not just the keydown edge) is what
+// makes them worth re-reporting every frame; see _noteInput below.
+const FLIGHT_KEYS = ['w', 's', 'a', 'd', 'r', 'f', ' ', 'q', 'e', '[', ']'];
+
 // First-person flight controls. Mouse (pointer-lock) yaws/pitches the ship;
 // keys translate thrust along ship axes, roll, set throttle, time-warp, etc.
+//
+// ⚠️ PILOT-INTENT COUNTER: every channel of pilot input MUST pass through
+// this._noteInput(). It is the single signal the autopilot reads to know it has
+// been overridden (js/physics/autopilot.js compares obs.inputSeq with the value
+// frozen at engage — N reporters, ONE counter, ONE condition, ONE reader). A new
+// input channel (gamepad, another touch button…) that skips it would silently
+// leave the pilot fighting the autopilot. The structural gate counts the
+// reporters (tests/structure.test.mjs).
 export class FlightControls {
   constructor(ship, domElement, hooks = {}) {
     this.ship = ship;
     this.dom = domElement;
-    this.hooks = hooks;            // { onModeToggle, onTarget, onFastTravel, onWarp, onReset, onPause, onCircularize, onMap, onTargetList, onMissions }
+    this.hooks = hooks;            // { onModeToggle, onTarget, onFastTravel, onWarp, onReset, onPause, onCircularize, onAutopilot, onMap, onTargetList, onMissions }
     this.keys = new Set();
     this.mouseSens = 0.0022;
     this.rollRate = 1.2;           // rad/s
     this.pitchYawFromMouse = new THREE.Vector2();
+    // Monotonic counter of PILOT INTENT. Rises on ANY input. Never decreases,
+    // never resets. The only writer is _noteInput().
+    this.inputSeq = 0;
 
     this._bind();
   }
+
+  // The ONLY writer of inputSeq (see the class header).
+  _noteInput() { this.inputSeq++; }
 
   _bind() {
     this.dom.addEventListener('click', () => this.dom.requestPointerLock());
@@ -43,6 +62,12 @@ export class FlightControls {
     });
 
     window.addEventListener('keydown', (e) => {
+      // Reporter #1: EVERY key, counted BEFORE dispatch. Order matters — the
+      // autopilot hook below reads the already-incremented value as its arming
+      // baseline, so engaging cannot be cancelled by its own keypress. That is
+      // sturdier than exempting the 'n' key (an exemption a future key would
+      // silently need too).
+      this._noteInput();
       const k = e.key.toLowerCase();
       this.keys.add(k);
       // Discrete actions.
@@ -59,6 +84,7 @@ export class FlightControls {
       else if (k === 'u') this.hooks.onCubeAberr?.();    // toggle cubemap aberration path
       else if (k === 'p') this.hooks.onPause?.();        // pause / warp-0
       else if (k === 'k') this.hooks.onCircularize?.();  // circularize orbit
+      else if (k === 'n') this.hooks.onAutopilot?.(e.shiftKey ? 'hohmann' : 'circularize'); // autopilot on/off
       else if (k === 'v') this.hooks.onMap?.();          // toggle top-down system map
       else if (k === 't') this.hooks.onTargetList?.();   // toggle proximity-sorted target list
       else if (k === 'j') this.hooks.onMissions?.();     // toggle student missions panel
@@ -77,6 +103,13 @@ export class FlightControls {
     const pitch = this.pitchYawFromMouse.x;
     const yaw = this.pitchYawFromMouse.y;
     this.pitchYawFromMouse.set(0, 0);
+    // Reporter #2: a HELD flight key or any look input is intent every frame,
+    // not just on its keydown edge (mouse/drag has no key event at all).
+    // Deliberately NOT `this.keys.size > 0`: a discrete action key stays in the
+    // set until keyup, so the broad form would make pressing N cancel the very
+    // autopilot it just engaged, one frame later. Everything discrete is
+    // already covered by reporter #1 on its keydown.
+    if (pitch || yaw || FLIGHT_KEYS.some((k) => this.keys.has(k))) this._noteInput();
     if (pitch || yaw) {
       const qx = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitch);
       const qy = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);

@@ -30,6 +30,7 @@ const DICT = {
       <div class="cline"><b>A · D</b> — slide left / right. &nbsp; <b>R · F</b> — slide up / down.</div>
       <div class="cline"><b>1…9</b> — set engine power, log scale (1≈1 g … 9≈1000 g in arcade; realistic clamps to the ship's thrust limit ≈3–15 g, <b>0</b> = engine off). &nbsp; <b>[ · ]</b> — trim power down / up. &nbsp; <b>Q · E</b> — tilt (roll).</div>
       <div class="cline"><b>X</b> — <b>STOP</b>: cancel all drifting and stop spinning (your "brake"). &nbsp; <b>K</b> — circularize your orbit around the nearest body.</div>
+      <div class="cline"><b>N</b> — <b>autopilot</b>: fly the engine for you into a round orbit. &nbsp; <b>Shift+N</b> — transfer to your target's orbit radius. Any control you touch switches it off; press <b>N</b> again to cancel.</div>
       <div class="cline"><b>Tab</b> — pick somewhere to go (Sun / planet / moon). &nbsp; <b>G</b> — instantly jump next to it.</div>
       <div class="cline"><b>.</b> / <b>,</b> — speed up / slow down time (to watch planets move or cross huge distances). &nbsp; <b>P</b> — pause.</div>
       <div class="cline"><b>M</b> — switch unlimited ↔ realistic limited fuel. &nbsp; <b>⌫ Backspace</b> — start over at Earth.</div>`,
@@ -74,6 +75,34 @@ const DICT = {
     'ev.bloomAuto': 'Glow turned off (slow frame-rate) — press B to force on',
     'ev.enterAtmo': 'Entering {name}’s atmosphere', 'ev.leftAtmo': 'Left {name}’s atmosphere',
     'w.on': 'on', 'w.off': 'off',
+    // --- autopilot (N / Shift+N) — keep this block contiguous in BOTH dicts ---
+    'hud.autopilot': 'AUTOPILOT',
+    'ap.phase.idle': 'standing by',
+    'ap.phase.wait': 'waiting for burn point · {t}',
+    'ap.phase.burn': 'BURNING · Δv {dv} to go',
+    'ap.phase.trim': 'trimming ({n}/3)',
+    'ap.phase.done': 'DONE · e {e}',
+    'ap.phase.cancelled': 'cancelled by pilot',
+    'ap.phase.refused': 'can’t do it: {why}',
+    'ap.phase.failed': 'gave up: {why}',
+    'ap.reason.landed': 'on the surface',
+    'ap.reason.no-body': 'no body to orbit',
+    'ap.reason.relativistic': 'relativistic speed (β > 1%)',
+    'ap.reason.atmosphere': 'inside the atmosphere',
+    'ap.reason.perturbed': 'two bodies pull too evenly',
+    'ap.reason.unbound': 'orbit is not closed',
+    'ap.reason.target-unreachable': 'target radius unreachable',
+    'ap.reason.no-fuel': 'not enough Δv',
+    'ap.reason.ref-changed': 'reference body changed',
+    'ap.reason.no-convergence': 'cannot hit the tolerance',
+    'ap.reason.timeout': 'took too long',
+    'ap.goal.circular': 'circularize',
+    'ap.goal.hohmann': 'transfer to {r}',
+    'ev.apEngaged': 'Autopilot: {what} around {name}',
+    'ev.apDone': 'Autopilot: orbit reached',
+    'ev.apCancelled': 'Autopilot off — you have control',
+    'ev.apRefused': 'Autopilot won’t take it: {why}',
+    'ev.apFailed': 'Autopilot gave up: {why}',
     // --- system map (V) ---
     'map.title': 'SYSTEM MAP', 'map.target': 'Target: {name}',
     'map.legend': 'Yellow ring = target · triangle = ship · arrow = velocity',
@@ -101,7 +130,7 @@ const DICT = {
     'onboard.hint2.touch': 'Tap <b>⤓ jump</b> for an instant close-up',
     'onboard.skip': 'skip',
     'help.html': `<b>CONTROLS</b> &nbsp;·&nbsp; <span>X</span> = STOP (brake) &nbsp;·&nbsp; <span>H</span> full help
-      <div class="keys"><span>Mouse</span> look &nbsp; <span>W/S</span> forward/back &nbsp; <span>A D R F</span> slide &nbsp; <span>Q/E</span> roll &nbsp; <span>1–9/0</span> power (log, 1≈1g…9≈1000g arcade; realistic ≈3–15g) &nbsp; <span>[ ]</span> trim &nbsp; <span>Tab</span> target &nbsp; <span>G</span> jump &nbsp; <span>,/.</span> time &nbsp; <span>P</span> pause &nbsp; <span>K</span> circularize &nbsp; <span>M</span> fuel &nbsp; <span>⌫</span> reset &nbsp; <span>O/L/B/C</span> orbits/labels/glow/relativity &nbsp; <span>U</span> cube aberration (~6-7× frame cost — may auto-disable on a slow machine)</div>`,
+      <div class="keys"><span>Mouse</span> look &nbsp; <span>W/S</span> forward/back &nbsp; <span>A D R F</span> slide &nbsp; <span>Q/E</span> roll &nbsp; <span>1–9/0</span> power (log, 1≈1g…9≈1000g arcade; realistic ≈3–15g) &nbsp; <span>[ ]</span> trim &nbsp; <span>Tab</span> target &nbsp; <span>G</span> jump &nbsp; <span>,/.</span> time &nbsp; <span>P</span> pause &nbsp; <span>K</span> circularize &nbsp; <span>N</span> autopilot (Shift+N transfer) &nbsp; <span>M</span> fuel &nbsp; <span>⌫</span> reset &nbsp; <span>O/L/B/C</span> orbits/labels/glow/relativity &nbsp; <span>U</span> cube aberration (~6-7× frame cost — may auto-disable on a slow machine)</div>`,
     // units
     'u.m': ' m', 'u.km': ' km', 'u.AU': ' AU', 'u.ly': ' ly', 'u.ms': ' m/s', 'u.kms': ' km/s',
     'u.s': ' s', 'u.min': ' min', 'u.h': ' h', 'u.d': ' d', 'u.yr': ' yr',
@@ -122,6 +151,7 @@ const DICT = {
       <div class="cline"><b>A · D</b> — сместиться влево / вправо. &nbsp; <b>R · F</b> — вверх / вниз.</div>
       <div class="cline"><b>1…9</b> — мощность двигателя, логарифмическая шкала (1≈1 g … 9≈1000 g в аркаде; в реализме упирается в предел тяги корабля ≈3–15 g, <b>0</b> = выключен). &nbsp; <b>[ · ]</b> — подстройка мощности вниз / вверх. &nbsp; <b>Q · E</b> — крен (наклон вбок).</div>
       <div class="cline"><b>X</b> — <b>СТОП</b>: погасить весь дрейф и вращение (это ваш «тормоз»). &nbsp; <b>K</b> — выйти на круговую орбиту вокруг ближайшего тела.</div>
+      <div class="cline"><b>N</b> — <b>автопилот</b>: сам отработает двигателем и выведет на круговую орбиту. &nbsp; <b>Shift+N</b> — перелёт на радиус орбиты вашей цели. Любое ваше касание управления его выключает; повторное <b>N</b> — отмена.</div>
       <div class="cline"><b>Tab</b> — выбрать, куда лететь (Солнце / планета / луна). &nbsp; <b>G</b> — мгновенно перенестись к ней.</div>
       <div class="cline"><b>.</b> / <b>,</b> — ускорить / замедлить время (смотреть, как движутся планеты, или покрывать огромные расстояния). &nbsp; <b>P</b> — пауза.</div>
       <div class="cline"><b>M</b> — переключить бесконечное ↔ реальное ограниченное топливо. &nbsp; <b>⌫ Backspace</b> — начать заново у Земли.</div>`,
@@ -164,6 +194,34 @@ const DICT = {
     'ev.bloomAuto': 'Свечение выключено (низкий FPS) — нажмите B, чтобы вернуть',
     'ev.enterAtmo': 'Вход в атмосферу: {name}', 'ev.leftAtmo': 'Покинули атмосферу: {name}',
     'w.on': 'вкл.', 'w.off': 'выкл.',
+    // --- автопилот (N / Shift+N) — блок держать смежным в ОБОИХ словарях ---
+    'hud.autopilot': 'АВТОПИЛОТ',
+    'ap.phase.idle': 'ожидание команды',
+    'ap.phase.wait': 'ожидание точки жжения · {t}',
+    'ap.phase.burn': 'ЖЖЕНИЕ · осталось Δv {dv}',
+    'ap.phase.trim': 'коррекция ({n}/3)',
+    'ap.phase.done': 'ГОТОВО · e {e}',
+    'ap.phase.cancelled': 'отменён пилотом',
+    'ap.phase.refused': 'не берусь: {why}',
+    'ap.phase.failed': 'прервано: {why}',
+    'ap.reason.landed': 'корабль на поверхности',
+    'ap.reason.no-body': 'нет опорного тела',
+    'ap.reason.relativistic': 'релятивистская скорость (β > 1%)',
+    'ap.reason.atmosphere': 'внутри атмосферы',
+    'ap.reason.perturbed': 'слишком сильное влияние второго тела',
+    'ap.reason.unbound': 'орбита незамкнута',
+    'ap.reason.target-unreachable': 'целевой радиус недостижим',
+    'ap.reason.no-fuel': 'не хватает Δv',
+    'ap.reason.ref-changed': 'сменилось опорное тело',
+    'ap.reason.no-convergence': 'не сходится в допуск',
+    'ap.reason.timeout': 'слишком долго',
+    'ap.goal.circular': 'круговая орбита',
+    'ap.goal.hohmann': 'переход к {r}',
+    'ev.apEngaged': 'Автопилот: {what} у {name}',
+    'ev.apDone': 'Автопилот: орбита достигнута',
+    'ev.apCancelled': 'Автопилот выключен — управление у вас',
+    'ev.apRefused': 'Автопилот не берётся: {why}',
+    'ev.apFailed': 'Автопилот прервал: {why}',
     // --- карта системы (V) ---
     'map.title': 'КАРТА СИСТЕМЫ', 'map.target': 'Цель: {name}',
     'map.legend': 'Жёлтое кольцо = цель · треугольник = корабль · стрелка = скорость',
@@ -191,7 +249,7 @@ const DICT = {
     'onboard.hint2.touch': 'Нажмите <b>⤓ jump</b> — мгновенное сближение',
     'onboard.skip': 'пропустить',
     'help.html': `<b>УПРАВЛЕНИЕ</b> &nbsp;·&nbsp; <span>X</span> = СТОП (тормоз) &nbsp;·&nbsp; <span>H</span> вся справка
-      <div class="keys"><span>Мышь</span> обзор &nbsp; <span>W/S</span> вперёд/назад &nbsp; <span>A D R F</span> сдвиг &nbsp; <span>Q/E</span> крен &nbsp; <span>1–9/0</span> мощность (лог., 1≈1g…9≈1000g аркада; реализм ≈3–15g) &nbsp; <span>[ ]</span> подстройка &nbsp; <span>Tab</span> цель &nbsp; <span>G</span> прыжок &nbsp; <span>,/.</span> время &nbsp; <span>P</span> пауза &nbsp; <span>K</span> круговая орбита &nbsp; <span>M</span> топливо &nbsp; <span>⌫</span> сброс &nbsp; <span>O/L/B/C</span> орбиты/подписи/свечение/релятивизм &nbsp; <span>U</span> кубическая аберрация (~6-7× цена кадра — может выключиться сама на слабой машине)</div>`,
+      <div class="keys"><span>Мышь</span> обзор &nbsp; <span>W/S</span> вперёд/назад &nbsp; <span>A D R F</span> сдвиг &nbsp; <span>Q/E</span> крен &nbsp; <span>1–9/0</span> мощность (лог., 1≈1g…9≈1000g аркада; реализм ≈3–15g) &nbsp; <span>[ ]</span> подстройка &nbsp; <span>Tab</span> цель &nbsp; <span>G</span> прыжок &nbsp; <span>,/.</span> время &nbsp; <span>P</span> пауза &nbsp; <span>K</span> круговая орбита &nbsp; <span>N</span> автопилот (Shift+N перелёт) &nbsp; <span>M</span> топливо &nbsp; <span>⌫</span> сброс &nbsp; <span>O/L/B/C</span> орбиты/подписи/свечение/релятивизм &nbsp; <span>U</span> кубическая аберрация (~6-7× цена кадра — может выключиться сама на слабой машине)</div>`,
     'u.m': ' м', 'u.km': ' км', 'u.AU': ' а.е.', 'u.ly': ' св.лет', 'u.ms': ' м/с', 'u.kms': ' км/с',
     'u.s': ' с', 'u.min': ' мин', 'u.h': ' ч', 'u.d': ' дн', 'u.yr': ' лет',
   },

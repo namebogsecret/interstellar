@@ -17,21 +17,17 @@
 // shared body-velocity vector passed to ship.step is never mutated here.
 // ─────────────────────────────────────────────────────────────────────────────
 import * as THREE from 'three';
-import { absolutePosition, propagateUniversal, bodyVelocity } from './orbits.js';
+// safeRadius / dominanceRatio / timeToPeriapsis were PRIVATE to this module and
+// now live in orbits.js — the autopilot needs them verbatim, and a second copy
+// of a formula is a copy that drifts (ГРАБЛИ #2). Imported, not re-derived.
+import { absolutePosition, propagateUniversal, bodyVelocity,
+         safeRadius, dominanceRatio, timeToPeriapsis } from './orbits.js';
 import { gravitationalPotential, dominantBody } from './gravity.js';
 import { momentumFromV } from './relativity.js';
 import { C2 } from './constants.js';
 
 // Tuning defaults (flagged for Vladimir playtest — see ТЗ §7).
 const DOM_RATIO = 10;          // dominant pull must exceed 2nd-strongest by ≥ this (SOI proxy)
-const ATMO_MARGIN_FRAC = 0.05; // safe-radius margin as a fraction of body radius
-
-// Safe radius: never engage/commit below the atmosphere top (or a margin above
-// the surface for airless bodies).
-function rSafe(b) {
-  const atmoH = (b.atmosphere && b.atmosphere.height) || 0;
-  return b.radius + Math.max(atmoH, ATMO_MARGIN_FRAC * b.radius);
-}
 
 // ── cabotage-private scratch (never main.js shared vectors) ──────────────────
 const _cabBp0 = new THREE.Vector3();   // refBody position at t
@@ -66,24 +62,6 @@ function fillPositions(bodies, t, byName, map) {
   return map;
 }
 
-// pull_i = GM_i / max(|shipPos−bodyPos_i|², radius_i²). Ratio of refBody's pull
-// to the strongest OTHER body's pull (∞ when refBody is the only massive body).
-function dominanceRatio(shipPos, refBody, bodies, map) {
-  let refPull = 0, secondPull = 0;
-  for (const b of bodies) {
-    if (!b.GM) continue;
-    const bp = map.get(b.name);
-    if (!bp) continue;
-    const r2 = Math.max(bp.distanceToSquared(shipPos), b.radius * b.radius);
-    const pull = b.GM / r2;
-    if (b === refBody) refPull = pull;
-    else if (pull > secondPull) secondPull = pull;
-  }
-  if (!(refPull > 0)) return 0;
-  if (!(secondPull > 0)) return Infinity;
-  return refPull / secondPull;
-}
-
 // §2 engagement predicate. TRUE iff coasting, above the atmosphere, under warp,
 // and deep enough inside refBody's sphere of influence that a two-body conic is
 // valid. Necessary but NOT sufficient — the per-frame look-ahead (§5) must pass.
@@ -92,7 +70,7 @@ export function cabotageEngaged(ship, refBody, refAlt, effWarp, bodies, byName, 
   if (ship.throttle !== 0) return false;                          // (2) coasting only
   if (!(effWarp > 1)) return false;                              // (3) no analytic gain at real-time
   if (!refBody || !(refBody.GM > 0)) return false;              // (4)
-  if (!(refAlt + refBody.radius > rSafe(refBody) * (1 + 1e-6))) return false; // (5) above atmosphere+margin
+  if (!(refAlt + refBody.radius > safeRadius(refBody) * (1 + 1e-6))) return false; // (5) above atmosphere+margin
   // (6) two-body dominance: refBody must out-pull the 2nd-strongest body by ≥ DOM_RATIO.
   fillPositions(bodies, simTime, byName, _cabPositions);
   if (dominanceRatio(ship.pos, refBody, bodies, _cabPositions) < DOM_RATIO) return false;
@@ -136,57 +114,6 @@ function integrateDtau(refBody, bodies, byName, simTime, dt, rRel, vRel, r0, mu)
     sum += wt * fval;
   }
   return (hstep / 3) * sum;
-}
-
-// Time (>=0, seconds) until the NEXT periapsis passage of the two-body conic
-// (r0=|rRel|, rdotv0=rRel·vRel, h=|rRel×vRel|, eps=specific energy), or
-// Infinity if the conic never reaches periapsis again in the forward
-// direction (hyperbolic/parabolic, already past periapsis and receding).
-//
-// Handles ellipse/hyperbola/near-parabola via the matching anomaly (Kepler /
-// hyperbolic-Kepler / Barker). The KEY property that makes this exact and
-// direction-agnostic: mean anomaly (Kepler's M, or Barker's M for the
-// parabola) is EXACTLY LINEAR in physical time — unlike true anomaly, which
-// only tells you WHERE on the conic you are, not how time maps to it. So
-// there is no sign-flip heuristic and no missed double-crossing (an arc that
-// sweeps past apoapsis and back through periapsis, sharing radial-velocity
-// sign at both endpoints, is caught exactly like a direct approach).
-function timeToPeriapsis(mu, r0, rdotv0, h, eps) {
-  const p = (h * h) / mu;
-  const scale = mu / Math.max(r0, 1);            // energy scale to make the eps~0 test relative
-  if (eps < -1e-9 * scale) {
-    // Elliptical (bound): a>0, mean anomaly M is linear in time over period T.
-    const a = -mu / (2 * eps);
-    const e = Math.sqrt(Math.max(0, 1 - p / a));
-    if (e < 1e-9) return Infinity;               // circular: no meaningful periapsis
-    const n = Math.sqrt(mu / (a * a * a));
-    const cosE0 = (a - r0) / (a * e);
-    const sinE0 = rdotv0 / (e * Math.sqrt(mu * a));
-    const E0 = Math.atan2(sinE0, cosE0);
-    const M0 = E0 - e * Math.sin(E0);
-    const M0w = ((M0 % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-    return M0w === 0 ? (2 * Math.PI) / n : (2 * Math.PI - M0w) / n;   // in (0,T]
-  } else if (eps > 1e-9 * scale) {
-    // Hyperbolic: periapsis occurs at most ONCE (ever) on the whole trajectory.
-    const aAbs = mu / (2 * eps);
-    const e = Math.sqrt(Math.max(1, 1 + p / aAbs));
-    const coshH0 = Math.max(1, r0 / aAbs + 1) / e;
-    let H0 = Math.acosh(Math.min(1e15, Math.max(1, coshH0)));
-    if (rdotv0 < 0) H0 = -H0;                    // inbound ⇒ before periapsis
-    const Mh0 = e * Math.sinh(H0) - H0;
-    const nHyp = Math.sqrt(mu / (aAbs * aAbs * aAbs));
-    const tSince = Mh0 / nHyp;                   // signed: <0 before periapsis, >0 after
-    return tSince < 0 ? -tSince : Infinity;
-  } else {
-    // Near-parabolic (|eps|≈0): Barker's equation.
-    const q = p / 2;
-    if (!(q > 0)) return Infinity;
-    const D0 = Math.sqrt(Math.max(0, r0 / q - 1)) * (rdotv0 < 0 ? -1 : 1);
-    const M0 = D0 + (D0 * D0 * D0) / 3;
-    const nParab = Math.sqrt(mu / (2 * q * q * q));
-    const tSince = M0 / nParab;
-    return tSince < 0 ? -tSince : Infinity;
-  }
 }
 
 // §5 boundary look-ahead + all-or-nothing analytic commit. Returns TRUE only
@@ -237,7 +164,7 @@ export function tryAnalyticCoast(ship, refBody, bodies, byName, simTime, dt) {
   const tPeri = timeToPeriapsis(mu, r0, rvStart, h, eps);
   const periapsisInArc = tPeri <= Math.abs(dt);
   const minRad = periapsisInArc ? rPeri : Math.min(r0, rEndMag);
-  if (minRad < rSafe(refBody)) return false;
+  if (minRad < safeRadius(refBody)) return false;
 
   // (5) SOI / dominant-body change at the endpoint.
   absolutePosition(refBody, simTime + dt, byName, _cabBp1);

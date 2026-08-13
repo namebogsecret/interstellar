@@ -224,6 +224,128 @@ export function orbitFromState(mu, rVec, vVec) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// APSIS TIMING + BODY-PROXIMITY HELPERS
+//
+// safeRadius / timeToPeriapsis / dominanceRatio were PRIVATE to cabotage.js and
+// are needed verbatim by the autopilot (js/physics/autopilot.js). They live here
+// now and cabotage.js imports them: a second copy of a formula is a copy that
+// eventually disagrees with the original (ГРАБЛИ.md — "тест хардкодил копию
+// константы"; ГРАБЛИ #2 — two independent statements of one fact drift apart).
+// Behaviour is bit-identical to the cabotage originals; its four tests are the
+// regression guard on that.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Safe-radius margin as a fraction of body radius (airless bodies get this
+// instead of an atmosphere height).
+const ATMO_MARGIN_FRAC = 0.05;
+
+// Safe radius of a body: the surface plus max(atmosphere height, 5% of the
+// radius). Metres FROM THE CENTRE. Below it neither the analytic coast nor the
+// autopilot will operate — drag (computed against the CO-ROTATING atmosphere in
+// ship.step) is a force neither two-body model knows about.
+export function safeRadius(b) {
+  const atmoH = (b.atmosphere && b.atmosphere.height) || 0;
+  return b.radius + Math.max(atmoH, ATMO_MARGIN_FRAC * b.radius);
+}
+
+// pull_i = GM_i / max(|shipPos−bodyPos_i|², radius_i²). Ratio of refBody's pull
+// to the strongest OTHER body's pull (∞ when refBody is the only massive body,
+// 0 when refBody itself has no pull here). An SOI proxy: how safely a two-body
+// model may stand in for the real N-body field.
+export function dominanceRatio(shipPos, refBody, bodies, positions) {
+  let refPull = 0, secondPull = 0;
+  for (const b of bodies) {
+    if (!b.GM) continue;
+    const bp = positions.get(b.name);
+    if (!bp) continue;
+    const r2 = Math.max(bp.distanceToSquared(shipPos), b.radius * b.radius);
+    const pull = b.GM / r2;
+    if (b === refBody) refPull = pull;
+    else if (pull > secondPull) secondPull = pull;
+  }
+  if (!(refPull > 0)) return 0;
+  if (!(secondPull > 0)) return Infinity;
+  return refPull / secondPull;
+}
+
+// Time (>=0, seconds) until the NEXT periapsis passage of the two-body conic
+// (r0=|rRel|, rdotv0=rRel·vRel, h=|rRel×vRel|, eps=specific energy), or
+// Infinity if the conic never reaches periapsis again in the forward
+// direction (hyperbolic/parabolic, already past periapsis and receding), or
+// if the orbit is circular (e < 1e-9 — no meaningful periapsis).
+//
+// Handles ellipse/hyperbola/near-parabola via the matching anomaly (Kepler /
+// hyperbolic-Kepler / Barker). The KEY property that makes this exact and
+// direction-agnostic: mean anomaly (Kepler's M, or Barker's M for the
+// parabola) is EXACTLY LINEAR in physical time — unlike true anomaly, which
+// only tells you WHERE on the conic you are, not how time maps to it. So
+// there is no sign-flip heuristic and no missed double-crossing (an arc that
+// sweeps past apoapsis and back through periapsis, sharing radial-velocity
+// sign at both endpoints, is caught exactly like a direct approach).
+// For a bound orbit the result is in (0, T] — never 0, so "the periapsis is
+// exactly now" reads as "one full revolution from now", which is what the
+// cabotage arc-membership test (tPeri <= |dt|) needs.
+export function timeToPeriapsis(mu, r0, rdotv0, h, eps) {
+  const p = (h * h) / mu;
+  const scale = mu / Math.max(r0, 1);            // energy scale to make the eps~0 test relative
+  if (eps < -1e-9 * scale) {
+    // Elliptical (bound): a>0, mean anomaly M is linear in time over period T.
+    const a = -mu / (2 * eps);
+    const e = Math.sqrt(Math.max(0, 1 - p / a));
+    if (e < 1e-9) return Infinity;               // circular: no meaningful periapsis
+    const n = Math.sqrt(mu / (a * a * a));
+    const cosE0 = (a - r0) / (a * e);
+    const sinE0 = rdotv0 / (e * Math.sqrt(mu * a));
+    const E0 = Math.atan2(sinE0, cosE0);
+    const M0 = E0 - e * Math.sin(E0);
+    const M0w = ((M0 % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+    return M0w === 0 ? (2 * Math.PI) / n : (2 * Math.PI - M0w) / n;   // in (0,T]
+  } else if (eps > 1e-9 * scale) {
+    // Hyperbolic: periapsis occurs at most ONCE (ever) on the whole trajectory.
+    const aAbs = mu / (2 * eps);
+    const e = Math.sqrt(Math.max(1, 1 + p / aAbs));
+    const coshH0 = Math.max(1, r0 / aAbs + 1) / e;
+    let H0 = Math.acosh(Math.min(1e15, Math.max(1, coshH0)));
+    if (rdotv0 < 0) H0 = -H0;                    // inbound ⇒ before periapsis
+    const Mh0 = e * Math.sinh(H0) - H0;
+    const nHyp = Math.sqrt(mu / (aAbs * aAbs * aAbs));
+    const tSince = Mh0 / nHyp;                   // signed: <0 before periapsis, >0 after
+    return tSince < 0 ? -tSince : Infinity;
+  } else {
+    // Near-parabolic (|eps|≈0): Barker's equation.
+    const q = p / 2;
+    if (!(q > 0)) return Infinity;
+    const D0 = Math.sqrt(Math.max(0, r0 / q - 1)) * (rdotv0 < 0 ? -1 : 1);
+    const M0 = D0 + (D0 * D0 * D0) / 3;
+    const nParab = Math.sqrt(mu / (2 * q * q * q));
+    const tSince = M0 / nParab;
+    return tSince < 0 ? -tSince : Infinity;
+  }
+}
+
+// Time (>=0, seconds) until the NEXT apoapsis passage. Apoapsis exists ONLY on
+// a bound, non-circular conic:
+//   bound (eps<0), e >= 1e-9 : T = 2π√(a³/mu);  tApo = (tPeri + T/2) mod T
+//   unbound, parabolic, or circular : Infinity (no apoapsis / undefined).
+// Derived FROM timeToPeriapsis rather than from its own anomaly inversion —
+// apoapsis is exactly half a period from periapsis on any ellipse, so deriving
+// it keeps a single source of truth for conic timing (a second, independently
+// rounded inversion is exactly the kind of duplicate that drifts). Guarantees
+// 0 <= tApo < T and |tApo − tPeri| = T/2 (mod T).
+export function timeToApoapsis(mu, r0, rdotv0, h, eps) {
+  const scale = mu / Math.max(r0, 1);
+  if (!(eps < -1e-9 * scale)) return Infinity;   // unbound / parabolic: no apoapsis
+  const a = -mu / (2 * eps);
+  if (!(a > 0) || !Number.isFinite(a)) return Infinity;
+  const tPeri = timeToPeriapsis(mu, r0, rdotv0, h, eps);
+  if (!Number.isFinite(tPeri)) return Infinity;  // circular (or degenerate): undefined
+  const T = 2 * Math.PI * Math.sqrt((a * a * a) / mu);
+  if (!(T > 0) || !Number.isFinite(T)) return Infinity;
+  const tApo = (tPeri + T / 2) % T;
+  return tApo < 0 ? tApo + T : tApo;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // UNIVERSAL-VARIABLE KEPLER PROPAGATOR (Vallado "KEPLER" / Curtis Alg. 3.4).
 // Advances a two-body RELATIVE state along its conic. Valid for ALL conics —
 // ellipse (α>0), parabola (α≈0), hyperbola (α<0) and near-parabolic (e≈1) —
