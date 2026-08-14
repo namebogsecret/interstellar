@@ -255,11 +255,13 @@ const controls = new FlightControls(ship, canvas, {
   onRelFx() { sim.relFx = !sim.relFx; saveToggle('iss_relfx', sim.relFx); sound.click(); overlay.event(t('ev.relfx', { s: t(sim.relFx ? 'w.on' : 'w.off') })); },
   onSound() {
     // Z key — see js/audio/audio.js's header for the lazy-context + autoplay
-    // handling. This keydown IS itself a user gesture, so turning sound ON
-    // right here can safely create/resume the AudioContext synchronously.
+    // handling. This keydown IS itself a user gesture, so { fromGesture:
+    // true } here is what authorizes creating/resuming the AudioContext
+    // synchronously (repair-round-1 R-3 — the page-load restore below passes
+    // NO gesture flag, on purpose, so it only records intent).
     sim.sound = !sim.sound;
     saveToggle('iss_sound', sim.sound);
-    sound.setEnabled(sim.sound);
+    sound.setEnabled(sim.sound, { fromGesture: true });
     if (sim.sound) sound.click();   // audible confirmation now that it's actually live
     overlay.event(t('ev.sound', { s: t(sim.sound ? 'w.on' : 'w.off') }));
   },
@@ -343,11 +345,16 @@ const controls = new FlightControls(ship, canvas, {
   if (loadToggle('iss_cube_forced') === true) sim.cubeForced = true;
   const co = loadToggle('iss_cockpit'); if (typeof co === 'boolean') sim.cockpitOn = co;   // applied via ensureCockpitResources in the frame loop
   const m = loadToggle('iss_mode');   if (m === 'arcade' || m === 'realistic') ship.mode = m;
-  // Sound restores its persisted flag too, but this runs at page load with no
-  // user gesture yet — setEnabled(true) here only lazily creates the
-  // AudioContext (which comes up 'suspended' per browser autoplay policy);
-  // onGesture (wired above) resumes it the moment a real interaction happens.
-  // Default is OFF (sim.sound already false) when nothing was ever persisted.
+  // Sound restores its persisted flag too, but this runs at page load with NO
+  // user gesture yet. Repair-round-1 R-3: setEnabled(sim.sound) called with
+  // no options records INTENT ONLY (this.enabled=true) — it does NOT create
+  // an AudioContext (that would be the literal "AudioContext created before
+  // a gesture" bug Chrome warns about). onGesture (wired above) is what
+  // actually creates+resumes the context, on the player's first real
+  // interaction after this — so a returning visitor whose sound was on last
+  // session gets it back automatically on their first click/keypress/tap,
+  // without needing to press Z again. Default is OFF (sim.sound already
+  // false) when nothing was ever persisted.
   const sd = loadToggle('iss_sound'); if (typeof sd === 'boolean') sim.sound = sd;
   sound.setEnabled(sim.sound);
   // Base RenderPass camera/pass wiring must match the restored toggles from
@@ -600,8 +607,14 @@ function frame(now) {
 
   // Engine hum: guarded here, not inside SoundEngine, so a disabled session
   // (the default) does zero work in the frame loop — no call in, no
-  // AudioParam writes, no allocation (ТЗ §B3 "zero work when off").
-  if (sim.sound) sound.updateEngine(ship.throttle, ship.mode, sim.warp);
+  // AudioParam writes, no allocation (ТЗ §B3 "zero work when off"). Placed
+  // AFTER the `if (!sim.paused)` block closes so it runs every frame the
+  // block is skipped too — sim.paused is passed explicitly (repair-round-1
+  // R-1a) so engineVoice() can mute correctly even though ship.throttle/
+  // sim.warp are FROZEN (last pre-pause values) while paused; document.hidden
+  // is handled independently inside SoundEngine itself (R-1b — see its
+  // visibilitychange listener), not threaded through here.
+  if (sim.sound) sound.updateEngine(ship.throttle, ship.mode, sim.warp, sim.paused);
 
   if (sim.target) sim.targetDist = positions.get(sim.target.name).distanceTo(ship.pos);
 
