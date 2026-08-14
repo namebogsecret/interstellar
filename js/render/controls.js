@@ -19,10 +19,40 @@ export function powerToThrottle(n, ship) {
 // First unthrottled thrust-key press should be gentle (~1g), not full power.
 function defaultThrottle(ship) { return powerToThrottle(1, ship); }
 
-// Keys that update() itself acts on — i.e. the ones that mean "the pilot is
-// flying the ship right now". Held state (not just the keydown edge) is what
-// makes them worth re-reporting every frame; see _noteInput below.
-const FLIGHT_KEYS = ['w', 's', 'a', 'd', 'r', 'f', ' ', 'q', 'e', '[', ']'];
+// ─────────────────────────────────────────────────────────────────────────────
+// WHAT COUNTS AS TAKING THE CONTROLS — the ONE table.
+//
+// Every channel of pilot input funnels into a single counter (inputSeq) that the
+// autopilot reads through a single condition. What this table decides is not
+// "how many conditions" but WHAT FEEDS the one counter: grabbing the stick is an
+// override; opening the map is not. Counting every keydown made V/T/J/H/P/M/
+// O/L/B/C/U — and I/Z — silently kill a Hohmann transfer that the player then
+// spent minutes waiting through.
+//
+// The classification lives HERE, in one place, for keyboard AND touch. Scatter
+// it into if-branches at the call sites and the two copies drift apart — the
+// exact failure ГРАБЛИ #2 is about. Adding an input channel means adding a row
+// here, not writing a second rule.
+//   HELD    — re-reported every frame while held (a key that is DOWN is intent
+//             even without a fresh keydown event); mouse look joins them there.
+//   ACTIONS — discrete commands that move the ship or reset it.
+//   throttle — digits and the trim keys are a manual thrust command.
+// Deliberately NOT here: M V T J H O L B C U I Z (panels/toggles), Tab (target
+// choice), , . (time speed) — and P, because pausing is not taking over.
+// 'n' IS here: it commands the autopilot, and its own increment is what arms the
+// manoeuvre (engage reads the already-incremented value) and what cancels it on
+// a second press — one mechanism, no special case.
+const FLIGHT_HELD_KEYS = ['w', 's', 'a', 'd', 'r', 'f', ' ', 'q', 'e', '[', ']'];
+const FLIGHT_ACTION_KEYS = ['x', 'k', 'g', 'n', 'backspace'];
+const FLIGHT_KEYS = new Set([...FLIGHT_HELD_KEYS, ...FLIGHT_ACTION_KEYS,
+                             '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
+// Touch tap-buttons reach the hooks without a keydown; same classification.
+const FLIGHT_TOUCH_ACTIONS = new Set(['kill', 'jump']);
+
+/** Does this key (already lower-cased) mean the pilot is flying the ship? */
+export function isFlightKey(k) { return FLIGHT_KEYS.has(k); }
+/** Same question for a touch tap-button name (js/render/touch.js::_action). */
+export function isFlightTouchAction(name) { return FLIGHT_TOUCH_ACTIONS.has(name); }
 
 // First-person flight controls. Mouse (pointer-lock) yaws/pitches the ship;
 // keys translate thrust along ship axes, roll, set throttle, time-warp, etc.
@@ -67,14 +97,14 @@ export class FlightControls {
     });
 
     window.addEventListener('keydown', (e) => {
-      // Reporter #1: EVERY key, counted BEFORE dispatch. Order matters — the
-      // autopilot hook below reads the already-incremented value as its arming
-      // baseline, so engaging cannot be cancelled by its own keypress. That is
-      // sturdier than exempting the 'n' key (an exemption a future key would
-      // silently need too).
-      this._noteInput();
       this.hooks.onGesture?.();
       const k = e.key.toLowerCase();
+      // Reporter #1: FLIGHT keys only (see the table above), counted BEFORE
+      // dispatch. Order matters — the autopilot hook below reads the
+      // already-incremented value as its arming baseline, so engaging cannot be
+      // cancelled by its own keypress, and a second N cancels through the very
+      // same increment.
+      if (isFlightKey(k)) this._noteInput();
       this.keys.add(k);
       // Discrete actions.
       if (k === 'm') this.hooks.onModeToggle?.();
@@ -113,11 +143,11 @@ export class FlightControls {
     this.pitchYawFromMouse.set(0, 0);
     // Reporter #2: a HELD flight key or any look input is intent every frame,
     // not just on its keydown edge (mouse/drag has no key event at all).
-    // Deliberately NOT `this.keys.size > 0`: a discrete action key stays in the
-    // set until keyup, so the broad form would make pressing N cancel the very
-    // autopilot it just engaged, one frame later. Everything discrete is
-    // already covered by reporter #1 on its keydown.
-    if (pitch || yaw || FLIGHT_KEYS.some((k) => this.keys.has(k))) this._noteInput();
+    // Only the HELD subset: a discrete action key stays in the set until keyup,
+    // so re-reporting it every frame would make pressing N cancel the very
+    // autopilot it just engaged, one frame later. Discrete actions are already
+    // covered by reporter #1 on their keydown.
+    if (pitch || yaw || FLIGHT_HELD_KEYS.some((k) => this.keys.has(k))) this._noteInput();
     if (pitch || yaw) {
       const qx = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), pitch);
       const qy = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw);

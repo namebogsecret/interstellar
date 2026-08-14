@@ -119,11 +119,27 @@ function _transferSpeed(mu, r, rT) {
   return Math.sqrt((2 * mu * rT) / (r * (r + rT)));
 }
 
-// Δv cutoff: 0.02 m/s leaves δe ≈ 2·δv/v ≈ 5e-6 in LEO — two orders below
+// Δv cutoff. 0.02 m/s leaves δe ≈ 2·δv/v ≈ 5e-6 in LEO — two orders below
 // E_TOL — while the relative term keeps the threshold sane near the Sun.
-function dvEps(mu, r) {
+//
+// …but an ABSOLUTE floor and the tolerance are two independent statements of
+// "close enough", and below v_circ ≈ 40 m/s they provably disagree: 0.02 m/s
+// implies e ≈ 1.1e-3, ABOVE the 1e-3 the contract promises, so DONE becomes
+// unreachable no matter how many trim passes follow (ГРАБЛИ #2 — two
+// independent conditions for one fact eventually contradict each other).
+// Since e ≈ 2·δv/v_circ, the tolerance itself dictates a ceiling on the
+// residual; taking the STRICTER of the two makes the cutoff a CONSEQUENCE of
+// the tolerance rather than a second opinion about it, and DONE reachable at
+// every radius where the autopilot agrees to work at all.
+const TOL_SAFETY = 0.5;                  // aim at half the allowed eccentricity
+export const TRIM_EPS_FACTOR = 0.1;      // TRIM cuts off ten times tighter than BURN
+function dvEps(mu, r, tight = false) {
   const vc = Math.sqrt(Math.abs(mu / r));
-  return Math.max(0.02, Number.isFinite(vc) ? 1e-6 * vc : 0);
+  const abs = Math.max(0.02, Number.isFinite(vc) ? 1e-6 * vc : 0);
+  const tolImplied = Number.isFinite(vc) ? (TOL_SAFETY * E_TOL * vc) / 2 : Infinity;
+  let eps = Math.min(abs, tolImplied > 0 ? tolImplied : abs);
+  if (tight) eps *= TRIM_EPS_FACTOR;
+  return Number.isFinite(eps) && eps > 0 ? eps : 0.02;
 }
 
 // The two-body state the guidance law works from, plus the elements. Pure.
@@ -379,17 +395,33 @@ export function engageAutopilot(goal, obs) {
 }
 
 // Whole-manoeuvre deadline (s of model time since engage).
+//
+// A timeout must mean "this is not converging". It must NEVER mean "this
+// manoeuvre is long" — so the deadline is expressed in the manoeuvre's OWN
+// timescales (orbital period, transfer coast) and carries no absolute ceiling
+// while such a scale exists. The absolute MANOEUVRE_TIMEOUT_MAX is the fallback
+// for the one case with no natural scale at all: an unbound starting orbit with
+// no finite transfer time.
+//
+// The previous `Math.min(MANOEUVRE_TIMEOUT_MAX, …)` destroyed exactly the
+// extension it was written next to: every heliocentric transfer is longer than
+// 1e6 s (11.6 days), so Earth→Mars (coast 2.24e7 s) and Earth→Jupiter (8.62e7 s)
+// always ended FAILED(timeout) — after correctly spending the 8.8 km/s
+// departure burn, leaving the ship stranded on the transfer ellipse. That is a
+// worse outcome than refusing the job, and re-engaging reproduced it forever.
 function _deadline(goal, obs, el, period0) {
-  let mt = period0 > 0 ? 12 * period0 : MANOEUVRE_TIMEOUT_MAX;
+  let mt = period0 > 0 ? 12 * period0 : 0;
   if (goal.kind === 'hohmann' && Number.isFinite(goal.targetRadius) && el.r > 0 && obs.mu > 0) {
     const raising = goal.targetRadius > el.r;
     let r1 = raising ? el.rPeri : el.rApo;
     if (!Number.isFinite(r1) || !(r1 > 0)) r1 = el.r;
     const aT = 0.5 * (r1 + goal.targetRadius);
     const tTrans = Math.PI * Math.sqrt((aT * aT * aT) / obs.mu);
+    // 3× the ideal coast: enough for the wait, both burns and a trim pass, and
+    // still far short of "a second lap of a transfer that never converged".
     if (Number.isFinite(tTrans)) mt = Math.max(mt, 3 * tTrans);
   }
-  return Math.min(MANOEUVRE_TIMEOUT_MAX, mt);
+  return mt > 0 && Number.isFinite(mt) ? mt : MANOEUVRE_TIMEOUT_MAX;
 }
 
 // Rough burn duration for centring the ignition and for BURN_TIMEOUT. Uses the
@@ -497,7 +529,10 @@ function _waitStep(st, o, el, T, dtS, outDir, prevTIgn) {
   const lapped = Number.isFinite(prevTIgn) && plan.tIgn > prevTIgn + 0.5 * (T || Infinity);
   st.lastTIgn = plan.tIgn;
   st.info = _info(0, plan.tIgn, st.goal.targetRadius, el.e, el.a);
-  return _cmd(st, 0, null, maxWarp, lapped ? 'ev.apEngaged' : null);
+  // Its OWN message: "I missed the burn point and I am going round again" is
+  // not the same news as "I have taken the job", and announcing the first with
+  // the second's text tells the player something that did not happen.
+  return _cmd(st, 0, null, maxWarp, lapped ? 'ev.apLap' : null);
 }
 
 const TERMINAL = { DONE: 1, CANCELLED: 1, REFUSED: 1, FAILED: 1 };
@@ -539,6 +574,22 @@ function _cmd(state, throttle, dir, maxWarp, event) {
  *  a non-null thrustDir is finite and unit; maxWarp ≥ 1; done ⇒ no thrust;
  *  and throttle·maxThrustAccel·dt ≤ dvRemaining (never overshoot). */
 export function autopilotStep(state, obs, dt, outDir) {
+  const cmd = _stepCore(state, obs, dt, outDir);
+  // ANNOUNCE THE ENGAGEMENT. `announced` used to be read only inside the
+  // terminal branch, so a refusal spoke but a successful engage never did: the
+  // player was told when the autopilot declined a job and never when it took
+  // one. The flag now means "the engagement has been announced" for every
+  // phase. A transition event on the same step wins the single event slot — it
+  // is the more urgent news, and the engagement flag is still cleared, so the
+  // announcement is never repeated later.
+  if (state && !state.announced && !cmd.done && cmd.state !== state) {
+    cmd.state.announced = true;
+    if (!cmd.event) cmd.event = 'ev.apEngaged';
+  }
+  return cmd;
+}
+
+function _stepCore(state, obs, dt, outDir) {
   if (!state) {
     const idle = { phase: PHASES.IDLE, goal: null, leg: 'circularize', trimCount: 0,
                    elapsed: 0, phaseElapsed: 0, armedInputSeq: 0, orbitPeriod0: 0,
@@ -598,7 +649,15 @@ export function autopilotStep(state, obs, dt, outDir) {
   // The deadline also can never be shorter than a handful of the CALLER's own
   // frames: at a 60 s frame a 120 s deadline resolves to two samples, so it
   // would be measuring the caller's granularity rather than non-convergence.
-  const eps0 = burning ? dvEps(o.mu, el.r) : 0;
+  // TRIM cuts off ten times tighter than BURN — which is also WHY the phase is
+  // able to exist: entering it from the burn cutoff leaves dvRemaining above
+  // TRIM's own threshold, so the trim branch actually thrusts. With a single
+  // shared threshold the entry step was already "cut off", so TRIM commanded
+  // zero thrust, the next frame reproduced the identical state, and three inert
+  // passes fell through to FAILED(no-convergence) — a phase the HUD showed the
+  // player while doing nothing at all.
+  const trimming = state.phase === PHASES.TRIM;
+  const eps0 = burning ? dvEps(o.mu, el.r, trimming) : 0;
   const cutoffReached = burning && dvRemaining <= eps0;
   const burnTimeout = Math.max(BURN_TIMEOUT_MIN, 8 * state.burnEst0, BURN_TIMEOUT_FRAMES * dtS);
   const manoeuvreTimeout = fin(state.manoeuvreTimeout, MANOEUVRE_TIMEOUT_MAX);
@@ -635,8 +694,11 @@ export function autopilotStep(state, obs, dt, outDir) {
       next.info = _info(0, Infinity, el.r, el.e, el.a);
       return _cmd(next, 0, null, Infinity, 'ev.apDone');
     }
-    // Out of tolerance: trim, up to TRIM_MAX passes, then admit it.
-    if (state.trimCount >= TRIM_MAX) {
+    // Out of tolerance. A TRIM pass thrusts down to a ten-times-tighter residual;
+    // if we are ALREADY in one and have hit that tighter cutoff, the commanded
+    // Δv cannot go lower and the tolerance is still missed — that is genuine
+    // non-convergence, not a reason for another identical pass.
+    if (trimming || state.trimCount >= TRIM_MAX) {
       const st = _terminal(next, PHASES.FAILED, REASONS.NO_CONVERGENCE,
                            _info(0, Infinity, el.r, el.e, el.a));
       return _cmd(st, 0, null, Infinity, 'ev.apFailed');
@@ -648,8 +710,16 @@ export function autopilotStep(state, obs, dt, outDir) {
     return _cmd(next, 0, null, 1, null);
   }
 
-  const trim = state.phase === PHASES.TRIM;
-  const th = _throttleFor(dvRemaining, o.maxThrustAccel, dtS, o.dtReal, trim);
+  // A trim pass ends the moment the tolerance is met — there is no reason to
+  // keep nudging toward a residual tighter than the contract asks for.
+  if (trimming && el.e <= E_TOL && el.bound === true) {
+    next.phase = PHASES.DONE;
+    next.phaseElapsed = 0;
+    next.info = _info(0, Infinity, el.r, el.e, el.a);
+    return _cmd(next, 0, null, Infinity, 'ev.apDone');
+  }
+
+  const th = _throttleFor(dvRemaining, o.maxThrustAccel, dtS, o.dtReal, trimming);
   const ok = th > 0 && _dirFromDv(outDir);
   next.info = _info(dvRemaining, Infinity, state.leg === 'transfer' ? state.goal.targetRadius : el.r, el.e, el.a);
   return _cmd(next, ok ? th : 0, ok ? outDir : null, 1, null);

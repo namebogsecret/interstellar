@@ -30,7 +30,7 @@ const DICT = {
       <div class="cline"><b>A · D</b> — slide left / right. &nbsp; <b>R · F</b> — slide up / down.</div>
       <div class="cline"><b>1…9</b> — set engine power, log scale (1≈1 g … 9≈1000 g in arcade; realistic clamps to the ship's thrust limit ≈3–15 g, <b>0</b> = engine off). &nbsp; <b>[ · ]</b> — trim power down / up. &nbsp; <b>Q · E</b> — tilt (roll).</div>
       <div class="cline"><b>X</b> — <b>STOP</b>: cancel all drifting and stop spinning (your "brake"). &nbsp; <b>K</b> — circularize your orbit around the nearest body.</div>
-      <div class="cline"><b>N</b> — <b>autopilot</b>: fly the engine for you into a round orbit. &nbsp; <b>Shift+N</b> — transfer to your target's orbit radius. Any control you touch switches it off; press <b>N</b> again to cancel.</div>
+      <div class="cline"><b>N</b> — <b>autopilot</b>: fly the engine for you into a round orbit. &nbsp; <b>Shift+N</b> — transfer to your target's orbit radius. Touching the <b>flight</b> controls switches it off (opening a panel or pausing doesn't); press <b>N</b> again to cancel.</div>
       <div class="cline"><b>Tab</b> — pick somewhere to go (Sun / planet / moon). &nbsp; <b>G</b> — instantly jump next to it.</div>
       <div class="cline"><b>.</b> / <b>,</b> — speed up / slow down time (to watch planets move or cross huge distances). &nbsp; <b>P</b> — pause.</div>
       <div class="cline"><b>M</b> — switch unlimited ↔ realistic limited fuel. &nbsp; <b>⌫ Backspace</b> — start over at Earth.</div>
@@ -107,6 +107,7 @@ const DICT = {
     'ev.apCancelled': 'Autopilot off — you have control',
     'ev.apRefused': 'Autopilot won’t take it: {why}',
     'ev.apFailed': 'Autopilot gave up: {why}',
+    'ev.apLap': 'Autopilot: burn point missed — going round again',
     // --- system map (V) ---
     'map.title': 'SYSTEM MAP', 'map.target': 'Target: {name}',
     'map.legend': 'Yellow ring = target · triangle = ship · arrow = velocity',
@@ -155,7 +156,7 @@ const DICT = {
       <div class="cline"><b>A · D</b> — сместиться влево / вправо. &nbsp; <b>R · F</b> — вверх / вниз.</div>
       <div class="cline"><b>1…9</b> — мощность двигателя, логарифмическая шкала (1≈1 g … 9≈1000 g в аркаде; в реализме упирается в предел тяги корабля ≈3–15 g, <b>0</b> = выключен). &nbsp; <b>[ · ]</b> — подстройка мощности вниз / вверх. &nbsp; <b>Q · E</b> — крен (наклон вбок).</div>
       <div class="cline"><b>X</b> — <b>СТОП</b>: погасить весь дрейф и вращение (это ваш «тормоз»). &nbsp; <b>K</b> — выйти на круговую орбиту вокруг ближайшего тела.</div>
-      <div class="cline"><b>N</b> — <b>автопилот</b>: сам отработает двигателем и выведет на круговую орбиту. &nbsp; <b>Shift+N</b> — перелёт на радиус орбиты вашей цели. Любое ваше касание управления его выключает; повторное <b>N</b> — отмена.</div>
+      <div class="cline"><b>N</b> — <b>автопилот</b>: сам отработает двигателем и выведет на круговую орбиту. &nbsp; <b>Shift+N</b> — перелёт на радиус орбиты вашей цели. Любое касание <b>рулей</b> его выключает (открыть панель или поставить паузу — нет); повторное <b>N</b> — отмена.</div>
       <div class="cline"><b>Tab</b> — выбрать, куда лететь (Солнце / планета / луна). &nbsp; <b>G</b> — мгновенно перенестись к ней.</div>
       <div class="cline"><b>.</b> / <b>,</b> — ускорить / замедлить время (смотреть, как движутся планеты, или покрывать огромные расстояния). &nbsp; <b>P</b> — пауза.</div>
       <div class="cline"><b>M</b> — переключить бесконечное ↔ реальное ограниченное топливо. &nbsp; <b>⌫ Backspace</b> — начать заново у Земли.</div>
@@ -230,6 +231,7 @@ const DICT = {
     'ev.apCancelled': 'Автопилот выключен — управление у вас',
     'ev.apRefused': 'Автопилот не берётся: {why}',
     'ev.apFailed': 'Автопилот прервал: {why}',
+    'ev.apLap': 'Автопилот: точка жжения пропущена — идём на второй виток',
     // --- карта системы (V) ---
     'map.title': 'КАРТА СИСТЕМЫ', 'map.target': 'Цель: {name}',
     'map.legend': 'Жёлтое кольцо = цель · треугольник = корабль · стрелка = скорость',

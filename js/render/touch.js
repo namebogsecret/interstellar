@@ -6,6 +6,8 @@
 // Layout: a full-screen look-pad (drag to aim) behind a left thumb-stick
 // (translate) and a right button cluster (up/down thrust, STOP), plus a bottom
 // strip (target / jump / time − + / help). Shown only on coarse-pointer devices.
+import { isFlightTouchAction } from './controls.js';
+
 export class TouchControls {
   constructor(controls, ship, canvas, openHelp) {
     this.controls = controls;
@@ -108,8 +110,9 @@ export class TouchControls {
   _action(name) {
     // Reporter #3 (the last one): tap-buttons reach the hooks directly, without
     // a keydown, so this is their only path to the pilot-intent counter that
-    // the autopilot watches (see the FlightControls header).
-    this.controls._noteInput();
+    // the autopilot watches. Uses the SAME classification table as the keyboard
+    // (controls.js) — STOP and jump take the controls, opening a panel does not.
+    if (isFlightTouchAction(name)) this.controls._noteInput();
     this.controls.hooks.onGesture?.();   // autoplay-resume gesture, see _bind() above
     const h = this.controls.hooks;
     switch (name) {
