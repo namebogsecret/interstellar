@@ -43,6 +43,9 @@ on launch (re-open anytime with **H**) written for people who've never flown.
 | **O / L / B** | toggle orbit lines / labels / bloom glow |
 | **C** | toggle relativistic optics (aberration + Doppler) |
 | **U** | toggle cubemap aberration (full-sphere relativistic view, no frame-edge clamp) — off by default, costs ~6–7× the frame's geometry; auto-disables itself on a slow machine |
+| **N** | **autopilot** — fly a Newtonian orbit-insertion burn for you (circularize at your current radius) · **Shift+N** — Hohmann transfer to your target's orbit radius. Touching the flight controls cancels it; **N** again cancels it yourself. |
+| **I** | toggle cockpit frame (a simple procedural cabin — struts, dashboard) — off by default; may auto-simplify on a slow machine |
+| **Z** | toggle engine/impact sound (procedural, no audio files) — off by default |
 | **⌫ Backspace** | reset to Earth |
 
 **On a phone / tablet** (touch screens) an on-screen layout appears automatically:
@@ -97,6 +100,76 @@ and the local atmospheric density.
   *BURNING · N g*, *ATMOSPHERIC FLIGHT*, plus a note when time-warp is being
   held at 1× for a burn or close approach — and a transient **event log**
   announces things like entering an atmosphere or switching flight model.
+
+## Autopilot (press N / Shift+N)
+
+A genuine closed-loop guidance system, not a scripted cutscene: every frame it
+looks at your actual position and velocity and re-aims a real thrust vector at
+the orbit it's trying to reach — the same `throttle` + thrust-direction
+controls you'd use yourself, checked against the same orbit maths the HUD
+already uses.
+
+- **N** — circularize at your current radius.
+- **Shift+N** — Hohmann transfer to your current target's orbit radius (pick
+  a target with **Tab**, e.g. the Moon, then Shift+N from Earth orbit).
+
+The HUD's AUTOPILOT line tracks it: waiting for the right point in the orbit
+to burn, burning with a live Δv countdown, a trim pass or two to tighten up,
+or why it stopped. Touching the flight controls (thrust, roll, look, reset,
+throttle, **K**, **X**) cancels it immediately — opening a panel, changing
+time-speed, or pausing does not. Press **N** again any time to call it off
+yourself.
+
+### What it won't do
+
+Said plainly, so it doesn't over-promise:
+
+- **Relativistic speeds** (β > 1%, roughly 3,000 km/s) — refuses; the
+  guidance law is Newtonian and stops being honest above that.
+- **Inside an atmosphere, or below a body's safe altitude** — refuses; it
+  doesn't fly through air.
+- **Landed or crashed** — refuses; it won't take off for you.
+- **Strong multi-body regions** — needs the reference body to out-pull
+  everything else by 10× to engage, 5× to keep going; a real three-body tug
+  ends the manoeuvre with an honest failure, not a silently wrong answer.
+- **An escaping (unbound) starting orbit**, for a transfer — you need to be
+  captured first.
+- **A target radius under the destination's safe altitude, or not a real
+  number** — refuses rather than aiming at nonsense.
+- **Not enough propellant** in realistic mode (it wants a 10% margin over its
+  own Δv estimate), or no engine at all — refuses up front, or gives up
+  honestly mid-burn if the tank runs dry.
+- **Plane changes and rendezvous** — it only changes speed within your
+  *current* orbital plane, and it targets a radius, not a meeting with a
+  moving body; no inclination changes, no phasing.
+- **Aerobraking, gravity assists, multi-burn or low-thrust spiral
+  transfers** — every manoeuvre is one clean impulsive burn (plus a couple of
+  automatic trim passes).
+- If it can't converge within its own budget of trim passes or time, it
+  stops and says so instead of burning forever.
+
+## Cockpit view (press I)
+
+A simple procedural cabin frame — angled A-pillars, a raked dashboard, lit
+trim rails — drawn around the edges of the view so first-person flight feels
+like sitting in something instead of a bare camera floating through space.
+It's cosmetic geometry only: drawn after everything else, co-moving with the
+ship, and it never touches the physics or the relativistic optics in the
+centre of the screen. Off by default; auto-simplifies (and can turn itself
+off) on a slow machine.
+
+## Sound (press Z)
+
+Procedural engine hum and hull-borne impact/click sounds, synthesized live
+with the Web Audio API — no audio files. The framing is deliberate: you're
+hearing the *inside of a pressurized hull*, the way a submarine crew hears
+their own engines and nothing of the ocean. Concretely that means no sound
+from anything outside the ship, no Doppler shift ever (the engine is rigidly
+attached to you, so its pitch never tracks your speed, however fast you're
+going), and the hum mutes itself honestly during time-warp and while paused
+rather than lying about what it would sound like. Off by default; needs a
+real click or keypress before the browser will let audio start, per the
+usual autoplay rules.
 
 ## Looking good (the visual layer)
 
@@ -186,7 +259,11 @@ js/
     controls.js         # pointer-lock 6-DOF flight controls (keyboard + mouse)
     touch.js            # on-screen joystick + buttons for phones/tablets
     relativisticPass.js # SR aberration + Doppler + beaming post-process
+    cockpit.js          # procedural cabin frame overlay (key I, off by default)
     hud.js              # HUD readouts
+  audio/
+    soundPolicy.js      # pure sound-parameter policy (no Web Audio/DOM)
+    audio.js            # thin Web Audio layer (procedural synthesis, key Z)
 ```
 
 ## Tuning for weaker / stronger machines
@@ -200,7 +277,6 @@ js/
 
 - **Landing**: terrain collision + surface frame + touchdown detection (the
   atmosphere/altitude/reference-body plumbing is already in place).
-- Newtonian orbit insertion autopilot; cockpit model; sound.
 
 ## Credits
 
