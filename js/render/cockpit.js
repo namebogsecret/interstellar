@@ -58,71 +58,187 @@ function frustumHalfExtents(camera, dist) {
 // not as baked numbers — so resize just re-evaluates it.
 function makePart(material, layout) {
   const mesh = new THREE.Mesh(UNIT_BOX, material);
-  mesh.userData.layout = layout; // (w, h) -> {px, py, pz?, sx, sy, sz?, rz?}
+  mesh.userData.layout = layout; // (w, h) -> {px, py, pz?, sx, sy, sz?, rx?, ry?, rz?, quat?}
   return mesh;
 }
 
+// `quat`, when present, overrides rx/ry/rz wholesale — it is how the
+// perspective struts (see segmentBox below) point a box's local Z axis
+// along an arbitrary direction instead of the axis-aligned rz-only tilt the
+// flat panels (dashboard, edge trims) use.
 function applyLayout(mesh, w, h) {
   const p = mesh.userData.layout(w, h);
   mesh.position.set(p.px, p.py, p.pz ?? -D);
   mesh.scale.set(p.sx, p.sy, p.sz ?? 0.03);
-  mesh.rotation.z = p.rz ?? 0;
+  if (p.quat) mesh.quaternion.copy(p.quat);
+  else mesh.rotation.set(p.rx ?? 0, p.ry ?? 0, p.rz ?? 0);
 }
 
 function layoutGroup(group, w, h) {
   for (const mesh of group.children) applyLayout(mesh, w, h);
 }
 
-// 'full' — 11 boxes: dashboard + trim strip + 3 instrument blocks, header bar
-// + trim strip, 4 corner struts. Trim/instrument parts sit at pz = -D+0.01
-// (closer to camera than the body they sit on) so they read as a bright
-// backlit edge rather than z-fighting with it.
+// ── Perspective struts (A-pillars, visor caps) ──────────────────────────────
+//
+// These are the parts that actually sell "you are inside a cabin": unlike
+// the flat dashboard/trim panels (axis-aligned rectangles facing the
+// camera), a strut is authored as two 3D endpoints — near/outer and
+// far/inner — and the unit box is stretched and quaternion-rotated to span
+// exactly between them. Because the endpoints sit at DIFFERENT depths (near
+// close to camera and wide, far deep and narrow, converging toward
+// screen-centre-top), the strut is genuinely foreshortened instead of being
+// a flat bar parallel to the screen edge.
+//
+// Endpoints are expressed in the SAME "fraction of the frustum's half-
+// extent at that depth" convention frustumHalfExtents already establishes
+// for D: half-extent at depth k*D is exactly k*(half-extent at D), because
+// the frustum is a cone from the camera. That is why every endpoint below
+// multiplies the frustum's (w, h) — evaluated once at D — by its own depth
+// factor k before taking a fraction of it; this keeps a strut correctly
+// sized relative to the view frustum at ITS OWN depth, not D's.
+function pillarPoints(side, w, h) {
+  const kNear = 0.60, kFar = 1.15;
+  // Outer, close to camera, low — hugs the bottom side edge.
+  const a = new THREE.Vector3(side * w * kNear * 0.90, -h * kNear * 0.50, -D * kNear);
+  // Still outer (not centre), high, receding — leans up and slightly
+  // inward, the way a real A-pillar cants toward the header without ever
+  // reaching the middle of the windshield.
+  const b = new THREE.Vector3(side * w * kFar * 0.58, h * kFar * 0.78, -D * kFar);
+  return { a, b };
+}
+
+// Visor cap: a short strut capping each pillar's far/high end — NOT a
+// bridge to top-centre (that read as a big tent apex over the whole view in
+// repair round 1's first screenshot pass, see ГРАБЛИ) — just enough of an
+// inward-and-up nudge to suggest a canopy corner, kept well clear of the
+// screen's dead centre and of the DOM HUD panels in the top-left/top-right.
+function visorPoints(side, w, h) {
+  const { b: outer } = pillarPoints(side, w, h);
+  const inner = new THREE.Vector3(outer.x * 0.72, outer.y * 1.04, outer.z * 0.96);
+  return { a: outer, b: inner };
+}
+
+// Builds a box spanning ptFn(w,h) -> {a, b} exactly: centred at the
+// midpoint, stretched along local Z to the a-b distance, quaternion-rotated
+// so local Z points from a to b. `thicknessScale` is a fraction of (w+h) so
+// the strut's cross-section scales with the frustum like everything else.
+function segmentBox(material, ptFn, thicknessScale) {
+  return makePart(material, (w, h) => {
+    const { a, b } = ptFn(w, h);
+    const mid = a.clone().add(b).multiplyScalar(0.5);
+    const dir = b.clone().sub(a);
+    const len = dir.length();
+    dir.normalize();
+    const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
+    const thickness = (w + h) * thicknessScale;
+    return { px: mid.x, py: mid.y, pz: mid.z, sx: thickness, sy: thickness, sz: len, quat };
+  });
+}
+
+// Same span as segmentBox, but offset sideways (in the strut's own local
+// frame, via the same quaternion) and thinned down — the lit edge rail
+// running alongside a pillar/visor body, the strut equivalent of the flat
+// panels' pz+epsilon trim convention.
+function segmentBoxTrim(material, ptFn, thicknessScale, railScale) {
+  return makePart(material, (w, h) => {
+    const { a, b } = ptFn(w, h);
+    const mid = a.clone().add(b).multiplyScalar(0.5);
+    const dir = b.clone().sub(a);
+    const len = dir.length();
+    dir.normalize();
+    const quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
+    const thickness = (w + h) * thicknessScale;
+    const offset = new THREE.Vector3(thickness * 0.65, thickness * 0.65, 0).applyQuaternion(quat);
+    const p = mid.add(offset);
+    return {
+      px: p.x, py: p.y, pz: p.z,
+      sx: thickness * railScale, sy: thickness * railScale, sz: len * 0.96, quat,
+    };
+  });
+}
+
+// ── Dashboard (raked, angled away from the pilot) ───────────────────────────
+//
+// CONSOLE_TILT rotates the slab about its own local X axis: its top edge
+// swings back (more negative Z, away from camera) and its bottom edge
+// swings forward (toward camera) — the "sloping instrument panel" look, as
+// opposed to the old flat card facing the camera dead-on. K_CONSOLE < 1
+// anchors the whole slab a bit closer than D, in the same "fraction of the
+// frustum at ITS depth" convention pillarPoints uses.
+const CONSOLE_TILT = -0.40;
+const K_CONSOLE = 0.85;
+
+function consoleGeom(w, h) {
+  const wk = w * K_CONSOLE, hk = h * K_CONSOLE;
+  return { wk, hk, py: -hk * 0.74, pz: -D * K_CONSOLE, sx: wk * 1.55, sy: hk * 0.36 };
+}
+
+// The raised, lit top rim of the dashboard: computed from the SAME rotated
+// box geometry (top edge of a box tilted by CONSOLE_TILT about its centre
+// lands at centre + halfHeight*(sin, cos) in the (z, y) plane), then nudged
+// a hair further along +Z so it reads as a proud edge rather than z-fighting
+// the slab it sits on — the rotated equivalent of the flat panels' pz+0.01.
+function consoleEdgeGeom(w, h) {
+  const g = consoleGeom(w, h);
+  const hy = g.sy / 2;
+  return {
+    ...g,
+    py: g.py + hy * Math.cos(CONSOLE_TILT),
+    pz: g.pz + hy * Math.sin(CONSOLE_TILT) + 0.02,
+  };
+}
+
+// 'full' — 12 boxes: raked dashboard + its lit top rim, 2 inset instrument
+// lights, 2 A-pillars + their lit edge rails, 2 visor caps + their lit edge
+// rails. Every strut is a true 3D span (segmentBox/segmentBoxTrim), not a
+// screen-parallel rectangle — that is what buys the perspective.
 function buildFullFrame(frameMat, trimMat) {
   const g = new THREE.Group();
-  const consoleBody = makePart(frameMat, (w, h) => ({
-    px: 0, py: -h * 0.90, sx: w * 1.70, sy: h * 0.24,
+  const consoleBody = makePart(frameMat, (w, h) => {
+    const p = consoleGeom(w, h);
+    return { px: 0, py: p.py, pz: p.pz, sx: p.sx, sy: p.sy, sz: 0.08, rx: CONSOLE_TILT };
+  });
+  const consoleEdge = makePart(trimMat, (w, h) => {
+    const p = consoleEdgeGeom(w, h);
+    return { px: 0, py: p.py, pz: p.pz, sx: p.sx * 0.98, sy: p.hk * 0.03, sz: 0.05, rx: CONSOLE_TILT };
+  });
+  const instruments = [-1, 1].map((side) => makePart(trimMat, (w, h) => {
+    const p = consoleEdgeGeom(w, h);
+    return {
+      px: side * p.wk * 0.34, py: p.py - p.hk * 0.06, pz: p.pz,
+      sx: p.wk * 0.09, sy: p.hk * 0.035, sz: 0.05, rx: CONSOLE_TILT,
+    };
   }));
-  const consoleTrim = makePart(trimMat, (w, h) => ({
-    px: 0, py: -h * 0.78, pz: -D + 0.01, sx: w * 1.66, sy: h * 0.012,
-  }));
-  const instruments = [-0.35, 0, 0.35].map((f) => makePart(trimMat, (w, h) => ({
-    px: w * f, py: -h * 0.90, pz: -D + 0.01, sx: w * 0.10, sy: h * 0.05,
-  })));
-  const headerBody = makePart(frameMat, (w, h) => ({
-    px: 0, py: h * 0.94, sx: w * 2.00, sy: h * 0.12,
-  }));
-  const headerTrim = makePart(trimMat, (w, h) => ({
-    px: 0, py: h * 0.885, pz: -D + 0.01, sx: w * 1.96, sy: h * 0.010,
-  }));
-  // Four corner struts, thin diagonal boxes bracketing each corner of the
-  // frustum; mirrored so top-left/bottom-right share one tilt and
-  // top-right/bottom-left share the other (a simple diamond brace, not
-  // meant to be structurally literal — cosmetic framing only).
-  const corners = [[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sy]) => makePart(frameMat, (w, h) => ({
-    px: sx * w * 0.94, py: sy * h * 0.80, sx: w * 0.09, sy: h * 0.30, rz: sx * sy * 0.35,
-  })));
-  g.add(consoleBody, consoleTrim, headerBody, headerTrim, ...instruments, ...corners);
+  const pillars = [-1, 1].map((side) => segmentBox(frameMat, (w, h) => pillarPoints(side, w, h), 0.0055));
+  const pillarTrims = [-1, 1].map((side) => segmentBoxTrim(trimMat, (w, h) => pillarPoints(side, w, h), 0.0055, 0.34));
+  const visorCaps = [-1, 1].map((side) => segmentBox(frameMat, (w, h) => visorPoints(side, w, h), 0.0048));
+  const visorTrims = [-1, 1].map((side) => segmentBoxTrim(trimMat, (w, h) => visorPoints(side, w, h), 0.0048, 0.34));
+  g.add(consoleBody, consoleEdge, ...instruments, ...pillars, ...pillarTrims, ...visorCaps, ...visorTrims);
   return g;
 }
 
-// 'lite' — 2 boxes: just the dashboard + header slabs, no trim/instruments/
-// corner struts. Still unmistakably "a cockpit", at a fifth of the triangles.
-function buildLiteFrame(frameMat) {
+// 'lite' — 4 boxes: the SAME dashboard + its lit rim + the two A-pillars,
+// no instruments/trim-rails/visor. Same shape as 'full', just the accents
+// stripped out — a third of the triangles, still unmistakably a cockpit.
+function buildLiteFrame(frameMat, trimMat) {
   const g = new THREE.Group();
-  const consoleBody = makePart(frameMat, (w, h) => ({
-    px: 0, py: -h * 0.90, sx: w * 1.70, sy: h * 0.24,
-  }));
-  const headerBody = makePart(frameMat, (w, h) => ({
-    px: 0, py: h * 0.94, sx: w * 2.00, sy: h * 0.12,
-  }));
-  g.add(consoleBody, headerBody);
+  const consoleBody = makePart(frameMat, (w, h) => {
+    const p = consoleGeom(w, h);
+    return { px: 0, py: p.py, pz: p.pz, sx: p.sx, sy: p.sy, sz: 0.08, rx: CONSOLE_TILT };
+  });
+  const consoleEdge = makePart(trimMat, (w, h) => {
+    const p = consoleEdgeGeom(w, h);
+    return { px: 0, py: p.py, pz: p.pz, sx: p.sx * 0.98, sy: p.hk * 0.03, sz: 0.05, rx: CONSOLE_TILT };
+  });
+  const pillars = [-1, 1].map((side) => segmentBox(frameMat, (w, h) => pillarPoints(side, w, h), 0.0055));
+  g.add(consoleBody, consoleEdge, ...pillars);
   return g;
 }
 
 // Mesh counts per level, kept in sync with build{Full,Lite}Frame above —
 // used only for the honest triangle-count report (ТЗ §5), not for anything
 // that affects rendering.
-const PART_COUNT = { full: 11, lite: 2, off: 0 };
+const PART_COUNT = { full: 12, lite: 4, off: 0 };
 
 export function cockpitTriangleCount(level) {
   const trisPerBox = UNIT_BOX.index ? UNIT_BOX.index.count / 3 : UNIT_BOX.attributes.position.count / 3;
@@ -151,10 +267,21 @@ export function ensureCockpitResources(state, camera) {
     // call — see drawCockpitOverlay) lifts dark low tones a lot, which washed
     // the intended dark chassis out to a flat pale grey-blue in practice.
     // Opting these two out renders the authored hex colours exactly as given.
-    const frameMat = new THREE.MeshBasicMaterial({ color: 0x0d1016, toneMapped: false });
-    const trimMat = new THREE.MeshBasicMaterial({ color: 0x6ec8ff, toneMapped: false });
+    //
+    // frameMat: a dark cool grey, NOT pure black — the void behind it (scene
+    // background / clear colour) IS pure black, so a truly black chassis
+    // would vanish into it; this sits just above that floor so the silhouette
+    // reads against both the void and a bright planet.
+    // trimMat: a muted warm brass, deliberately NOT the HUD's accent cyan
+    // (0x6ec8ff, see hud.js) — repair round 1 (B2-repair) found that sharing
+    // the HUD's exact hue made the frame read as more interface chrome
+    // instead of a physical part of the ship; a warm hue reads as the ship's
+    // own running-light colour and lets the eye separate "structure" from
+    // "instruments" at a glance.
+    const frameMat = new THREE.MeshBasicMaterial({ color: 0x1b2028, toneMapped: false });
+    const trimMat = new THREE.MeshBasicMaterial({ color: 0x9c7248, toneMapped: false });
     const groupFull = buildFullFrame(frameMat, trimMat);
-    const groupLite = buildLiteFrame(frameMat);
+    const groupLite = buildLiteFrame(frameMat, trimMat);
     scene.add(groupFull, groupLite);
     state.scene = scene;
     state.groupFull = groupFull;
