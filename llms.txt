@@ -1,0 +1,13 @@
+# Interstellar — relativistic flight through the Solar System
+
+> A browser simulation of relativistic spaceflight: fly between planets at a meaningful fraction of the speed of light and watch time dilation, aberration and Doppler shift change what you see. Free, no registration. Built by Vladimir Podlevskikh (MSU physicist) as a teaching tool for special relativity.
+
+- [Launch the simulation](https://space.podlevskikh.com/)
+
+## The physics inside
+Time dilation and the twin paradox made tangible, relativistic aberration of starlight, Doppler shift of stellar spectra, and the real scale of interplanetary distances at sub-light speeds.
+
+## Related projects
+- [Physics Lab — 70 interactive physics simulations](https://physics.podlevskikh.com/)
+- [RocketSim — rocket dynamics labs](https://rocket.podlevskikh.com/edu/)
+- [Physics tutoring with the author](https://tutor.podlevskikh.com/)
