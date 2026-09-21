@@ -29,7 +29,7 @@ export const PANEL_ACTIONS = [
   { name: 'map',       key: 'v',       hook: 'onMap',
     kind: 'toggle', stateKey: 'showMap',     label: 'MAP',  title: 'Toggle system map' },
   { name: 'targets',   key: 't',       hook: 'onTargetList',
-    kind: 'toggle', stateKey: null,          label: 'TGT',  title: 'Toggle target list' },
+    kind: 'toggle', stateKey: 'showTargetList', label: 'TGT', title: 'Toggle target list' },
   { name: 'missions',  key: 'j',       hook: 'onMissions',
     kind: 'toggle', stateKey: 'showMissions', label: 'MSN', title: 'Toggle missions panel' },
   { name: 'cube',      key: 'u',       hook: 'onCubeAberr',

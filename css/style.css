@@ -171,6 +171,16 @@ body.touch { touch-action: none; }
 body.touch #view { cursor: default; }
 body.touch #help { display: none; }            /* keyboard hints are irrelevant */
 
+/* Start-screen "all the controls" block (F6, repair round 1): the keyboard
+   list is meaningless with no keyboard, and never explained the ☰ panel /
+   AP○/AP⇗/MAP/TGT/MSN/CPT/SND/CUBE/BLM/REL labels — swap it for the touch
+   explainer instead (index.html has both, i18n keys start.controls /
+   start.controls.touch), same "irrelevant input method hidden" rule as #help
+   right above. */
+.controls-touch { display: none; }
+body.touch .controls-kbd { display: none; }
+body.touch .controls-touch { display: block; }
+
 #touchui #joy, #touchui .tbtn {
   position: fixed; z-index: 10; touch-action: none; user-select: none;
   -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
@@ -207,26 +217,61 @@ body.touch #help { display: none; }            /* keyboard hints are irrelevant 
 /* "☰" drawer (js/render/touchPanel.js::PANEL_ACTIONS) — the touch equivalents
    of the keyboard-only features (autopilot/Hohmann/map/targets/missions/
    cockpit/sound/bloom/relfx/cube). Hidden by default; toggled by .open (read
-   from the DOM by the Playwright smoke, not a JS-only flag). Sits above the
-   bottom button strip so it never overlaps the joystick/thrust cluster, and
-   above the HUD panels (z-index 20 > their 10-ish stacking). It is included
+   from the DOM by the Playwright smoke, not a JS-only flag). It is included
    in touch.js's `isUI` look-drag filter, so a tap anywhere on it — button or
    the drawer's own padding — never starts rotating the ship (the main trap of
    this feature: any untagged surface over the canvas steals the look-drag).
+
+   Repair round 1 (adversarial findings F1-F3) turned it into a proper mobile
+   bottom-sheet:
+   - #tpanelwrap is a full-screen backdrop shown together with #tpanel
+     (toggled by the same .open class, in touch.js's _openPanel/_closePanel).
+     While open it sits ABOVE the joystick/thrust cluster/HUD/map/target-list
+     (their z-index is all <19) but BELOW the sheet itself (z-index 20) — so
+     a stray tap can only land on the sheet or the backdrop, never on flight
+     controls or an overlay the sheet itself opened underneath it (F2), and a
+     tap on the backdrop closes the sheet (F3, see touch.js).
+   - #tpanel gets an explicit `touch-action: pan-y` (F1): `body.touch` sets
+     `touch-action: none` (see above) to kill the look-drag gesture, and per
+     the touch-action spec that value is intersected with ALL DOM ancestors
+     of the hit-tested node — EXCEPT that a `position: fixed` element's own
+     containing block is the viewport itself, so `body`'s `none` is not in
+     its ancestor chain for this purpose and an explicit value here wins.
+     Without it the sheet's `overflow-y: auto` scroll never receives a touch
+     gesture at all (buttons past the fold were simply unreachable). Scroll
+     stays a fallback, not the primary way to reach a button — see the grid
+     below.
 */
+#touchui #tpanelwrap {
+  display: none;
+  position: fixed; inset: 0; z-index: 19;
+  background: rgba(4, 9, 13, 0.45);
+  touch-action: none;   /* it only needs to catch taps, never scrolls */
+}
+#touchui #tpanelwrap.open { display: block; }
 #touchui #tpanel {
   display: none;
   position: fixed; left: 50%; bottom: 88px; transform: translateX(-50%);
-  z-index: 20; width: min(320px, 92vw); max-height: 44vh; overflow-y: auto;
+  z-index: 20; width: min(340px, 92vw); max-height: 70vh; overflow-y: auto;
   padding: 10px; border-radius: 14px; gap: 8px;
-  grid-template-columns: repeat(3, minmax(44px, 1fr));
+  grid-template-columns: repeat(4, minmax(44px, 1fr));
   background: rgba(10, 22, 30, 0.78); border: 1.5px solid var(--line);
   backdrop-filter: blur(4px);
+  touch-action: pan-y; overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 #touchui #tpanel.open { display: grid; }
 #touchui #tpanel .tbtn {
   min-width: 44px; min-height: 44px; height: 48px; width: auto;
   font-size: 12px; padding: 0 4px;
+}
+/* Landscape phones are short on vertical space, not horizontal — go wider
+   (5 columns ⇒ 2 rows for the 10 buttons) instead of relying on the scroll
+   fallback, so the whole sheet fits above the bottom-88px anchor without
+   ever needing to scroll (measured 844×390: 2×48px rows + gap + padding
+   ≈124px, well inside the viewport). */
+@media (orientation: landscape) {
+  #touchui #tpanel { grid-template-columns: repeat(5, minmax(44px, 1fr)); }
 }
 
 /* tighten the readouts on small screens so the two panels never collide and

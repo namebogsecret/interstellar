@@ -8,12 +8,22 @@
 // strip (target / jump / time − + / help / ☰ panel). Shown only on
 // coarse-pointer devices.
 //
-// The "☰" button opens #tpanel, a drawer built by looping over
+// The "☰" button opens #tpanel, a bottom-sheet drawer built by looping over
 // js/render/touchPanel.js's PANEL_ACTIONS — the touch equivalents of the
 // keyboard-only features (autopilot, Hohmann, map, target list, missions,
 // cockpit, sound, bloom, relativistic optics, cubemap aberration). That table
 // is the single source of truth for the button set; this file only renders it
 // and dispatches through it (no per-name literals for panel actions).
+//
+// #tpanelwrap is a full-screen backdrop shown together with #tpanel (repair
+// round 1, adversarial findings F1-F3): while the sheet is open it sits above
+// everything else EXCEPT the sheet itself, so a stray tap can physically only
+// land on the sheet or the backdrop — never on the thrust cluster/joystick
+// underneath (that used to be reachable through the small drawer's gaps) and
+// never at the map/target-list/missions overlays the sheet itself opened
+// (those sit at a lower z-index than #tpanel/#tpanelwrap). Tapping the
+// backdrop closes the sheet (a tap on the sheet itself does not); this is why
+// _closePanel() is the single place that tears both down together.
 import { isFlightTouchAction } from './controls.js';
 import { PANEL_ACTIONS, panelAction } from './touchPanel.js';
 
@@ -51,17 +61,25 @@ export class TouchControls {
         <button class="tbtn" data-tap="help">?</button>
         <button class="tbtn" data-tap="panel" title="menu">☰</button>
       </div>
+      <div id="tpanelwrap"></div>
       <div id="tpanel">${panelBtns}</div>`;
     document.body.appendChild(root);
     this.root = root;
     this.panelEl = root.querySelector('#tpanel');
+    this.panelWrapEl = root.querySelector('#tpanelwrap');
+    // Tapping the backdrop (anywhere outside the sheet) closes the sheet —
+    // F3. A tap on the sheet itself never reaches here (the sheet sits above
+    // the backdrop and its own buttons/padding stop propagation via isUI
+    // below, same as before this repair round).
+    this.panelWrapEl.addEventListener('pointerdown', (e) => { e.preventDefault(); this._closePanel(); });
+    this._panelPollId = null;   // F4: only ticks while the sheet is open, see _openPanel/_closePanel
 
     // --- look: drag anywhere that isn't a control or a modal to aim ----------
     // No overlay div (it would steal taps from the buttons); we listen on the
     // document and ignore touches that begin on a UI control, the panel
     // drawer, or the briefing.
     const isUI = (el) => el && el.closest &&
-      el.closest('#joy, .tbtn, #tpanel, #startscreen, #langtoggle, #langtoggle2, button, a');
+      el.closest('#joy, .tbtn, #tpanel, #tpanelwrap, #startscreen, #langtoggle, #langtoggle2, button, a');
     document.addEventListener('pointerdown', (e) => {
       // A real touch gesture — same autoplay-resume role as the mouse click/
       // keydown gestures in js/render/controls.js (see that file's comment).
@@ -157,14 +175,29 @@ export class TouchControls {
   }
 
   _togglePanel() {
-    this._panelOpen = !this._panelOpen;
-    this.panelEl.classList.toggle('open', this._panelOpen);
-    if (this._panelOpen) this._updatePanelState();
+    if (this._panelOpen) this._closePanel(); else this._openPanel();
+  }
+
+  _openPanel() {
+    this._panelOpen = true;
+    this.panelEl.classList.add('open');
+    this.panelWrapEl.classList.add('open');
+    this._updatePanelState();
+    // F4: sim.bloom/sim.cubeAberr can flip themselves off mid-frame (FPS
+    // auto-demotion in main.js, ~745/756) without the panel knowing — poll
+    // while the sheet is actually open so the highlight never goes stale and
+    // a "turn it off" tap doesn't silently turn it back on. Stopped in
+    // _closePanel(), never left running while closed (house rule: zero
+    // per-frame/timer work for a UI surface that isn't showing, see
+    // CLAUDE.md's sound-engine "off = zero work" invariant).
+    if (this._panelPollId == null) this._panelPollId = setInterval(() => this._updatePanelState(), 250);
   }
 
   _closePanel() {
     this._panelOpen = false;
     this.panelEl.classList.remove('open');
+    this.panelWrapEl.classList.remove('open');
+    if (this._panelPollId != null) { clearInterval(this._panelPollId); this._panelPollId = null; }
   }
 
   // Reflect sim[stateKey] on every toggle button that declares one. Guarded

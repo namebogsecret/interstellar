@@ -69,7 +69,10 @@ const EXPECTED = [
   { name: 'autopilot', key: 'n',       hook: 'onAutopilot',  arg: 'circularize', kind: 'action', stateKey: null },
   { name: 'hohmann',   key: 'shift+n', hook: 'onAutopilot',  arg: 'hohmann',     kind: 'action', stateKey: null },
   { name: 'map',       key: 'v',       hook: 'onMap',        arg: undefined,     kind: 'toggle', stateKey: 'showMap' },
-  { name: 'targets',   key: 't',       hook: 'onTargetList', arg: undefined,     kind: 'toggle', stateKey: null },
+  // правка контракта: sim.showTargetList существует (main.js:188) — targets
+  // DOES have a live sim flag (set by TargetList's onOpenChange), so the
+  // panel button can (and must) highlight like every other toggle here.
+  { name: 'targets',   key: 't',       hook: 'onTargetList', arg: undefined,     kind: 'toggle', stateKey: 'showTargetList' },
   { name: 'missions',  key: 'j',       hook: 'onMissions',   arg: undefined,     kind: 'toggle', stateKey: 'showMissions' },
   { name: 'cockpit',   key: 'i',       hook: 'onCockpit',    arg: undefined,     kind: 'toggle', stateKey: 'cockpitOn' },
   { name: 'sound',     key: 'z',       hook: 'onSound',      arg: undefined,     kind: 'toggle', stateKey: 'sound' },
@@ -77,7 +80,7 @@ const EXPECTED = [
   { name: 'relfx',     key: 'c',       hook: 'onRelFx',      arg: undefined,     kind: 'toggle', stateKey: 'relFx' },
   { name: 'cube',      key: 'u',       hook: 'onCubeAberr',  arg: undefined,     kind: 'toggle', stateKey: 'cubeAberr' },
 ];
-const STATEKEY_WHITELIST = new Set(['showMap', 'showMissions', 'cockpitOn', 'sound', 'bloom', 'relFx', 'cubeAberr']);
+const STATEKEY_WHITELIST = new Set(['showMap', 'showMissions', 'cockpitOn', 'sound', 'bloom', 'relFx', 'cubeAberr', 'showTargetList']);
 
 // ── 1. Coverage: every promised key has EXACTLY one row ─────────────────────
 // "Feature reachable from a phone" == "there is exactly one PANEL_ACTIONS row

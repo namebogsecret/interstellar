@@ -37,7 +37,14 @@ window.addEventListener("unhandledrejection",function(ev){var r=ev.reason;p({typ
       <details id="startdetails">
         <summary data-i18n="start.details.summary"></summary>
         <p data-i18n-html="start.intro"></p>
-        <div class="controls" data-i18n-html="start.controls"></div>
+        <div class="controls controls-kbd" data-i18n-html="start.controls"></div>
+        <!-- F6 (repair round 1): the keyboard block above is meaningless on a
+             phone (no keys to press) and never mentioned the ☰ panel that
+             replaces it — this is the ONLY place a touch player reaches via
+             the ? button (js/render/touch.js openHelp -> shows #startscreen,
+             #help itself stays keyboard-only and hidden on touch, css above).
+             body.touch swaps this in for the block above (css/style.css). -->
+        <div class="controls controls-touch" data-i18n-html="start.controls.touch"></div>
         <p class="tip" data-i18n-html="start.tip"></p>
       </details>
       <button id="startbtn" data-i18n="start.launch"></button>
