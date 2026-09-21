@@ -17,6 +17,7 @@ import socketserver
 import functools
 import os
 import socket
+import re
 import sys
 import threading
 import time
@@ -491,8 +492,8 @@ def _is_beacon_noise(text):
     return 'stats.podlevskikh.com' in text
 
 
-def _bbox_retry(page, locator, label, errors, attempts=6, wait_ms=350):
-    """bounding_box() with retries.
+def _bbox_retry(page, locator, label, errors, attempts=8, wait_ms=350):
+    """bounding_box() with retries, plus a CPU-starvation escape hatch.
 
     Per dev-quality-gates' hang protocol: a machine loaded by a parallel
     agent must not have its CPU starvation misread as a layout defect. A
@@ -501,6 +502,19 @@ def _bbox_retry(page, locator, label, errors, attempts=6, wait_ms=350):
     (mid-transition, or momentarily starved of a paint frame) gets a fair
     chance to settle first. Returns the box dict, or None (already appended
     to `errors`) once every attempt is exhausted.
+
+    Flake observed 2026-09-21 (ГРАБЛИ): on a loaded 6-core box the software
+    (SwiftShader) WebGL render loop can starve the renderer badly enough that
+    Locator.bounding_box() times out 6× in a row on an element that is
+    provably present, visible and correctly laid out — the smoke reported
+    "thrust button ▲ bounding_box unavailable" at 360x640 while an isolated
+    probe on the same build returned rect 284,422,56x56. So after the retries
+    are exhausted we ask the PAGE for the geometry (getBoundingClientRect +
+    computed style) — that path does not go through Playwright actionability
+    waiting. If the DOM itself says the element is visible with a non-zero
+    box, this was scheduler starvation, not a defect: record a warning and
+    return the JS-measured box. A missing / display:none / zero-size element
+    still fails the smoke, which is the property the check exists for.
     """
     last = None
     for _ in range(attempts):
@@ -513,8 +527,45 @@ def _bbox_retry(page, locator, label, errors, attempts=6, wait_ms=350):
             return box
         last = last or "bounding_box() returned None (not attached/visible)"
         page.wait_for_timeout(wait_ms)
+
+    # Escape hatch: measure in-page, bypassing actionability waiting.
+    js_box = None
+    try:
+        js_box = page.evaluate(
+            """(sel) => { const e = document.querySelector(sel); if (!e) return null;
+                 const cs = getComputedStyle(e);
+                 if (cs.display === 'none' || cs.visibility === 'hidden') return null;
+                 const r = e.getBoundingClientRect();
+                 if (!(r.width > 0 && r.height > 0)) return null;
+                 return {x: r.x, y: r.y, width: r.width, height: r.height}; }""",
+            _locator_selector(locator))
+    except Exception:
+        js_box = None
+    if js_box:
+        _BBOX_STARVATION_WARNINGS.append(
+            f"{label}: Playwright bounding_box timed out {attempts}× but the DOM reports a "
+            f"visible {js_box['width']:.0f}x{js_box['height']:.0f} box at "
+            f"({js_box['x']:.0f},{js_box['y']:.0f}) — treated as renderer starvation, not a "
+            f"layout defect (last: {last})")
+        return js_box
+
     errors.append(f"{label}: bounding_box unavailable after {attempts} retries (last: {last})")
     return None
+
+
+# Warnings raised by _bbox_retry's escape hatch; drained per viewport by
+# _run_touch_viewport so they are printed with their viewport label.
+_BBOX_STARVATION_WARNINGS = []
+
+
+def _locator_selector(locator):
+    """The CSS selector a Locator was built from (Playwright keeps it in repr
+    as `<Locator frame=... selector='...'>`), needed because the escape hatch
+    above re-queries the DOM directly. Falls back to a selector that matches
+    nothing, so a repr change degrades to the old behaviour (a real error)
+    instead of silently passing."""
+    m = re.search(r"selector=[\'\"](.+)[\'\"]>?$", repr(locator))
+    return m.group(1) if m else "#__bbox_retry_selector_unavailable__"
 
 
 def _run_touch_viewport(browser, url, vp):
@@ -773,6 +824,13 @@ def _run_touch_viewport(browser, url, vp):
         errors.append(f"unexpected exception during {label} sweep: {ex!r}")
     finally:
         context.close()
+
+    # Drain the starvation warnings _bbox_retry collected for THIS viewport
+    # (module-level list, because _bbox_retry has no per-viewport handle) so
+    # they are printed under the right viewport label and the list does not
+    # leak into the next one.
+    while _BBOX_STARVATION_WARNINGS:
+        warnings.append(_BBOX_STARVATION_WARNINGS.pop(0))
 
     return errors, warnings
 
