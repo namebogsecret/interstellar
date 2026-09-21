@@ -46,8 +46,17 @@ const FLIGHT_HELD_KEYS = ['w', 's', 'a', 'd', 'r', 'f', ' ', 'q', 'e', '[', ']']
 const FLIGHT_ACTION_KEYS = ['x', 'k', 'g', 'n', 'backspace'];
 const FLIGHT_KEYS = new Set([...FLIGHT_HELD_KEYS, ...FLIGHT_ACTION_KEYS,
                              '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']);
-// Touch tap-buttons reach the hooks without a keydown; same classification.
-const FLIGHT_TOUCH_ACTIONS = new Set(['kill', 'jump']);
+// Touch tap-buttons reach the hooks without a keydown; same classification,
+// for BOTH the always-visible bottom strip (kill/jump — js/render/touch.js)
+// and the "☰" drawer's toggle/action buttons (js/render/touchPanel.js's
+// PANEL_ACTIONS — map/targets/missions/cockpit/sound/bloom/relfx/cube plus
+// autopilot/hohmann). Only 'autopilot' and 'hohmann' belong in this set: they
+// are the touch equivalents of 'n'/'shift+n', which IS a flight key (see the
+// table above). Every panel TOGGLE (map/targets/missions/cockpit/sound/bloom/
+// relfx/cube) is reachable from touch now but stays out of this set on
+// purpose — same as V/T/J/I/Z/B/C/U on the keyboard: opening a panel is not
+// taking the controls.
+const FLIGHT_TOUCH_ACTIONS = new Set(['kill', 'jump', 'autopilot', 'hohmann']);
 
 /** Does this key (already lower-cased) mean the pilot is flying the ship? */
 export function isFlightKey(k) { return FLIGHT_KEYS.has(k); }

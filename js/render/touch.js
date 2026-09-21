@@ -5,23 +5,37 @@
 //
 // Layout: a full-screen look-pad (drag to aim) behind a left thumb-stick
 // (translate) and a right button cluster (up/down thrust, STOP), plus a bottom
-// strip (target / jump / time − + / help). Shown only on coarse-pointer devices.
+// strip (target / jump / time − + / help / ☰ panel). Shown only on
+// coarse-pointer devices.
+//
+// The "☰" button opens #tpanel, a drawer built by looping over
+// js/render/touchPanel.js's PANEL_ACTIONS — the touch equivalents of the
+// keyboard-only features (autopilot, Hohmann, map, target list, missions,
+// cockpit, sound, bloom, relativistic optics, cubemap aberration). That table
+// is the single source of truth for the button set; this file only renders it
+// and dispatches through it (no per-name literals for panel actions).
 import { isFlightTouchAction } from './controls.js';
+import { PANEL_ACTIONS, panelAction } from './touchPanel.js';
 
 export class TouchControls {
-  constructor(controls, ship, canvas, openHelp) {
+  constructor(controls, ship, canvas, openHelp, sim) {
     this.controls = controls;
     this.ship = ship;
     this.openHelp = openHelp;
+    this.sim = sim;   // used only to read stateKey flags for panel-button highlighting
     this.lookSens = 0.0042;
     this._lookId = null;
     this._lookX = 0; this._lookY = 0;
+    this._panelOpen = false;
     this._build();
   }
 
   _build() {
     const root = document.createElement('div');
     root.id = 'touchui';
+    const panelBtns = PANEL_ACTIONS
+      .map((a) => `<button class="tbtn pbtn" data-tap="${a.name}" title="${a.title}">${a.label}</button>`)
+      .join('');
     root.innerHTML = `
       <div id="joy"><div id="joyknob"></div></div>
       <div id="tbtns-r">
@@ -35,15 +49,19 @@ export class TouchControls {
         <button class="tbtn" data-tap="warpdn">«</button>
         <button class="tbtn" data-tap="warpup">»</button>
         <button class="tbtn" data-tap="help">?</button>
-      </div>`;
+        <button class="tbtn" data-tap="panel" title="menu">☰</button>
+      </div>
+      <div id="tpanel">${panelBtns}</div>`;
     document.body.appendChild(root);
     this.root = root;
+    this.panelEl = root.querySelector('#tpanel');
 
     // --- look: drag anywhere that isn't a control or a modal to aim ----------
     // No overlay div (it would steal taps from the buttons); we listen on the
-    // document and ignore touches that begin on a UI control or the briefing.
+    // document and ignore touches that begin on a UI control, the panel
+    // drawer, or the briefing.
     const isUI = (el) => el && el.closest &&
-      el.closest('#joy, .tbtn, #startscreen, #langtoggle, #langtoggle2, button, a');
+      el.closest('#joy, .tbtn, #tpanel, #startscreen, #langtoggle, #langtoggle2, button, a');
     document.addEventListener('pointerdown', (e) => {
       // A real touch gesture — same autoplay-resume role as the mouse click/
       // keydown gestures in js/render/controls.js (see that file's comment).
@@ -101,6 +119,8 @@ export class TouchControls {
         btn.addEventListener('pointerup', up);
         btn.addEventListener('pointercancel', up);
         btn.addEventListener('pointerleave', up);
+      } else if (tap === 'panel') {
+        btn.addEventListener('pointerdown', (e) => { e.preventDefault(); this._togglePanel(); });
       } else if (tap) {
         btn.addEventListener('pointerdown', (e) => { e.preventDefault(); this._action(tap); });
       }
@@ -111,10 +131,21 @@ export class TouchControls {
     // Reporter #3 (the last one): tap-buttons reach the hooks directly, without
     // a keydown, so this is their only path to the pilot-intent counter that
     // the autopilot watches. Uses the SAME classification table as the keyboard
-    // (controls.js) — STOP and jump take the controls, opening a panel does not.
+    // (controls.js) — STOP/jump/autopilot/Hohmann take the controls, opening a
+    // panel does not.
     if (isFlightTouchAction(name)) this.controls._noteInput();
     this.controls.hooks.onGesture?.();   // autoplay-resume gesture, see _bind() above
     const h = this.controls.hooks;
+    // Table-driven dispatch for the ☰-panel actions (js/render/touchPanel.js).
+    // No per-name literals here for panel actions — a new row in that table
+    // must not need a new line in this switch.
+    const a = panelAction(name);
+    if (a) {
+      h[a.hook]?.(a.arg);
+      this._updatePanelState();
+      if (a.kind === 'action') this._closePanel();
+      return;
+    }
     switch (name) {
       case 'kill':   h.onKill?.(); break;
       case 'target': h.onTarget?.(1); break;
@@ -122,6 +153,29 @@ export class TouchControls {
       case 'warpup': h.onWarp?.(1); break;
       case 'warpdn': h.onWarp?.(-1); break;
       case 'help':   this.openHelp?.(); break;
+    }
+  }
+
+  _togglePanel() {
+    this._panelOpen = !this._panelOpen;
+    this.panelEl.classList.toggle('open', this._panelOpen);
+    if (this._panelOpen) this._updatePanelState();
+  }
+
+  _closePanel() {
+    this._panelOpen = false;
+    this.panelEl.classList.remove('open');
+  }
+
+  // Reflect sim[stateKey] on every toggle button that declares one. Guarded
+  // against a missing/undefined sim (constructor arg is optional) — a panel
+  // that can't read state just shows no highlight, it must not throw.
+  _updatePanelState() {
+    if (!this.sim) return;
+    for (const a of PANEL_ACTIONS) {
+      if (!a.stateKey) continue;
+      const btn = this.panelEl.querySelector(`[data-tap="${a.name}"]`);
+      if (btn) btn.classList.toggle('on', !!this.sim[a.stateKey]);
     }
   }
 }

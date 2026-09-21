@@ -834,7 +834,7 @@ document.querySelectorAll('[data-lang]').forEach((el) => {
 if (isTouch) {
   document.body.classList.add('touch');
   const openHelp = () => { document.exitPointerLock?.(); startScreen.style.display = 'flex'; };
-  new TouchControls(controls, ship, canvas, openHelp);
+  new TouchControls(controls, ship, canvas, openHelp, sim);
 }
 
 window.SIM = { ship, sim, BODIES, positions, spawnAt, controls, sound };
