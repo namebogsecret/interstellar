@@ -83,16 +83,19 @@
   check, not a physics check, and not covered by the tables below.</p>
 
   <h2>The machine-readable gate — <code>physics-gate.yaml</code></h2>
-  <p><code>physics-gate.yaml</code> at the repo root formalizes <b>4</b> of
-  the invariants below as individually-runnable gate entries — own command,
-  own tolerance, own exit code — rather than lines inside the combined
-  <code>tests/run.sh</code> output. These four are the project's load-bearing
-  physical claims:</p>
+  <p><code>physics-gate.yaml</code> at the repo root is valid YAML that
+  formalizes <b>4</b> of the invariants below as individually-runnable
+  entries — own command, own tolerance, own exit code — rather than lines
+  inside the combined <code>tests/run.sh</code> output. It documents the
+  commands for a human or agent to run by hand; the file itself is not wired
+  into any CI runner (no <code>.github/workflows</code>, and
+  <code>tests/run.sh</code> doesn't read it) — reproduction is manual, not
+  automated. These four are the project's load-bearing physical claims:</p>
   <table>
     <tr><th>Invariant</th><th>Test file</th><th>Locks</th><th class="refcol">Reference</th><th class="tolcol">Tolerance</th></tr>
     <tr><td>INV-PHYS-01</td><td>longitudinal.regression</td><td>Longitudinal 4-force not divided by γ (1000g burn)</td><td class="refcol">γ(t)=√(1+(αt/c)²)</td><td class="tolcol">2%</td></tr>
-    <tr><td>INV-PHYS-03</td><td>orbits</td><td>Angular-momentum-conserving Kepler elements (e, periapsis, apoapsis)</td><td class="refcol">v²=μ(2/r−1/a)</td><td class="tolcol">1e-3</td></tr>
-    <tr><td>INV-PHYS-06</td><td>gravity</td><td>Φ&lt;0, decreasing with r; weak-field dτ→1 at large r</td><td class="refcol">Φ=−μ/r</td><td class="tolcol">1e-12</td></tr>
+    <tr><td>INV-PHYS-03</td><td>orbits</td><td>Orbit elements (a, e, periapsis, apoapsis) from state (r,v); actual conservation of h under propagation is checked separately in propagator.conservation, not this file</td><td class="refcol">v²=μ(2/r−1/a)</td><td class="tolcol">1e-3</td></tr>
+    <tr><td>INV-PHYS-06</td><td>gravity</td><td>Φ&lt;0, decreasing with r (sign+monotonicity, no numeric reference); weak-field dτ→1 at large r</td><td class="refcol">Φ=−μ/r (sign/monotonicity only)</td><td class="tolcol">dτ→1: 1e-12 abs (not a tolerance on Φ)</td></tr>
     <tr><td>INV-PHYS-09</td><td>relativity</td><td>Aberration formula, round-trip, monotonicity</td><td class="refcol">(cp−β)/(1−β·cp)</td><td class="tolcol">1e-9</td></tr>
   </table>
   <div class="note">The 2% tolerance on INV-PHYS-01 is not a convenience
@@ -101,7 +104,7 @@
   refactor ever divides the longitudinal thrust term by γ, this is the test
   meant to go red.</div>
   <p>Several other files carry their own in-code <code>INV-PHYS-NN</code>
-  labels (10, 11, 12 — see below) that are <b>not yet wired into
+  labels (04, 05, 07, 10, 11, 12 — see below) that are <b>not yet wired into
   <code>physics-gate.yaml</code></b>; they run inside <code>tests/run.sh</code>
   but don't have an individual entry with their own exit code — a real gap,
   stated here rather than hidden.</p>
@@ -113,15 +116,21 @@
     <tr><th>File</th><th>Checks</th><th class="refcol">Reference</th><th class="tolcol">Tolerance</th></tr>
     <tr><td>relativity</td><td>Aberration formula, round-trip, monotonicity (INV-PHYS-09)</td><td class="refcol">(cp−β)/(1−β·cp)</td><td class="tolcol">1e-9</td></tr>
     <tr><td>longitudinal.regression</td><td>γ(t) under constant 1000g proper accel, longitudinal 4-force undivided (INV-PHYS-01, NEVER DELETE/WEAKEN)</td><td class="refcol">γ(t)=√(1+(αt/c)²)</td><td class="tolcol">2%</td></tr>
-    <tr><td>gravity.relativistic</td><td>Weak-field relativistic gravity on a fast particle — transverse/longitudinal factors differ (INV-PHYS-10, not in physics-gate.yaml)</td><td class="refcol">a=(1+β²)g⊥+(1−3β²)g∥, β=0.99</td><td class="tolcol">guard: ratio &gt; 1.5</td></tr>
+    <tr><td>gravity.relativistic</td><td>(a) Transverse factor — actually gated: hard guard ratio&gt;1.5 plus 3% tolerance vs (1+β²) at β=0.99 (INV-PHYS-10, not in physics-gate.yaml). (b) Longitudinal factor (1−3β²) — implemented in ship.js, but only printed via console.log in a try/catch; <b>not asserted</b> by the gate</td><td class="refcol">a⊥=(1+β²)g⊥ · a∥=(1−3β²)g∥</td><td class="tolcol">(a) guard&gt;1.5 + 3% rel · (b) none — diagnostic only</td></tr>
   </table>
   <p>The <code>(1−3β²)</code> longitudinal factor is a fixed, deliberate
-  decision by the project owner (2026-07-07) — settled, not an open question.</p>
+  decision by the project owner about the physics engine itself — an internal
+  decision, not something independently verifiable from a source inside this
+  repo, and not something this document proposes to revisit. What's
+  inaccurate is calling it <em>gate coverage</em>: there is currently no
+  automated regression assertion on the longitudinal term, only the
+  diagnostic <code>console.log</code> above — a known, stated gap, not a
+  hidden one.</p>
 
   <h3>B — Orbital mechanics / Kepler</h3>
   <table>
     <tr><th>File</th><th>Checks</th><th class="refcol">Reference</th><th class="tolcol">Tolerance</th></tr>
-    <tr><td>orbits</td><td>Kepler elements (a, e, rPeri, rApo) (INV-PHYS-03)</td><td class="refcol">v²=μ(2/r−1/a)</td><td class="tolcol">1e-3</td></tr>
+    <tr><td>orbits</td><td>Kepler elements (a, e, rPeri, rApo) from state (r,v) (INV-PHYS-03) — does not itself assert conservation of angular momentum under propagation; see propagator.conservation below</td><td class="refcol">v²=μ(2/r−1/a)</td><td class="tolcol">1e-3</td></tr>
     <tr><td>orbits.classify</td><td>bound/unbound via specific energy, not e≥1 (ADR-8)</td><td class="refcol">ε=v²/2−μ/r&lt;0</td><td class="tolcol">exact identity</td></tr>
     <tr><td>orbits.guards</td><td>Finiteness at degenerate inputs (r→0, e=1)</td><td class="refcol">—</td><td class="tolcol">finiteness only</td></tr>
     <tr><td>orbits.radial</td><td>Near-radial orbits: bound ≡ isFinite(rApo)</td><td class="refcol">—</td><td class="tolcol">exact identity</td></tr>
@@ -138,15 +147,15 @@
   <h3>C — Gravity</h3>
   <table>
     <tr><th>File</th><th>Checks</th><th class="refcol">Reference</th><th class="tolcol">Tolerance</th></tr>
-    <tr><td>gravity</td><td>Φ&lt;0, decreasing with r; weak-field dτ→1 at large r (INV-PHYS-06)</td><td class="refcol">Φ=−μ/r</td><td class="tolcol">1e-12</td></tr>
-    <tr><td>gravity.relativistic</td><td>see table A above</td><td class="refcol">a=(1+β²)g⊥+(1−3β²)g∥</td><td class="tolcol">guard: ratio &gt; 1.5</td></tr>
+    <tr><td>gravity</td><td>Φ&lt;0, decreasing with r (sign+monotonicity, no numeric reference); weak-field dτ→1 at large r (INV-PHYS-06)</td><td class="refcol">Φ=−μ/r (sign/monotonicity only)</td><td class="tolcol">dτ→1: 1e-12 abs (not a tolerance on Φ)</td></tr>
+    <tr><td>gravity.relativistic</td><td>see table A above</td><td class="refcol">a⊥=(1+β²)g⊥ · a∥=(1−3β²)g∥</td><td class="tolcol">(a) guard&gt;1.5 · (b) not asserted</td></tr>
   </table>
 
   <h3>D — Autopilot (orbital-manoeuvre guidance)</h3>
   <table>
     <tr><th>File</th><th>Checks</th><th class="tolcol">Tolerance</th></tr>
-    <tr><td>autopilot.circular</td><td>Circularization burn converges to target radius</td><td class="tolcol">a: 1e-3–2e-3 rel · e: 1e-3–1e-5</td></tr>
-    <tr><td>autopilot.hohmann</td><td>Hohmann transfer converges to target orbit radius</td><td class="tolcol">final a within 5e-3 rel, e&lt;1e-4</td></tr>
+    <tr><td>autopilot.circular</td><td>Circularization burn converges to target radius</td><td class="tolcol">a: 1e-3–2e-3 rel · e: 1e-3</td></tr>
+    <tr><td>autopilot.hohmann</td><td>Hohmann transfer converges to target orbit radius</td><td class="tolcol">final a within 5e-3 rel, e&lt;2e-3 (5e-3 for Earth–Moon)</td></tr>
     <tr><td>autopilot.integrator</td><td>Same manoeuvres via the real Ship.step integrator, not an idealized bench</td><td class="tolcol">same order</td></tr>
     <tr><td>autopilot.refuse</td><td>Refusal gate returns the correct reason code (relativistic speed, landed, atmosphere, unbound start, low fuel, multi-body domination, low target)</td><td class="tolcol">exact reason-code match</td></tr>
     <tr><td>autopilot.cancel</td><td>Cancellation via a single monotonic inputSeq counter (ADR-7)</td><td class="tolcol">exact condition</td></tr>
@@ -234,16 +243,20 @@
   таблицы ниже не входит.</p>
 
   <h2>Машиночитаемый гейт — <code>physics-gate.yaml</code></h2>
-  <p><code>physics-gate.yaml</code> в корне репозитория формализует
-  <b>4</b> из инвариантов ниже как отдельно запускаемые пункты гейта —
-  своя команда, свой допуск, свой код выхода — а не просто строки внутри
-  общего вывода <code>tests/run.sh</code>. Это четыре физических
-  утверждения, на которых держится проект:</p>
+  <p><code>physics-gate.yaml</code> в корне репозитория — валидный YAML,
+  формализующий <b>4</b> из инвариантов ниже как отдельно запускаемые пункты
+  гейта — своя команда, свой допуск, свой код выхода — а не просто строки
+  внутри общего вывода <code>tests/run.sh</code>. Файл документирует команды
+  для ручного запуска человеком или агентом; сам он <b>не</b> подключён ни к
+  какому CI-раннеру (нет <code>.github/workflows</code>, и
+  <code>tests/run.sh</code> его не читает) — воспроизведение ручное, не
+  автоматическое. Это четыре физических утверждения, на которых держится
+  проект:</p>
   <table>
     <tr><th>Инвариант</th><th>Файл теста</th><th>Что закрепляет</th><th class="refcol">Эталон</th><th class="tolcol">Допуск</th></tr>
     <tr><td>INV-PHYS-01</td><td>longitudinal.regression</td><td>Продольная 4-сила не делится на γ (тяга 1000g)</td><td class="refcol">γ(t)=√(1+(αt/c)²)</td><td class="tolcol">2%</td></tr>
-    <tr><td>INV-PHYS-03</td><td>orbits</td><td>Кеплеровы элементы с сохранением момента импульса (e, периапсис, апоапсис)</td><td class="refcol">v²=μ(2/r−1/a)</td><td class="tolcol">1e-3</td></tr>
-    <tr><td>INV-PHYS-06</td><td>gravity</td><td>Φ&lt;0, убывает с r; слабопольная dτ→1 при больших r</td><td class="refcol">Φ=−μ/r</td><td class="tolcol">1e-12</td></tr>
+    <tr><td>INV-PHYS-03</td><td>orbits</td><td>Элементы орбиты (a, e, периапсис, апоапсис) из состояния (r,v); реальное сохранение h при пропагации проверяется отдельно в propagator.conservation, не в этом файле</td><td class="refcol">v²=μ(2/r−1/a)</td><td class="tolcol">1e-3</td></tr>
+    <tr><td>INV-PHYS-06</td><td>gravity</td><td>Φ&lt;0, убывает с r (только знак+монотонность, без числового эталона); слабопольная dτ→1 при больших r</td><td class="refcol">Φ=−μ/r (только знак/монотонность)</td><td class="tolcol">dτ→1: 1e-12 абс. (не допуск на сам Φ)</td></tr>
     <tr><td>INV-PHYS-09</td><td>relativity</td><td>Формула аберрации, round-trip, монотонность</td><td class="refcol">(cp−β)/(1−β·cp)</td><td class="tolcol">1e-9</td></tr>
   </table>
   <div class="note">Допуск 2% у INV-PHYS-01 — не удобная погрешность «с
@@ -252,10 +265,10 @@
   4-силы когда-нибудь начнёт делить продольный член тяги на γ, именно этот
   тест должен покраснеть.</div>
   <p>У нескольких других файлов есть собственные внутрикодовые метки
-  <code>INV-PHYS-NN</code> (10, 11, 12 — см. ниже), которые <b>ещё не
-  включены в <code>physics-gate.yaml</code></b>: они выполняются внутри
-  <code>tests/run.sh</code>, но не имеют отдельной записи со своим кодом
-  выхода — реальный пробел, названный здесь, а не скрытый.</p>
+  <code>INV-PHYS-NN</code> (04, 05, 07, 10, 11, 12 — см. ниже), которые
+  <b>ещё не включены в <code>physics-gate.yaml</code></b>: они выполняются
+  внутри <code>tests/run.sh</code>, но не имеют отдельной записи со своим
+  кодом выхода — реальный пробел, названный здесь, а не скрытый.</p>
 
   <h2>Полный гейт по темам</h2>
 
@@ -264,15 +277,21 @@
     <tr><th>Файл</th><th>Проверяет</th><th class="refcol">Эталон</th><th class="tolcol">Допуск</th></tr>
     <tr><td>relativity</td><td>Формула аберрации, round-trip, монотонность (INV-PHYS-09)</td><td class="refcol">(cp−β)/(1−β·cp)</td><td class="tolcol">1e-9</td></tr>
     <tr><td>longitudinal.regression</td><td>γ(t) при постоянном 1000g собственном ускорении, продольная 4-сила без деления (INV-PHYS-01, NEVER DELETE/WEAKEN)</td><td class="refcol">γ(t)=√(1+(αt/c)²)</td><td class="tolcol">2%</td></tr>
-    <tr><td>gravity.relativistic</td><td>Слабопольная релятивистская гравитация на быстрой частице — продольный/поперечный факторы различны (INV-PHYS-10, нет в physics-gate.yaml)</td><td class="refcol">a=(1+β²)g⊥+(1−3β²)g∥, β=0.99</td><td class="tolcol">guard: ratio &gt; 1.5</td></tr>
+    <tr><td>gravity.relativistic</td><td>(a) Поперечный фактор — реально гейтится: жёсткий guard ratio&gt;1.5 плюс допуск 3% против (1+β²) при β=0.99 (INV-PHYS-10, нет в physics-gate.yaml). (b) Продольный фактор (1−3β²) — реализован в ship.js, но только выводится через console.log в try/catch; гейтом <b>не проверяется</b></td><td class="refcol">a⊥=(1+β²)g⊥ · a∥=(1−3β²)g∥</td><td class="tolcol">(a) guard&gt;1.5 + 3% отн. · (b) нет — только диагностика</td></tr>
   </table>
   <p>Продольный фактор <code>(1−3β²)</code> — зафиксированное осознанное
-  решение владельца проекта (2026-07-07), не открытый вопрос.</p>
+  решение владельца проекта о самой физике движка — внутреннее решение, не
+  проверяемое независимо по источнику внутри этого репозитория, и не то,
+  что этот документ предлагает пересматривать. Неточность была в другом —
+  в формулировке этого как <em>покрытия гейтом</em>: сейчас нет
+  автоматической регрессионной проверки продольного члена, только
+  диагностический <code>console.log</code> выше — известный, названный
+  пробел, а не скрытый.</p>
 
   <h3>B — Орбитальная механика / законы Кеплера</h3>
   <table>
     <tr><th>Файл</th><th>Проверяет</th><th class="refcol">Эталон</th><th class="tolcol">Допуск</th></tr>
-    <tr><td>orbits</td><td>Кеплеровы элементы (a, e, rPeri, rApo) (INV-PHYS-03)</td><td class="refcol">v²=μ(2/r−1/a)</td><td class="tolcol">1e-3</td></tr>
+    <tr><td>orbits</td><td>Кеплеровы элементы (a, e, rPeri, rApo) из состояния (r,v) (INV-PHYS-03) — сам не проверяет сохранение момента импульса при пропагации; см. propagator.conservation ниже</td><td class="refcol">v²=μ(2/r−1/a)</td><td class="tolcol">1e-3</td></tr>
     <tr><td>orbits.classify</td><td>bound/unbound по удельной энергии, не по e≥1 (ADR-8)</td><td class="refcol">ε=v²/2−μ/r&lt;0</td><td class="tolcol">точное тождество</td></tr>
     <tr><td>orbits.guards</td><td>Конечность при вырожденных входах (r→0, e=1)</td><td class="refcol">—</td><td class="tolcol">только конечность</td></tr>
     <tr><td>orbits.radial</td><td>Near-radial орбиты: bound ≡ isFinite(rApo)</td><td class="refcol">—</td><td class="tolcol">точное тождество</td></tr>
@@ -289,15 +308,15 @@
   <h3>C — Гравитация</h3>
   <table>
     <tr><th>Файл</th><th>Проверяет</th><th class="refcol">Эталон</th><th class="tolcol">Допуск</th></tr>
-    <tr><td>gravity</td><td>Φ&lt;0, убывает с r; слабопольная dτ→1 при больших r (INV-PHYS-06)</td><td class="refcol">Φ=−μ/r</td><td class="tolcol">1e-12</td></tr>
-    <tr><td>gravity.relativistic</td><td>см. таблицу A выше</td><td class="refcol">a=(1+β²)g⊥+(1−3β²)g∥</td><td class="tolcol">guard: ratio &gt; 1.5</td></tr>
+    <tr><td>gravity</td><td>Φ&lt;0, убывает с r (только знак+монотонность, без числового эталона); слабопольная dτ→1 при больших r (INV-PHYS-06)</td><td class="refcol">Φ=−μ/r (только знак/монотонность)</td><td class="tolcol">dτ→1: 1e-12 абс. (не допуск на сам Φ)</td></tr>
+    <tr><td>gravity.relativistic</td><td>см. таблицу A выше</td><td class="refcol">a⊥=(1+β²)g⊥ · a∥=(1−3β²)g∥</td><td class="tolcol">(a) guard&gt;1.5 · (b) не проверяется</td></tr>
   </table>
 
   <h3>D — Автопилот (орбитальные манёвры)</h3>
   <table>
     <tr><th>Файл</th><th>Проверяет</th><th class="tolcol">Допуск</th></tr>
-    <tr><td>autopilot.circular</td><td>Циркуляризация сходится к целевому радиусу</td><td class="tolcol">a: 1e-3–2e-3 отн. · e: 1e-3–1e-5</td></tr>
-    <tr><td>autopilot.hohmann</td><td>Хоман-трансфер сходится к целевому радиусу орбиты</td><td class="tolcol">финальная a ±5e-3 отн., e&lt;1e-4</td></tr>
+    <tr><td>autopilot.circular</td><td>Циркуляризация сходится к целевому радиусу</td><td class="tolcol">a: 1e-3–2e-3 отн. · e: 1e-3</td></tr>
+    <tr><td>autopilot.hohmann</td><td>Хоман-трансфер сходится к целевому радиусу орбиты</td><td class="tolcol">финальная a ±5e-3 отн., e&lt;2e-3 (5e-3 для Земля–Луна)</td></tr>
     <tr><td>autopilot.integrator</td><td>Те же манёвры через реальный интегратор Ship.step, не идеализированный стенд</td><td class="tolcol">тот же порядок</td></tr>
     <tr><td>autopilot.refuse</td><td>Гейт отказа возвращает верный код причины (релятивистская скорость, посадка, атмосфера, unbound-старт, топливо, доминирование, низкая цель)</td><td class="tolcol">точное совпадение кода</td></tr>
     <tr><td>autopilot.cancel</td><td>Отмена через единый монотонный счётчик inputSeq (ADR-7)</td><td class="tolcol">точное условие</td></tr>

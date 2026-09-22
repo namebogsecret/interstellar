@@ -30,17 +30,20 @@ check, and is not covered by the tables below.
 
 ## The machine-readable gate: `physics-gate.yaml`
 
-`physics-gate.yaml` at the repo root formalizes **4** of the invariants below
-as individually-runnable, individually-scored gate entries (own command, own
-tolerance, own exit code) rather than lines inside the combined
-`tests/run.sh` output. These are the four the project treats as the
-load-bearing physical claims of the simulator:
+`physics-gate.yaml` at the repo root is a valid YAML document that formalizes
+**4** of the invariants below as individually-runnable entries — own command,
+own tolerance, own exit code — rather than lines inside the combined
+`tests/run.sh` output. It documents the commands for a human or agent to run
+by hand; the file itself is **not** wired into any CI runner (no
+`.github/workflows` exist, and `tests/run.sh` does not read it), so
+reproduction is manual, not automated. These are the four the project treats
+as the load-bearing physical claims of the simulator:
 
 | Invariant | Test file | What it locks | Reference | Tolerance |
 |---|---|---|---|---|
 | INV-PHYS-01 | `longitudinal.regression.test.mjs` | Longitudinal 4-force is **not** divided by γ: sustained 1000 g proper acceleration reproduces the analytic relativistic rocket | γ(t) = √(1+(αt/c)²) | 2% |
-| INV-PHYS-03 | `orbits.test.mjs` | Angular-momentum-conserving orbit elements from `circularizeVelocity`/`orbitFromState` (eccentricity, periapsis, apoapsis) | v² = μ(2/r − 1/a) | 1e-3 |
-| INV-PHYS-06 | `gravity.test.mjs` | Gravitational potential is negative and shrinks with r; weak-field time-dilation factor → 1 as r → ∞ | Φ = −μ/r | 1e-12 |
+| INV-PHYS-03 | `orbits.test.mjs` | Orbit elements (a, e, rPeri, rApo) computed from a state (r,v) via `circularizeVelocity`/`orbitFromState`; actual conservation of angular momentum under propagation is checked separately in `propagator.conservation.test.mjs` (not one of these 4 formalized INV-ids) | v² = μ(2/r − 1/a) | 1e-3 |
+| INV-PHYS-06 | `gravity.test.mjs` | Gravitational potential's sign and monotonicity (no numeric reference comparison); weak-field time-dilation factor converges to 1 as r → ∞ | Φ = −μ/r (sign/monotonicity check, not a numeric comparison) | dτ-factor→1: 1e-12 abs (this tolerance is on the dτ factor, not on Φ itself) |
 | INV-PHYS-09 | `relativity.test.mjs` | Relativistic aberration: exact formula, round-trip with its own inverse, monotonicity | aberratedCos(cp,β) = (cp−β)/(1−β·cp) | 1e-9 |
 
 **On the 2% tolerance (INV-PHYS-01):** that is not a rounding margin picked
@@ -50,7 +53,7 @@ header: if a future 4-force refactor ever divides the longitudinal thrust
 term by γ, this is the test that is supposed to go red.
 
 A number of other test files carry their own in-code `INV-PHYS-NN` labels
-(10, 11, 12 — see the tables below) that are **not yet wired into
+(04, 05, 07, 10, 11, 12 — see the tables below) that are **not yet wired into
 `physics-gate.yaml`**; they run as part of `tests/run.sh` but don't have an
 individual entry with their own exit code. That is a real gap, not an
 oversight being hidden here.
@@ -63,17 +66,22 @@ oversight being hidden here.
 |---|---|---|---|
 | `relativity.test.mjs` | Aberration formula, round-trip, monotonicity (INV-PHYS-09) | aberratedCos(cp,β) = (cp−β)/(1−β·cp) | 1e-9 |
 | `longitudinal.regression.test.mjs` | γ(t) under constant 1000g proper acceleration, longitudinal 4-force undivided by γ (INV-PHYS-01, **NEVER DELETE/WEAKEN**) | γ(t) = √(1+(αt/c)²) | 2% |
-| `gravity.relativistic.test.mjs` | Weak-field relativistic gravity on a fast test particle: transverse and longitudinal coordinate-acceleration factors differ (internally labeled INV-PHYS-10, not yet in `physics-gate.yaml`) | a = (1+β²)·g⊥ + (1−3β²)·g∥ at β=0.99 | hard guard: transverse ratio a⊥/g > 1.5 |
+| `gravity.relativistic.test.mjs` | **(a) Transverse** coordinate-acceleration factor — actually gated: hard guard `ratio > 1.5` plus a 3% tolerance against `(1+β²)` at β=0.99 (internally labeled INV-PHYS-10, not yet in `physics-gate.yaml`). **(b) Longitudinal** factor `(1−3β²)` — implemented in `js/physics/ship.js`, but only printed via `console.log` inside a `try/catch`; it is **not asserted** by the gate at all | a⊥ = (1+β²)·g⊥ · a∥ = (1−3β²)·g∥ (both at β=0.99 for (a); β=0.5 for the (b) diagnostic) | (a) hard guard ratio>1.5 + 3% rel · (b) none — diagnostic only |
 
 The `(1−3β²)` longitudinal factor is a fixed, deliberate decision by the
-project owner (2026-07-07) — it is not an open question or a placeholder to
-revisit; treat it as settled.
+project owner about the physics engine itself — an internal decision, not
+something independently verifiable from a source inside this repo, and not
+something this document is proposing to revisit. What's inaccurate is
+describing it as *gate coverage*: there is currently no automated regression
+assertion on the longitudinal term, only the diagnostic `console.log` above.
+That is a known, stated gap, not a hidden one — see the honest-gap list
+above and (b) in the row directly above.
 
 ### B — Orbital mechanics / Kepler
 
 | File | Checks | Reference | Tolerance |
 |---|---|---|---|
-| `orbits.test.mjs` | Kepler elements (a, e, rPeri, rApo) from `circularizeVelocity`/`orbitFromState` (INV-PHYS-03) | v² = μ(2/r − 1/a) | 1e-3 |
+| `orbits.test.mjs` | Kepler elements (a, e, rPeri, rApo) from a state (r,v) via `circularizeVelocity`/`orbitFromState` (INV-PHYS-03) — does **not** itself assert conservation of angular momentum during propagation; that is checked separately below in `propagator.conservation.test.mjs` | v² = μ(2/r − 1/a) | 1e-3 |
 | `orbits.classify.test.mjs` | bound/unbound classification uses specific orbital energy, **not** `e ≥ 1` (ADR-8) | eps = v²/2 − μ/r < 0 | exact identity (not a numeric tolerance) |
 | `orbits.guards.test.mjs` | Degenerate inputs (r→0, exact parabola e=1) stay finite, don't regress well-posed cases | — | finiteness only |
 | `orbits.radial.test.mjs` | Near-radial trajectories: `bound` field agrees with `Number.isFinite(rApo)` | — | exact identity |
@@ -90,15 +98,15 @@ revisit; treat it as settled.
 
 | File | Checks | Reference | Tolerance |
 |---|---|---|---|
-| `gravity.test.mjs` | Gravitational potential negative and decreasing with r; weak-field dτ factor → 1 at large r (INV-PHYS-06) | Φ = −μ/r | 1e-12 |
+| `gravity.test.mjs` | Gravitational potential's sign (negative) and monotonicity (decreasing with r) — no numeric comparison against a reference value; weak-field dτ factor converges to 1 at large r (INV-PHYS-06) | Φ = −μ/r (sign/monotonicity only) | dτ-factor→1: 1e-12 abs (not a tolerance on Φ) |
 | `gravity.relativistic.test.mjs` | see table A above | a = (1+β²)g⊥ + (1−3β²)g∥ | guard: ratio > 1.5 |
 
 ### D — Autopilot (orbital-manoeuvre guidance)
 
 | File | Checks | Reference | Tolerance |
 |---|---|---|---|
-| `autopilot.circular.test.mjs` | Closed-loop circularization burn converges to the target radius | a ≈ target r, e < 1e-5 | a: 1e-3–2e-3 rel · e: 1e-3–1e-5 |
-| `autopilot.hohmann.test.mjs` | Hohmann transfer converges to the target orbit radius | — | final a within 5e-3 rel of target, e < 1e-4 |
+| `autopilot.circular.test.mjs` | Closed-loop circularization burn converges to the target radius | a ≈ target r, e < 1e-3 | a: 1e-3–2e-3 rel · e: 1e-3 |
+| `autopilot.hohmann.test.mjs` | Hohmann transfer converges to the target orbit radius | — | final a within 5e-3 rel of target, e < 2e-3 (5e-3 for the Earth–Moon case) |
 | `autopilot.integrator.test.mjs` | Same manoeuvres, but driven through the real `Ship.step` integrator, not an idealized bench | — | same order as above |
 | `autopilot.refuse.test.mjs` | Refusal gate returns the correct reason code: relativistic speed, landed/crashed, in atmosphere, unbound starting orbit, insufficient propellant, multi-body domination, sub-safe-altitude target | — | exact reason-code match |
 | `autopilot.cancel.test.mjs` | Manoeuvre cancellation via a single monotonic `inputSeq` counter (ADR-7) | — | exact condition |
