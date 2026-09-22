@@ -40,7 +40,7 @@ const DICT = {
       hold <b>W</b>, and watch the clocks: near light speed your ship-clock ticks
       slower than the system clock — that's real physics.`,
     'start.launch': '▶ Launch (click to capture the mouse)',
-    'start.cta': 'The physics under the hood — orbits, gravity, special relativity — is the same physics taught in IB, AP and SAT courses. I\'m the physicist who built this and who teaches it: <a href="https://tutor.podlevskikh.com" target="_blank" rel="noopener" style="color:#7fb3ff;text-decoration:none;border-bottom:1px dotted rgba(127,179,255,.5)">tutor.podlevskikh.com</a>',
+    'start.cta': 'The physics under the hood — orbits, gravity, special relativity — is the same physics taught in IB, AP and SAT courses. I\'m the physicist who built this and who teaches it: <a href="https://tutor.podlevskikh.com" target="_blank" rel="noopener" style="color:#7fb3ff;text-decoration:none;border-bottom:1px dotted rgba(127,179,255,.5)">tutor.podlevskikh.com</a> — <a href="physics-verification.html" style="color:#7fb3ff;text-decoration:none;border-bottom:1px dotted rgba(127,179,255,.5)">how we verify the physics</a>',
 
     // --- HUD labels ---
     'hud.speed': 'SPEED', 'hud.gamma': 'γ (time-stretch)', 'hud.dilation': 'TIME DILATION',
@@ -166,7 +166,7 @@ const DICT = {
       Землю, держите <b>W</b> и следите за часами: у скорости света ваши часы идут
       медленнее «мировых» — это настоящая физика.`,
     'start.launch': '▶ Старт (клик — захватить мышь)',
-    'start.cta': 'Физика под капотом — орбиты, гравитация, специальная теория относительности — та же, что в курсах IB, AP и SAT. Я физик, который это построил и который её преподаёт: <a href="https://tutor.podlevskikh.com" target="_blank" rel="noopener" style="color:#7fb3ff;text-decoration:none;border-bottom:1px dotted rgba(127,179,255,.5)">tutor.podlevskikh.com</a>',
+    'start.cta': 'Физика под капотом — орбиты, гравитация, специальная теория относительности — та же, что в курсах IB, AP и SAT. Я физик, который это построил и который её преподаёт: <a href="https://tutor.podlevskikh.com" target="_blank" rel="noopener" style="color:#7fb3ff;text-decoration:none;border-bottom:1px dotted rgba(127,179,255,.5)">tutor.podlevskikh.com</a> — <a href="physics-verification.html" style="color:#7fb3ff;text-decoration:none;border-bottom:1px dotted rgba(127,179,255,.5)">как мы проверяем физику</a>',
 
     'hud.speed': 'СКОРОСТЬ', 'hud.gamma': 'γ (растяжение времени)', 'hud.dilation': 'ЗАМЕДЛЕНИЕ ВРЕМЕНИ',
     'hud.accel': 'ПЕРЕГРУЗКА', 'hud.mode': 'РЕЖИМ', 'hud.throttle': 'МОЩНОСТЬ',

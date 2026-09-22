@@ -7,6 +7,8 @@
 ## The physics inside
 Time dilation and the twin paradox made tangible, relativistic aberration of starlight, Doppler shift of stellar spectra, and the real scale of interplanetary distances at sub-light speeds.
 
+- [How the physics is verified](https://space.podlevskikh.com/physics-verification.html) — the test suite, reference formulas and tolerances behind every physics claim above, honestly reported (no invented precision).
+
 ## Related projects
 - [Physics Lab — 70 interactive physics simulations](https://physics.podlevskikh.com/)
 - [RocketSim — rocket dynamics labs](https://rocket.podlevskikh.com/edu/)

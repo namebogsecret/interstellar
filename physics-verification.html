@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Physics verification — Interstellar</title>
+<meta name="description" content="How the physics in Interstellar is checked: the 39-file test suite, reference formulas and tolerances behind every physics claim, honestly reported." />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="120x120" href="/favicon-120.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<style>
+  :root {
+    --fg: #9fe7ff; --dim: #5b7c88; --bg: rgba(6, 14, 20, 0.66);
+    --line: rgba(120, 200, 230, 0.18); --card: rgba(8, 16, 24, 0.92);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #05070c; }
+  body {
+    color: #cfeefc; font: 14px/1.65 "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    padding: 0 0 60px;
+  }
+  a { color: #7fb3ff; }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 22px 0; }
+  header.top {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    flex-wrap: wrap; margin-bottom: 22px;
+  }
+  header.top a.home { color: var(--dim); text-decoration: none; }
+  header.top a.home:hover { color: var(--fg); }
+  #langtoggle { display: flex; gap: 3px; background: var(--bg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 3px; }
+  #langtoggle span { cursor: pointer; padding: 3px 10px; border-radius: 5px; color: var(--dim); font-size: 12px; }
+  #langtoggle span.active { color: #eaffff; background: rgba(60,116,148,0.5); }
+  h1 { font-size: 22px; letter-spacing: 0.06em; color: #bfeeff; margin: 0 0 6px; }
+  h2 { font-size: 15px; letter-spacing: 0.05em; color: #d7f6ff; margin: 34px 0 10px;
+    border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  h3 { font-size: 13px; color: #bfe6f4; margin: 22px 0 8px; }
+  p { color: #b9d8e6; margin: 10px 0; }
+  b, strong { color: #eaffff; }
+  code { background: rgba(120,200,230,0.1); border-radius: 3px; padding: 1px 5px; color: #d7f6ff; }
+  pre { background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 14px; overflow-x: auto; color: #d7f6ff; }
+  .note { background: rgba(40,90,120,0.18); border-left: 2px solid #4a8fb0; padding: 10px 14px;
+    border-radius: 5px; color: #bfe6f4; margin: 14px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid rgba(120,200,230,0.1); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; letter-spacing: 0.03em; font-size: 11.5px; }
+  td.mono, th.mono { font-family: inherit; }
+  tr:hover td { background: rgba(120,200,230,0.04); }
+  .tolcol, .refcol { white-space: nowrap; color: #9fe7ff; }
+  footer.bottom { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line);
+    color: var(--dim); font-size: 12px; }
+  [data-lang] { display: none; }
+  [data-lang].active { display: block; }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <a class="home" href="/">← Interstellar</a>
+    <div id="langtoggle"><span data-set="en">EN</span><span data-set="ru">RU</span></div>
+  </header>
+
+<div data-lang="en" class="active">
+  <h1>PHYSICS VERIFICATION</h1>
+  <p>How the physics in this simulator is checked — what runs, against which
+  reference formula, and to what tolerance. This is not marketing copy: where
+  a tolerance is wide, or a check is really a code/UX contract rather than a
+  from-scratch physics derivation, that is said plainly. Nothing below is
+  aspirational — every row maps to a real, currently-passing test file. If a
+  check isn't listed here, it isn't part of the gate.</p>
+
+  <h2>Reproduce it</h2>
+  <pre>bash tests/run.sh</pre>
+  <p>Runs every <code>tests/*.test.mjs</code> file under Node, bare
+  <code>assert</code>, no framework, no build step — currently
+  <b>39 files</b>, about 2 seconds. Prints <code>PHYSICS GATE: PASS</code> and
+  exits 0 only if every assertion in every file holds. Separately,
+  <code>tests/smoke_playwright.py</code> drives a real browser to catch
+  frame-loop crashes the Node tests can't see — a crash/console-error smoke
+  check, not a physics check, and not covered by the tables below.</p>
+
+  <h2>The machine-readable gate — <code>physics-gate.yaml</code></h2>
+  <p><code>physics-gate.yaml</code> at the repo root formalizes <b>4</b> of
+  the invariants below as individually-runnable gate entries — own command,
+  own tolerance, own exit code — rather than lines inside the combined
+  <code>tests/run.sh</code> output. These four are the project's load-bearing
+  physical claims:</p>
+  <table>
+    <tr><th>Invariant</th><th>Test file</th><th>Locks</th><th class="refcol">Reference</th><th class="tolcol">Tolerance</th></tr>
+    <tr><td>INV-PHYS-01</td><td>longitudinal.regression</td><td>Longitudinal 4-force not divided by γ (1000g burn)</td><td class="refcol">γ(t)=√(1+(αt/c)²)</td><td class="tolcol">2%</td></tr>
+    <tr><td>INV-PHYS-03</td><td>orbits</td><td>Angular-momentum-conserving Kepler elements (e, periapsis, apoapsis)</td><td class="refcol">v²=μ(2/r−1/a)</td><td class="tolcol">1e-3</td></tr>
+    <tr><td>INV-PHYS-06</td><td>gravity</td><td>Φ&lt;0, decreasing with r; weak-field dτ→1 at large r</td><td class="refcol">Φ=−μ/r</td><td class="tolcol">1e-12</td></tr>
+    <tr><td>INV-PHYS-09</td><td>relativity</td><td>Aberration formula, round-trip, monotonicity</td><td class="refcol">(cp−β)/(1−β·cp)</td><td class="tolcol">1e-9</td></tr>
+  </table>
+  <div class="note">The 2% tolerance on INV-PHYS-01 is not a convenience
+  margin — it's the test's own bound at γ≈13, and the file is marked
+  <b>NEVER DELETE, NEVER WEAKEN</b> in its header: if a future 4-force
+  refactor ever divides the longitudinal thrust term by γ, this is the test
+  meant to go red.</div>
+  <p>Several other files carry their own in-code <code>INV-PHYS-NN</code>
+  labels (10, 11, 12 — see below) that are <b>not yet wired into
+  <code>physics-gate.yaml</code></b>; they run inside <code>tests/run.sh</code>
+  but don't have an individual entry with their own exit code — a real gap,
+  stated here rather than hidden.</p>
+
+  <h2>Full gate, by topic</h2>
+
+  <h3>A — Special relativity</h3>
+  <table>
+    <tr><th>File</th><th>Checks</th><th class="refcol">Reference</th><th class="tolcol">Tolerance</th></tr>
+    <tr><td>relativity</td><td>Aberration formula, round-trip, monotonicity (INV-PHYS-09)</td><td class="refcol">(cp−β)/(1−β·cp)</td><td class="tolcol">1e-9</td></tr>
+    <tr><td>longitudinal.regression</td><td>γ(t) under constant 1000g proper accel, longitudinal 4-force undivided (INV-PHYS-01, NEVER DELETE/WEAKEN)</td><td class="refcol">γ(t)=√(1+(αt/c)²)</td><td class="tolcol">2%</td></tr>
+    <tr><td>gravity.relativistic</td><td>Weak-field relativistic gravity on a fast particle — transverse/longitudinal factors differ (INV-PHYS-10, not in physics-gate.yaml)</td><td class="refcol">a=(1+β²)g⊥+(1−3β²)g∥, β=0.99</td><td class="tolcol">guard: ratio &gt; 1.5</td></tr>
+  </table>
+  <p>The <code>(1−3β²)</code> longitudinal factor is a fixed, deliberate
+  decision by the project owner (2026-07-07) — settled, not an open question.</p>
+
+  <h3>B — Orbital mechanics / Kepler</h3>
+  <table>
+    <tr><th>File</th><th>Checks</th><th class="refcol">Reference</th><th class="tolcol">Tolerance</th></tr>
+    <tr><td>orbits</td><td>Kepler elements (a, e, rPeri, rApo) (INV-PHYS-03)</td><td class="refcol">v²=μ(2/r−1/a)</td><td class="tolcol">1e-3</td></tr>
+    <tr><td>orbits.classify</td><td>bound/unbound via specific energy, not e≥1 (ADR-8)</td><td class="refcol">ε=v²/2−μ/r&lt;0</td><td class="tolcol">exact identity</td></tr>
+    <tr><td>orbits.guards</td><td>Finiteness at degenerate inputs (r→0, e=1)</td><td class="refcol">—</td><td class="tolcol">finiteness only</td></tr>
+    <tr><td>orbits.radial</td><td>Near-radial orbits: bound ≡ isFinite(rApo)</td><td class="refcol">—</td><td class="tolcol">exact identity</td></tr>
+    <tr><td>propagator.conservation</td><td>Universal-variable propagator conserves ε, h, and the f/g Wronskian</td><td class="refcol">f·ġ−ḟ·g=1</td><td class="tolcol">ε/h: 1e-8 rel · Wronskian: 1e-9</td></tr>
+    <tr><td>propagator.parabolic</td><td>e≈1 and e&gt;1 match Barker's closed form</td><td class="refcol">Barker's equation</td><td class="tolcol">1e-6 rel</td></tr>
+    <tr><td>propagator.roundtrip</td><td>propagate(+Δt)∘propagate(−Δt) ≈ identity, all conics</td><td class="refcol">—</td><td class="tolcol">round-trip identity</td></tr>
+    <tr><td>propagator.vs.numeric</td><td>Analytic step vs RK4 reference</td><td class="refcol">RK4</td><td class="tolcol">circular 1e-9 · eccentric 1e-4</td></tr>
+    <tr><td>cabotage.predicate</td><td>Analytic↔numeric engagement predicate + boundary look-ahead</td><td class="refcol">—</td><td class="tolcol">exact logic</td></tr>
+    <tr><td>cabotage.continuity</td><td>γ(w)≈γ(v) continuous across hand-off</td><td class="refcol">—</td><td class="tolcol">1e-12</td></tr>
+    <tr><td>cabotage.periapsis</td><td>No periapsis overshoot on hand-off (NEVER DELETE/WEAKEN)</td><td class="refcol">—</td><td class="tolcol">regression corpus</td></tr>
+    <tr><td>cabotage.dtau</td><td>Analytic dτ vs converged fine numeric reference</td><td class="refcol">dτ=dt/γ integrated</td><td class="tolcol">1e-6 rel</td></tr>
+  </table>
+
+  <h3>C — Gravity</h3>
+  <table>
+    <tr><th>File</th><th>Checks</th><th class="refcol">Reference</th><th class="tolcol">Tolerance</th></tr>
+    <tr><td>gravity</td><td>Φ&lt;0, decreasing with r; weak-field dτ→1 at large r (INV-PHYS-06)</td><td class="refcol">Φ=−μ/r</td><td class="tolcol">1e-12</td></tr>
+    <tr><td>gravity.relativistic</td><td>see table A above</td><td class="refcol">a=(1+β²)g⊥+(1−3β²)g∥</td><td class="tolcol">guard: ratio &gt; 1.5</td></tr>
+  </table>
+
+  <h3>D — Autopilot (orbital-manoeuvre guidance)</h3>
+  <table>
+    <tr><th>File</th><th>Checks</th><th class="tolcol">Tolerance</th></tr>
+    <tr><td>autopilot.circular</td><td>Circularization burn converges to target radius</td><td class="tolcol">a: 1e-3–2e-3 rel · e: 1e-3–1e-5</td></tr>
+    <tr><td>autopilot.hohmann</td><td>Hohmann transfer converges to target orbit radius</td><td class="tolcol">final a within 5e-3 rel, e&lt;1e-4</td></tr>
+    <tr><td>autopilot.integrator</td><td>Same manoeuvres via the real Ship.step integrator, not an idealized bench</td><td class="tolcol">same order</td></tr>
+    <tr><td>autopilot.refuse</td><td>Refusal gate returns the correct reason code (relativistic speed, landed, atmosphere, unbound start, low fuel, multi-body domination, low target)</td><td class="tolcol">exact reason-code match</td></tr>
+    <tr><td>autopilot.cancel</td><td>Cancellation via a single monotonic inputSeq counter (ADR-7)</td><td class="tolcol">exact condition</td></tr>
+    <tr><td>autopilot.invariants</td><td>500 pseudo-random states: determinism + totality</td><td class="tolcol">exact, no tolerance</td></tr>
+    <tr><td>autopilot.repair</td><td>Regression corpus: 4 defects an earlier green gate missed</td><td class="tolcol">regression corpus</td></tr>
+  </table>
+
+  <h3>E — Epoch / time</h3>
+  <table>
+    <tr><th>File</th><th>Checks</th><th class="refcol">Reference</th></tr>
+    <tr><td>epoch</td><td>J2000 mean-anomaly helper, fixed timestamps only</td><td class="refcol">—</td></tr>
+    <tr><td>epoch.tt</td><td>J2000.0 = true TT, not UTC (ADR-4)</td><td class="refcol">J2000.0 = UTC noon − 64.184s</td></tr>
+  </table>
+
+  <h3>F — Engineering structural guards (<em>not</em> physical-law checks)</h3>
+  <p>These keep the <em>code</em> honest — layering, single-source-of-truth,
+  UI/UX policy, i18n, sound framing — not a formula-vs-textbook check. A few
+  do touch physically-meaningful quantities; where that's true it's flagged
+  in the row rather than folded silently into the tables above.</p>
+  <table>
+    <tr><th>File</th><th>Checks</th></tr>
+    <tr><td>structure</td><td>Static source-text fitness functions (§9) — greps for forbidden duplicate-condition patterns, not a runtime test</td></tr>
+    <tr><td>renderpath</td><td>resolveRenderPath truth table (plain/wide/cube render path)</td></tr>
+    <tr><td>cubepolicy</td><td>cubeAutoStep auto-demotion policy for the cubemap path</td></tr>
+    <tr><td>cubetoggle</td><td>Cube-toggle wiring between the frame loop and renderPolicy.js</td></tr>
+    <tr><td>cockpitpolicy</td><td>cockpitDetail LOD policy for the cockpit overlay</td></tr>
+    <tr><td>orientation</td><td>Body spin orientation is one quaternion, not two independent Euler components (internal item "A6")</td></tr>
+    <tr><td>soundpolicy</td><td>Engine/impact/UI-click sound policy: honest mute conditions, no Doppler (ADR-11, ADR-12)</td></tr>
+    <tr><td>i18n.storage</td><td>localStorage access resilience when storage is entirely inaccessible (private browsing)</td></tr>
+    <tr><td>controls.throttle</td><td>Throttle-digit-to-accel log-ladder is mode-aware, honestly clamped (INV-PHYS-11) — <em>UX calibration contract, not a law derivation</em></td></tr>
+    <tr><td>touchdown.impact</td><td>Impact speed measured against actual co-rotating ground, not just body velocity (INV-PHYS-12) — <em>a reference-frame contract</em></td></tr>
+    <tr><td>ship.refpair</td><td>Atomicity of the (refBody, refBodyVel) pair fed into Ship.step() within one frame</td></tr>
+    <tr><td>ship</td><td>Fuel/dτ bookkeeping, transverse 4-force, drag-vs-rest-frame — <em>exercises the same formulas as A/C, as a code contract, not an independent derivation</em></td></tr>
+    <tr><td>missions</td><td>Student-mission pure predicates: Mars circular orbit, Moon landing, Jupiter-flyby state machine</td></tr>
+    <tr><td>missions.hyperbolic</td><td>Jupiter-flyby arming uses the canonical bound/unbound classifier, not ULP-unsafe e≥1 (ADR-8)</td></tr>
+  </table>
+
+  <h2>Relevant ADRs</h2>
+  <p>The project's append-only decision log documents several of the choices
+  locked in above. These are the actual <code>ADR.md</code> entry numbers —
+  not the internal "ТЗ item" labels used in a few test-file comments (like
+  orientation's "A6"), which are a separate numbering scheme.</p>
+  <ul>
+    <li><b>ADR-4</b> — J2000.0 epoch is true TT, not UTC.</li>
+    <li><b>ADR-7</b> — Autopilot cancellation: one monotonic counter, one condition, one reader.</li>
+    <li><b>ADR-8</b> — bound/unbound classification by specific orbital energy everywhere, never e≥1.</li>
+    <li><b>ADR-11</b> — Sound is heard "from inside the hull": no external events audible, Doppler prohibited outright.</li>
+    <li><b>ADR-12</b> — AudioContext created lazily, only on a real user gesture; sound off by default.</li>
+  </ul>
+
+  <h2>What this gate does not claim</h2>
+  <ul>
+    <li>No general relativity (no frame-dragging, no curved-spacetime geodesics beyond the weak-field approximation) — Newtonian gravity + special-relativistic kinematics, by design.</li>
+    <li>Bodies don't perturb each other's orbits — a stated simplification.</li>
+    <li>Transverse thrust is reduced by an extra factor of γ vs longitudinal — the honest relativistic 4-force result, a documented known limitation, not hidden here.</li>
+    <li>A green <code>tests/run.sh</code> is a <b>regression gate</b>, not a proof of absolute correctness — it proves the code still agrees with the formulas and tolerances above. Anything not listed here has no automated check.</li>
+  </ul>
+
+  <footer class="bottom">
+    Source-linked version on GitHub:
+    <a href="https://github.com/namebogsecret/interstellar/blob/main/PHYSICS-VERIFICATION.md" target="_blank" rel="noopener">PHYSICS-VERIFICATION.md</a>
+    · test files: <a href="https://github.com/namebogsecret/interstellar/tree/main/tests" target="_blank" rel="noopener">tests/</a>
+  </footer>
+</div>
+
+<div data-lang="ru">
+  <h1>ПРОВЕРКА ФИЗИКИ</h1>
+  <p>Как устроена проверка физики в этом симуляторе — что именно гоняется,
+  против какой эталонной формулы и с каким допуском. Это не рекламный текст:
+  там, где допуск широк или проверка на самом деле контракт кода/UX, а не
+  вывод формулы «с нуля», об этом сказано прямо. Ничего ниже не выдаётся
+  желаемое за действительное — каждая строка соответствует реальному,
+  сейчас-зелёному тестовому файлу. Если проверки нет в этом списке — она не
+  часть гейта.</p>
+
+  <h2>Как воспроизвести</h2>
+  <pre>bash tests/run.sh</pre>
+  <p>Гоняет каждый файл <code>tests/*.test.mjs</code> под Node, голые
+  <code>assert</code>, без фреймворка и без сборки — сейчас
+  <b>39 файлов</b>, около 2 секунд. Печатает <code>PHYSICS GATE: PASS</code>
+  и выходит с кодом 0, только если верны все утверждения во всех файлах.
+  Отдельно <code>tests/smoke_playwright.py</code> гоняет реальный браузер и
+  ловит крэши игрового цикла, которых Node-тесты не видят — это
+  дымовая проверка крэшей/console-ошибок, не физическая проверка, и в
+  таблицы ниже не входит.</p>
+
+  <h2>Машиночитаемый гейт — <code>physics-gate.yaml</code></h2>
+  <p><code>physics-gate.yaml</code> в корне репозитория формализует
+  <b>4</b> из инвариантов ниже как отдельно запускаемые пункты гейта —
+  своя команда, свой допуск, свой код выхода — а не просто строки внутри
+  общего вывода <code>tests/run.sh</code>. Это четыре физических
+  утверждения, на которых держится проект:</p>
+  <table>
+    <tr><th>Инвариант</th><th>Файл теста</th><th>Что закрепляет</th><th class="refcol">Эталон</th><th class="tolcol">Допуск</th></tr>
+    <tr><td>INV-PHYS-01</td><td>longitudinal.regression</td><td>Продольная 4-сила не делится на γ (тяга 1000g)</td><td class="refcol">γ(t)=√(1+(αt/c)²)</td><td class="tolcol">2%</td></tr>
+    <tr><td>INV-PHYS-03</td><td>orbits</td><td>Кеплеровы элементы с сохранением момента импульса (e, периапсис, апоапсис)</td><td class="refcol">v²=μ(2/r−1/a)</td><td class="tolcol">1e-3</td></tr>
+    <tr><td>INV-PHYS-06</td><td>gravity</td><td>Φ&lt;0, убывает с r; слабопольная dτ→1 при больших r</td><td class="refcol">Φ=−μ/r</td><td class="tolcol">1e-12</td></tr>
+    <tr><td>INV-PHYS-09</td><td>relativity</td><td>Формула аберрации, round-trip, монотонность</td><td class="refcol">(cp−β)/(1−β·cp)</td><td class="tolcol">1e-9</td></tr>
+  </table>
+  <div class="note">Допуск 2% у INV-PHYS-01 — не удобная погрешность «с
+  запасом», а собственный допуск теста при γ≈13, а сам файл помечен в
+  заголовке <b>NEVER DELETE, NEVER WEAKEN</b>: если будущий рефакторинг
+  4-силы когда-нибудь начнёт делить продольный член тяги на γ, именно этот
+  тест должен покраснеть.</div>
+  <p>У нескольких других файлов есть собственные внутрикодовые метки
+  <code>INV-PHYS-NN</code> (10, 11, 12 — см. ниже), которые <b>ещё не
+  включены в <code>physics-gate.yaml</code></b>: они выполняются внутри
+  <code>tests/run.sh</code>, но не имеют отдельной записи со своим кодом
+  выхода — реальный пробел, названный здесь, а не скрытый.</p>
+
+  <h2>Полный гейт по темам</h2>
+
+  <h3>A — Специальная теория относительности</h3>
+  <table>
+    <tr><th>Файл</th><th>Проверяет</th><th class="refcol">Эталон</th><th class="tolcol">Допуск</th></tr>
+    <tr><td>relativity</td><td>Формула аберрации, round-trip, монотонность (INV-PHYS-09)</td><td class="refcol">(cp−β)/(1−β·cp)</td><td class="tolcol">1e-9</td></tr>
+    <tr><td>longitudinal.regression</td><td>γ(t) при постоянном 1000g собственном ускорении, продольная 4-сила без деления (INV-PHYS-01, NEVER DELETE/WEAKEN)</td><td class="refcol">γ(t)=√(1+(αt/c)²)</td><td class="tolcol">2%</td></tr>
+    <tr><td>gravity.relativistic</td><td>Слабопольная релятивистская гравитация на быстрой частице — продольный/поперечный факторы различны (INV-PHYS-10, нет в physics-gate.yaml)</td><td class="refcol">a=(1+β²)g⊥+(1−3β²)g∥, β=0.99</td><td class="tolcol">guard: ratio &gt; 1.5</td></tr>
+  </table>
+  <p>Продольный фактор <code>(1−3β²)</code> — зафиксированное осознанное
+  решение владельца проекта (2026-07-07), не открытый вопрос.</p>
+
+  <h3>B — Орбитальная механика / законы Кеплера</h3>
+  <table>
+    <tr><th>Файл</th><th>Проверяет</th><th class="refcol">Эталон</th><th class="tolcol">Допуск</th></tr>
+    <tr><td>orbits</td><td>Кеплеровы элементы (a, e, rPeri, rApo) (INV-PHYS-03)</td><td class="refcol">v²=μ(2/r−1/a)</td><td class="tolcol">1e-3</td></tr>
+    <tr><td>orbits.classify</td><td>bound/unbound по удельной энергии, не по e≥1 (ADR-8)</td><td class="refcol">ε=v²/2−μ/r&lt;0</td><td class="tolcol">точное тождество</td></tr>
+    <tr><td>orbits.guards</td><td>Конечность при вырожденных входах (r→0, e=1)</td><td class="refcol">—</td><td class="tolcol">только конечность</td></tr>
+    <tr><td>orbits.radial</td><td>Near-radial орбиты: bound ≡ isFinite(rApo)</td><td class="refcol">—</td><td class="tolcol">точное тождество</td></tr>
+    <tr><td>propagator.conservation</td><td>Универсальный Кеплер-пропагатор сохраняет ε, h и вронскиан f/g</td><td class="refcol">f·ġ−ḟ·g=1</td><td class="tolcol">ε/h: 1e-8 отн. · вронскиан: 1e-9</td></tr>
+    <tr><td>propagator.parabolic</td><td>e≈1 и e&gt;1 против решения Баркера</td><td class="refcol">уравнение Баркера</td><td class="tolcol">1e-6 отн.</td></tr>
+    <tr><td>propagator.roundtrip</td><td>propagate(+Δt)∘propagate(−Δt) ≈ identity, все конические сечения</td><td class="refcol">—</td><td class="tolcol">round-trip identity</td></tr>
+    <tr><td>propagator.vs.numeric</td><td>Аналитический шаг vs эталон RK4</td><td class="refcol">RK4</td><td class="tolcol">круг 1e-9 · эксцентрик 1e-4</td></tr>
+    <tr><td>cabotage.predicate</td><td>Предикат вход/выход аналитика↔интегратор + boundary look-ahead</td><td class="refcol">—</td><td class="tolcol">точная логика</td></tr>
+    <tr><td>cabotage.continuity</td><td>γ(w)≈γ(v) непрерывна при переключении</td><td class="refcol">—</td><td class="tolcol">1e-12</td></tr>
+    <tr><td>cabotage.periapsis</td><td>Нет overshoot периапсиса при переключении (NEVER DELETE/WEAKEN)</td><td class="refcol">—</td><td class="tolcol">регресс-корпус</td></tr>
+    <tr><td>cabotage.dtau</td><td>Аналитическое dτ vs сходящийся мелкий численный эталон</td><td class="refcol">dτ=dt/γ, интеграл</td><td class="tolcol">1e-6 отн.</td></tr>
+  </table>
+
+  <h3>C — Гравитация</h3>
+  <table>
+    <tr><th>Файл</th><th>Проверяет</th><th class="refcol">Эталон</th><th class="tolcol">Допуск</th></tr>
+    <tr><td>gravity</td><td>Φ&lt;0, убывает с r; слабопольная dτ→1 при больших r (INV-PHYS-06)</td><td class="refcol">Φ=−μ/r</td><td class="tolcol">1e-12</td></tr>
+    <tr><td>gravity.relativistic</td><td>см. таблицу A выше</td><td class="refcol">a=(1+β²)g⊥+(1−3β²)g∥</td><td class="tolcol">guard: ratio &gt; 1.5</td></tr>
+  </table>
+
+  <h3>D — Автопилот (орбитальные манёвры)</h3>
+  <table>
+    <tr><th>Файл</th><th>Проверяет</th><th class="tolcol">Допуск</th></tr>
+    <tr><td>autopilot.circular</td><td>Циркуляризация сходится к целевому радиусу</td><td class="tolcol">a: 1e-3–2e-3 отн. · e: 1e-3–1e-5</td></tr>
+    <tr><td>autopilot.hohmann</td><td>Хоман-трансфер сходится к целевому радиусу орбиты</td><td class="tolcol">финальная a ±5e-3 отн., e&lt;1e-4</td></tr>
+    <tr><td>autopilot.integrator</td><td>Те же манёвры через реальный интегратор Ship.step, не идеализированный стенд</td><td class="tolcol">тот же порядок</td></tr>
+    <tr><td>autopilot.refuse</td><td>Гейт отказа возвращает верный код причины (релятивистская скорость, посадка, атмосфера, unbound-старт, топливо, доминирование, низкая цель)</td><td class="tolcol">точное совпадение кода</td></tr>
+    <tr><td>autopilot.cancel</td><td>Отмена через единый монотонный счётчик inputSeq (ADR-7)</td><td class="tolcol">точное условие</td></tr>
+    <tr><td>autopilot.invariants</td><td>500 псевдослучайных состояний: детерминизм + totality</td><td class="tolcol">точно, без допуска</td></tr>
+    <tr><td>autopilot.repair</td><td>Регресс-корпус: 4 дефекта, пропущенных прошлым зелёным гейтом</td><td class="tolcol">регресс-корпус</td></tr>
+  </table>
+
+  <h3>E — Эпоха / время</h3>
+  <table>
+    <tr><th>Файл</th><th>Проверяет</th><th class="refcol">Эталон</th></tr>
+    <tr><td>epoch</td><td>Хелпер средней аномалии J2000, только фиксированные метки времени</td><td class="refcol">—</td></tr>
+    <tr><td>epoch.tt</td><td>J2000.0 = истинный TT, не UTC (ADR-4)</td><td class="refcol">J2000.0 = полдень UTC − 64.184с</td></tr>
+  </table>
+
+  <h3>F — Инженерные структурные гарды (<em>не</em> проверка физических законов)</h3>
+  <p>Эти файлы следят за честностью <em>кода</em> — слоистость,
+  единственный источник правды, UX-политика, i18n, дизайн звука — а не за
+  соответствием формулы учебнику. Некоторые касаются физически осмысленных
+  величин; где это так — отмечено прямо в строке, а не тихо смешано с
+  таблицами выше.</p>
+  <table>
+    <tr><th>Файл</th><th>Проверяет</th></tr>
+    <tr><td>structure</td><td>Статические фитнес-функции по исходному тексту (§9) — grep запрещённых дублирующихся условий, не рантайм-тест</td></tr>
+    <tr><td>renderpath</td><td>Таблица истинности resolveRenderPath (plain/wide/cube путь рендера)</td></tr>
+    <tr><td>cubepolicy</td><td>Политика авто-демоции cubeAutoStep для кубмап-пути</td></tr>
+    <tr><td>cubetoggle</td><td>Проводка тумблера кубмапы между игровым циклом и renderPolicy.js</td></tr>
+    <tr><td>cockpitpolicy</td><td>LOD-политика cockpitDetail для оверлея кабины</td></tr>
+    <tr><td>orientation</td><td>Ориентация спина тела — один кватернион, не два независимых Euler-компонента (внутренняя метка «A6»)</td></tr>
+    <tr><td>soundpolicy</td><td>Политика звука двигателя/удара/клика: честные условия заглушения, без Допплера (ADR-11, ADR-12)</td></tr>
+    <tr><td>i18n.storage</td><td>Устойчивость доступа к localStorage при полностью недоступном хранилище (приватный режим)</td></tr>
+    <tr><td>controls.throttle</td><td>Лог-лестница «цифра тяги → ускорение», зависит от режима, честно ограничена (INV-PHYS-11) — <em>UX-контракт калибровки, не вывод закона</em></td></tr>
+    <tr><td>touchdown.impact</td><td>Скорость удара меряется против реальной со-вращающейся поверхности, не только скорости тела (INV-PHYS-12) — <em>контракт системы отсчёта</em></td></tr>
+    <tr><td>ship.refpair</td><td>Атомарность пары (refBody, refBodyVel), передаваемой в Ship.step() за один кадр</td></tr>
+    <tr><td>ship</td><td>Учёт топлива/dτ, поперечная 4-сила, сопротивление относительно системы покоя — <em>те же формулы, что в A/C, но как контракт кода, не независимый вывод</em></td></tr>
+    <tr><td>missions</td><td>Чистые предикаты ученических миссий: круговая орбита у Марса, посадка на Луну, машина состояний пролёта Юпитера</td></tr>
+    <tr><td>missions.hyperbolic</td><td>Взведение пролёта Юпитера — по каноническому классификатору bound/unbound, не по небезопасному e≥1 (ADR-8)</td></tr>
+  </table>
+
+  <h2>Релевантные ADR</h2>
+  <p>Append-only журнал решений проекта документирует часть закреплённых
+  выше решений. Ниже — реальные номера записей <code>ADR.md</code>, не
+  внутренние метки «пунктов ТЗ» из комментариев некоторых тестов (как
+  «A6» у orientation) — это отдельная система нумерации.</p>
+  <ul>
+    <li><b>ADR-4</b> — эпоха J2000.0 = истинный TT, не UTC.</li>
+    <li><b>ADR-7</b> — отмена автопилота: один монотонный счётчик, одно условие, один читатель.</li>
+    <li><b>ADR-8</b> — классификация bound/unbound по удельной орбитальной энергии везде, никогда по e≥1.</li>
+    <li><b>ADR-11</b> — звук «слышен изнутри корпуса»: внешние события не звучат, Допплер запрещён прямо.</li>
+    <li><b>ADR-12</b> — AudioContext создаётся лениво, только по реальному жесту пользователя; звук по умолчанию выключен.</li>
+  </ul>
+
+  <h2>Чего этот гейт не утверждает</h2>
+  <ul>
+    <li>Нет общей теории относительности (нет frame-dragging, нет геодезических искривлённого пространства-времени за пределами слабопольного приближения) — ньютоновская гравитация + специально-релятивистская кинематика, осознанно.</li>
+    <li>Тела не возмущают орбиты друг друга — заявленное упрощение.</li>
+    <li>Поперечная тяга уменьшена на дополнительный множитель γ относительно продольной — честный релятивистский результат 4-силы, задокументированное известное ограничение, не скрытое здесь.</li>
+    <li>Зелёный <code>tests/run.sh</code> — это <b>регресс-гейт</b>, не доказательство абсолютной корректности: он доказывает, что код по-прежнему согласуется с формулами и допусками выше. У всего, чего нет в этом списке, нет автоматической проверки.</li>
+  </ul>
+
+  <footer class="bottom">
+    Версия с исходниками на GitHub:
+    <a href="https://github.com/namebogsecret/interstellar/blob/main/PHYSICS-VERIFICATION.md" target="_blank" rel="noopener">PHYSICS-VERIFICATION.md</a>
+    · файлы тестов: <a href="https://github.com/namebogsecret/interstellar/tree/main/tests" target="_blank" rel="noopener">tests/</a>
+  </footer>
+</div>
+
+</main>
+<script>
+(function () {
+  var saved = null;
+  try { saved = localStorage.getItem('iss_lang'); } catch (e) {}
+  var lang = saved || ((navigator.language || 'en').slice(0, 2) === 'ru' ? 'ru' : 'en');
+  function apply(l) {
+    document.querySelectorAll('[data-lang]').forEach(function (el) {
+      el.classList.toggle('active', el.getAttribute('data-lang') === l);
+    });
+    document.querySelectorAll('#langtoggle span').forEach(function (el) {
+      el.classList.toggle('active', el.getAttribute('data-set') === l);
+    });
+  }
+  apply(lang);
+  document.getElementById('langtoggle').addEventListener('click', function (ev) {
+    var s = ev.target.closest('span');
+    if (!s) return;
+    var l = s.getAttribute('data-set');
+    apply(l);
+    try { localStorage.setItem('iss_lang', l); } catch (e) {}
+  });
+})();
+</script>
+<script defer src="https://stats.podlevskikh.com/a/static/network-footer.js"></script>
+</body>
+</html>
