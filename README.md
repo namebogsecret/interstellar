@@ -48,6 +48,15 @@ on launch (re-open anytime with **H**) written for people who've never flown.
 | **Z** | toggle engine/impact sound (procedural, no audio files) — off by default |
 | **⌫ Backspace** | reset to Earth |
 
+*Three of the defaults above are still open decisions, not settled design:
+cockpit off by default (**I**), the ~318 km safe-altitude margin used by the
+autopilot's refusal checks (5% of Earth's radius vs. a flat 200 km textbook
+LEO floor), and whether the autopilot keeps turning your view toward the burn
+vector while it flies. Nothing here changes until Vladimir picks — see
+РЕШЕНИЕ-ВОЛНА-B.md — and each answer is a single named-constant flip
+(`COCKPIT_DEFAULT_ON` / `SAFE_MARGIN_MODE` / `AP_ATTITUDE_AUTOFOLLOW`), not a
+rewrite.*
+
 **On a phone / tablet** (touch screens) an on-screen layout appears automatically:
 a left thumb-stick (move), drag-anywhere to look, and right-hand buttons for
 up/down thrust, **STOP**, target, fast-travel, time-speed and help.

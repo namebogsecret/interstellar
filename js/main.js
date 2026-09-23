@@ -114,6 +114,13 @@ const ap = { state: null, applied: NaN, lastSimDt: 0, whatKey: 'ap.goal.circular
 // a burn. Set to 0 to disable.
 const AP_SLEW_RATE = 0.5;   // rad/s
 
+// Открытый вопрос волны B (Q3, см. РЕШЕНИЕ-ВОЛНА-B.md): автопилот доворачивает корабль (и с ним камеру)
+// во время манёвра — оставить или сделать статичным видом?
+const AP_ATTITUDE_AUTOFOLLOW = true;
+
+// Открытый вопрос волны B (Q1, см. РЕШЕНИЕ-ВОЛНА-B.md): включить кокпит по умолчанию? Флип константы.
+const COCKPIT_DEFAULT_ON = false;
+
 // A failed ~50MB cube-render-target allocation is silent on many GPUs (no
 // guaranteed exception — see ensureCubeResources); a lost WebGL context is
 // the other way constrained hardware can drop the cube path out from under
@@ -343,7 +350,8 @@ const controls = new FlightControls(ship, canvas, {
   const r = loadToggle('iss_relfx');  if (typeof r === 'boolean') sim.relFx = r;   // applied via applyRenderPath in loop
   const cb = loadToggle('iss_cube'); if (typeof cb === 'boolean') sim.cubeAberr = cb;
   if (loadToggle('iss_cube_forced') === true) sim.cubeForced = true;
-  const co = loadToggle('iss_cockpit'); if (typeof co === 'boolean') sim.cockpitOn = co;   // applied via ensureCockpitResources in the frame loop
+  sim.cockpitOn = COCKPIT_DEFAULT_ON;
+  const co = loadToggle('iss_cockpit'); if (typeof co === 'boolean') sim.cockpitOn = co;   // persisted toggle still outranks the default — applied via ensureCockpitResources in the frame loop
   const m = loadToggle('iss_mode');   if (m === 'arcade' || m === 'realistic') ship.mode = m;
   // Sound restores its persisted flag too, but this runs at page load with NO
   // user gesture yet. Repair-round-1 R-3: setEnabled(sim.sound) called with
@@ -531,7 +539,7 @@ function frame(now) {
   // Cosmetic attitude slew toward the burn vector (AP_SLEW_RATE = 0 disables).
   // The camera rides ship.quat, so this is what makes the autopilot's work
   // VISIBLE. It never gates thrust — see the ap block's header.
-  if (tdirAuto && AP_SLEW_RATE > 0) {
+  if (AP_ATTITUDE_AUTOFOLLOW && tdirAuto && AP_SLEW_RATE > 0) {
     _apUp.set(0, 1, 0);
     if (Math.abs(tdirAuto.dot(_apUp)) > 0.999) _apUp.set(1, 0, 0);
     // Same convention as spawnAt/orientLanded: lookAt(eye, target) puts the

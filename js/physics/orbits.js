@@ -239,12 +239,25 @@ export function orbitFromState(mu, rVec, vVec) {
 // instead of an atmosphere height).
 const ATMO_MARGIN_FRAC = 0.05;
 
+// Which formula safeRadius() uses for the margin above the surface:
+//  - 'conservative'    — current behaviour, unchanged: max(atmoH, 5% of radius)
+//                         for every body (≈318 km for Earth).
+//  - 'earth-leo-200km' — for Earth ONLY, a fixed 200 km floor instead of the
+//                         5%-of-radius fraction (a textbook LEO altitude);
+//                         every other body keeps the conservative formula.
+// Открытый вопрос волны B (Q2, см. РЕШЕНИЕ-ВОЛНА-B.md): 318 км (5% радиуса, текущее) vs 200 км (учебная НОО).
+export const SAFE_MARGIN_MODE = 'conservative';
+const EARTH_LEO_MARGIN_M = 200000;
+
 // Safe radius of a body: the surface plus max(atmosphere height, 5% of the
 // radius). Metres FROM THE CENTRE. Below it neither the analytic coast nor the
 // autopilot will operate — drag (computed against the CO-ROTATING atmosphere in
 // ship.step) is a force neither two-body model knows about.
 export function safeRadius(b) {
   const atmoH = (b.atmosphere && b.atmosphere.height) || 0;
+  if (SAFE_MARGIN_MODE === 'earth-leo-200km' && b.name === 'Earth') {
+    return b.radius + Math.max(atmoH, EARTH_LEO_MARGIN_M);
+  }
   return b.radius + Math.max(atmoH, ATMO_MARGIN_FRAC * b.radius);
 }
 
