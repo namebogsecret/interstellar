@@ -268,4 +268,73 @@ const STATEKEY_WHITELIST = new Set(['showMap', 'showMissions', 'cockpitOn', 'sou
     `touch.js must dispatch PANEL_ACTIONS by table lookup, not case literals — found case branches for: ${bad.join(', ')}`);
 }
 
+// ── 9. Runtime invariant: TouchControls.prototype._action() must actually
+// call controls._noteInput() BEFORE dispatching the panel hook, for flight
+// actions only — not just satisfy the metadata check in section 5 above.
+//
+// Section 5 proves isFlightTouchAction(name) === isFlightKey(baseKey) as
+// TABLE DATA. It says nothing about the real _action() method in
+// js/render/touch.js (what a tap on the panel actually runs) honouring that
+// classification at runtime — a future edit that moves the _noteInput() call
+// below the table-driven `if (a) { ... }` dispatch, or drops it for that
+// branch, leaves every check above green while a tap on AUTOPILOT/HOHMANN
+// from a phone silently stops counting as pilot intent (adversarial-verifier
+// repair-round finding L1): the autopilot keeps flying straight through what
+// should have cancelled it, and nothing in the gate would catch it.
+//
+// _action() only touches `this.controls` / `this.sim` / `this.panelEl` /
+// `this.panelWrapEl` / `this.openHelp` (see touch.js) — none of it needs a
+// live DOM, so a plain stand-in built via Object.create(TouchControls.prototype)
+// runs the REAL _action()/_updatePanelState()/_closePanel() methods without
+// ever calling the constructor's _build() (which does need `document`).
+{
+  const { TouchControls } = await import('../js/render/touch.js');
+
+  const makeCtx = () => Object.create(TouchControls.prototype, {
+    controls: { value: {
+      inputSeq: 0,
+      hooks: {},   // every hook is optional-chained in _action(); fine to be empty
+      _noteInput() { this.inputSeq++; },   // same shape as controls.js's real _noteInput
+    } },
+    sim: { value: null },   // falsy sim short-circuits _updatePanelState(), see that method
+    panelEl: { value: { classList: { add() {}, remove() {} }, querySelector: () => null } },
+    panelWrapEl: { value: { classList: { add() {}, remove() {} } } },
+    _panelOpen: { value: false, writable: true },
+    _panelPollId: { value: null, writable: true },
+    openHelp: { value: () => {} },
+  });
+
+  // Table-driven panel actions: 'autopilot'/'hohmann' are the two
+  // FLIGHT_TOUCH_ACTIONS entries in PANEL_ACTIONS — a tap MUST bump inputSeq.
+  for (const name of ['autopilot', 'hohmann']) {
+    const ctx = makeCtx();
+    TouchControls.prototype._action.call(ctx, name);
+    assert.equal(ctx.controls.inputSeq, 1,
+      `_action('${name}') must call controls._noteInput() exactly once at runtime ` +
+      `('${name}' is flight-intent per FLIGHT_TOUCH_ACTIONS) — got inputSeq=${ctx.controls.inputSeq}`);
+  }
+
+  // Table-driven panel toggles: passive, must NOT bump inputSeq.
+  for (const name of ['cockpit', 'sound', 'map', 'targets', 'missions', 'cube', 'bloom', 'relfx']) {
+    const ctx = makeCtx();
+    TouchControls.prototype._action.call(ctx, name);
+    assert.equal(ctx.controls.inputSeq, 0,
+      `_action('${name}') must NOT call controls._noteInput() at runtime ` +
+      `('${name}' is a passive panel toggle, not pilot intent) — got inputSeq=${ctx.controls.inputSeq}`);
+  }
+
+  // Non-table (pre-existing) actions go through the same isFlightTouchAction
+  // gate ahead of the switch statement — spot-check one of each polarity.
+  {
+    const ctx = makeCtx();
+    TouchControls.prototype._action.call(ctx, 'kill');
+    assert.equal(ctx.controls.inputSeq, 1, "_action('kill') must call _noteInput() at runtime (flight-intent)");
+  }
+  {
+    const ctx = makeCtx();
+    TouchControls.prototype._action.call(ctx, 'help');
+    assert.equal(ctx.controls.inputSeq, 0, "_action('help') must NOT call _noteInput() at runtime (opening help is not pilot intent)");
+  }
+}
+
 console.log('touchpanel.test.mjs OK');
