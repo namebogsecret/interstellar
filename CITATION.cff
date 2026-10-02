@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software or its validation results, please cite it as below."
+title: "interstellar: relativistic spaceflight simulator with a reproducible validation suite"
+type: software
+authors:
+  - family-names: Podlevskikh
+    given-names: Vladimir
+repository-code: "https://github.com/namebogsecret/interstellar"
+url: "https://space.podlevskikh.com"
+abstract: "Browser simulator of relativistic spaceflight (specific-momentum integrator, proper time, Doppler, weak-field gravitational time dilation) together with a one-command validation suite against analytic references: hyperbolic motion, the twin paradox, relativistic Doppler and gravitational redshift."
+keywords:
+  - special relativity
+  - hyperbolic motion
+  - twin paradox
+  - redshift
+  - validation
+# license: intentionally omitted -- no LICENSE file in the repository yet (owner must choose).
