@@ -14,7 +14,7 @@ import { cubeAutoStep, cubeToggleState, cubeResourceAction, cockpitDetail } from
 import { createCockpitState, ensureCockpitResources, releaseCockpitResources,
          layoutCockpit, setCockpitLevel, drawCockpitOverlay } from './render/cockpit.js';
 import { BodyView } from './render/bodies.js';
-import { FlightControls } from './render/controls.js';
+import { FlightControls, requestLockSafe } from './render/controls.js';
 import { SystemMap } from './render/map.js';
 import { TargetList } from './render/targetlist.js';
 import { MissionTracker } from './missions.js';
@@ -813,7 +813,7 @@ const startScreen = document.getElementById('startscreen');
 function launch() {
   startScreen.style.display = 'none';
   onboarding.show();
-  canvas.requestPointerLock?.();
+  requestLockSafe(canvas);
 }
 document.getElementById('startbtn').addEventListener('click', launch);
 startScreen.addEventListener('click', (e) => { if (e.target === startScreen) launch(); });

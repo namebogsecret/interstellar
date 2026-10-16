@@ -1,6 +1,16 @@
 import * as THREE from 'three';
 import { G0 } from '../physics/constants.js';
 
+// Chrome отклоняет промис requestPointerLock, если клик пришёл сразу после выхода из
+// захвата (Esc → клик) — это не сбой, а политика браузера; без catch он всплывал как
+// unhandledrejection и виджет «Обратной связи» считал его JS-ошибкой (отчёт 2026-10-16).
+export function requestLockSafe(el) {
+  try {
+    const p = el?.requestPointerLock?.();
+    if (p && typeof p.catch === 'function') p.catch(() => {});
+  } catch { /* старые браузеры бросают синхронно — захват мыши необязателен */ }
+}
+
 // Digit (1-9) -> throttle mapping, LOGARITHMIC across 1g..1000g so a fresh pilot
 // pressing '1' gets a gentle ~1g nudge instead of instantly maxing out thrust
 // and tearing up their orbit. The TARGET felt acceleration is mode-INDEPENDENT:
@@ -89,7 +99,7 @@ export class FlightControls {
     // want to be on (e.g. a persisted iss_sound=true restored at page load,
     // before any gesture happened). onGesture is a cheap, self-guarded no-op
     // whenever there is nothing to resume — see js/audio/audio.js.
-    this.dom.addEventListener('click', () => { this.dom.requestPointerLock(); this.hooks.onGesture?.(); });
+    this.dom.addEventListener('click', () => { requestLockSafe(this.dom); this.hooks.onGesture?.(); });
     document.addEventListener('mousemove', (e) => {
       if (document.pointerLockElement !== this.dom) return;
       this.pitchYawFromMouse.x += -e.movementY * this.mouseSens; // pitch
