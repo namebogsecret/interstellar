@@ -35,6 +35,13 @@ const DICT = {
       <div class="cline"><b>.</b> / <b>,</b> — speed up / slow down time (to watch planets move or cross huge distances). &nbsp; <b>P</b> — pause.</div>
       <div class="cline"><b>M</b> — switch unlimited ↔ realistic limited fuel. &nbsp; <b>⌫ Backspace</b> — start over at Earth.</div>
       <div class="cline"><b>I</b> — cockpit frame on/off (off by default; simplifies itself on a slow machine). &nbsp; <b>Z</b> — sound on/off (engine hum, cockpit clicks, impacts — off by default).</div>`,
+    'start.controls.touch': `
+      <div class="cline"><b>Drag</b> anywhere on the screen — look around / aim the nose. &nbsp; <b>Left stick</b> — move (forward/back/left/right).</div>
+      <div class="cline"><b>▲ ▼</b> (bottom-right) — thrust up / down. &nbsp; <b>✖</b> — STOP: cancel drift and spin.</div>
+      <div class="cline"><b>⇆ target</b> — pick somewhere to go. &nbsp; <b>⤓ jump</b> — instantly jump next to it. &nbsp; <b>« »</b> — slow down / speed up time.</div>
+      <div class="cline"><b>☰</b> opens a panel with the features that only had a keyboard shortcut before — tap outside the panel (or ☰ again) to close it; if it doesn't all fit, it scrolls. What each button does:</div>
+      <div class="cline"><b>AP ○</b> autopilot: circularize orbit &nbsp; <b>AP ⇗</b> autopilot: Hohmann transfer to your target &nbsp; <b>MAP</b> system map &nbsp; <b>TGT</b> target list</div>
+      <div class="cline"><b>MSN</b> missions &nbsp; <b>CPT</b> cockpit frame &nbsp; <b>SND</b> sound &nbsp; <b>CUBE</b> cubemap aberration path &nbsp; <b>BLM</b> bloom glow &nbsp; <b>REL</b> relativistic optics</div>`,
     'start.tip': `<b>Never flown before? Try this:</b> press <b>Tab</b> until the
       target says the Moon, then press <b>G</b> to jump beside it. Or aim at Earth,
       hold <b>W</b>, and watch the clocks: near light speed your ship-clock ticks
@@ -161,6 +168,13 @@ const DICT = {
       <div class="cline"><b>.</b> / <b>,</b> — ускорить / замедлить время (смотреть, как движутся планеты, или покрывать огромные расстояния). &nbsp; <b>P</b> — пауза.</div>
       <div class="cline"><b>M</b> — переключить бесконечное ↔ реальное ограниченное топливо. &nbsp; <b>⌫ Backspace</b> — начать заново у Земли.</div>
       <div class="cline"><b>I</b> — рамка кокпита вкл/выкл (по умолчанию выключена; на слабой машине упрощается сама). &nbsp; <b>Z</b> — звук вкл/выкл (гул двигателя, щелчки приборов, удары — по умолчанию выключен).</div>`,
+    'start.controls.touch': `
+      <div class="cline"><b>Проведите пальцем</b> где угодно по экрану — осмотреться / навести нос. &nbsp; <b>Левый стик</b> — движение (вперёд/назад/влево/вправо).</div>
+      <div class="cline"><b>▲ ▼</b> (справа внизу) — тяга вверх / вниз. &nbsp; <b>✖</b> — СТОП: погасить дрейф и вращение.</div>
+      <div class="cline"><b>⇆ target</b> — выбрать, куда лететь. &nbsp; <b>⤓ jump</b> — мгновенно перенестись к цели. &nbsp; <b>« »</b> — замедлить / ускорить время.</div>
+      <div class="cline"><b>☰</b> открывает панель с функциями, у которых раньше была только клавиша — тап мимо панели (или снова ☰) закрывает её; если всё не помещается, она прокручивается. Что означают кнопки:</div>
+      <div class="cline"><b>AP ○</b> автопилот: круговая орбита &nbsp; <b>AP ⇗</b> автопилот: перелёт Хомана к цели &nbsp; <b>MAP</b> карта системы &nbsp; <b>TGT</b> список целей</div>
+      <div class="cline"><b>MSN</b> миссии &nbsp; <b>CPT</b> рамка кокпита &nbsp; <b>SND</b> звук &nbsp; <b>CUBE</b> кубмап-аберрация &nbsp; <b>BLM</b> свечение (bloom) &nbsp; <b>REL</b> релятивистская оптика</div>`,
     'start.tip': `<b>Никогда не летали? Попробуйте так:</b> нажимайте <b>Tab</b>, пока
       цель не станет «Луна», затем <b>G</b> — перенесётесь к ней. Или наведитесь на
       Землю, держите <b>W</b> и следите за часами: у скорости света ваши часы идут

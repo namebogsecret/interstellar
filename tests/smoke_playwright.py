@@ -17,6 +17,7 @@ import socketserver
 import functools
 import os
 import socket
+import re
 import sys
 import threading
 import time
@@ -386,6 +387,498 @@ def run_mirror(out_dir):
     sys.exit(1 if fails else 0)
 
 
+# ---------------------------------------------------------------------------
+# --touch: mobile-viewport smoke for the touch panel (work item wi2, ТЗ
+# "interstellar-touch-panel"). Loads the page in a has_touch+is_mobile
+# context and, for EACH of three viewports (a bug found by adversarial
+# review only shows up in one of them — see _TOUCH_VIEWPORTS below), confirms
+# the coarse-pointer branch actually took (body.touch / #touchui), that every
+# one of the 10 js/render/touchPanel.js PANEL_ACTIONS buttons is actually
+# reachable (not just present in the DOM — see item 2 below) and dispatches,
+# that flight controls are not intercepted while the panel is closed, and
+# that tapping outside the panel sheet closes it. FAILS on a missing/
+# unreachable button, an exception from a tap, or a pageerror/console error
+# not attributable to the pre-existing external-beacon noise documented below
+# (and in CLAUDE.md for the default scenario). Runs ONE browser process for
+# all three viewports (a fresh BrowserContext per viewport) to keep the CPU
+# footprint down when other agents are working the machine concurrently.
+# ---------------------------------------------------------------------------
+
+# Three viewports, not one. 390x844/360x640 are portraits; 844x390 is the
+# LANDSCAPE case where the regression this file was extended for actually
+# reproduces: the bottom (REL) row of the panel is clipped by a
+# `max-height:44vh` rule while `touch-action` is suppressed, so a button can
+# end up with < 44px of tappable height, or fall partly/wholly outside the
+# viewport, or sit under a sibling element at its own visual centre. All
+# three of those are things elementFromPoint()/bounding_box() can catch
+# directly; none of them raises a JS exception, so the ORIGINAL (single
+# 390x844, no hit-test) --touch mode could not see this class of bug at all.
+_TOUCH_VIEWPORTS = [
+    {"width": 390, "height": 844, "label": "portrait 390x844 (standard)"},
+    {"width": 360, "height": 640, "label": "portrait 360x640 (small)"},
+    {"width": 844, "height": 390, "label": "landscape 844x390"},
+]
+
+# 44 CSS px — the same minimum tap-target guidance interaction design and
+# accessibility review both use (iOS HIG / Android Material / WCAG 2.5.5).
+# Not an interstellar-specific number: it's the bar "a human thumb can hit
+# this reliably", which is exactly what item 2 of this work item is about.
+_MIN_TAP_PX = 44
+
+# Direct hit-test: does document.elementFromPoint() at a button's own visual
+# centre resolve to that button (or a descendant of it, e.g. an inner <span>/
+# icon), or does something else — a clipped ancestor, a sibling panel row, an
+# invisible backdrop, the WebGL canvas itself — intercept the tap instead?
+# This is the literal mechanism behind "тап попадает не в ту кнопку": a
+# button can be perfectly present and even individually >=44px, and still
+# not be what a real tap at its coordinates would actually hit, if something
+# else is layered on top. Checking `elementFromPoint(cx, cy) === target ||
+# target.contains(elementFromPoint(...))` is a direct model of what iOS/
+# Android hit-testing does; a pure DOM query (e.g. checking the button is
+# `:visible`) would NOT catch an occluding sibling.
+_ELEMENT_AT_POINT_JS = """([x, y, selector]) => {
+  const el = document.elementFromPoint(x, y);
+  const target = document.querySelector(selector);
+  if (!el) return {hit: false, tag: null, id: null, cls: null, reason: 'elementFromPoint(x,y) returned null (out of any element, or point is off-screen)'};
+  if (!target) return {hit: false, tag: el.tagName, id: el.id, cls: null, reason: 'selector not found in DOM'};
+  const hit = (el === target) || target.contains(el);
+  const cls = (el.className && el.className.toString) ? el.className.toString() : String(el.className);
+  return {hit, tag: el.tagName, id: el.id, cls};
+}"""
+
+# Mirrors js/render/touchPanel.js's PANEL_ACTIONS names exactly (ТЗ list, not
+# discovered from the DOM) — if a name here and the real table ever disagree,
+# that mismatch IS the bug this sweep exists to catch (a button silently
+# missing from the rendered drawer), so the list must not be self-referential.
+_TOUCH_PANEL_NAMES = ['autopilot', 'hohmann', 'map', 'targets', 'missions',
+                      'cockpit', 'sound', 'bloom', 'relfx', 'cube']
+# kind:'action' entries close the drawer after dispatch (js/render/touch.js
+# ::_action -> this._closePanel()) — the sweep must re-open #tpanel before
+# tapping the next button, and it is itself a mini-assertion: an action
+# button that does NOT close the panel is a real, catchable regression.
+_TOUCH_PANEL_ACTION_CLOSERS = {'autopilot', 'hohmann'}
+# js/main.js's initial sim object ships with bloom:true and relFx:true — a
+# deterministic, load-order-independent probe of whether the panel's on/off
+# highlighting is wired at all (js/render/touch.js::_updatePanelState reads
+# sim[stateKey], guarded to a silent no-op if `sim` was never handed to
+# TouchControls). Reported as a WARNING, not a FAIL: cosmetic highlighting is
+# outside this work item's acceptance criteria (button-reaches-hook is what
+# matters for "works from a phone"), but a silent no-op is exactly the class
+# of bug a human reading smoke output should be told about.
+_TOUCH_PANEL_INITIALLY_ON = {'bloom': 'bloom', 'relfx': 'relFx'}
+
+# Flight controls that must NOT be intercepted while the panel is CLOSED
+# (item 3 of the ТЗ contract for this extension) — the thrust button ▲ in the
+# bottom-right cluster, and the movement joystick. Selectors are the exact
+# ones the ТЗ specified, not rediscovered from touch.js, so a rename of
+# either control in the implementation shows up here as "selector not found"
+# rather than silently testing nothing.
+_TOUCH_FLIGHT_CONTROLS = [
+    ('#tbtns-r [data-hold="r"]', "thrust button ▲"),
+    ("#joy", "joystick"),
+]
+
+
+def _is_beacon_noise(text):
+    # Same call already made (and explained) for the default desktop
+    # scenario — see CLAUDE.md "Как проверить": stats.podlevskikh.com is an
+    # external analytics beacon embedded in index.html, unreachable from a
+    # machine without direct access to that host, and its 400/network-error
+    # noise is pre-existing baseline behaviour with nothing to do with touch
+    # controls. Filtering it here (with this comment) is not silently
+    # papering over it — see the ADR-length rationale at that CLAUDE.md
+    # anchor for why treating it as a real failure would just make every run
+    # of this mode permanently red for an unrelated reason.
+    return 'stats.podlevskikh.com' in text
+
+
+def _bbox_retry(page, locator, label, errors, attempts=8, wait_ms=350):
+    """bounding_box() with retries, plus a CPU-starvation escape hatch.
+
+    Per dev-quality-gates' hang protocol: a machine loaded by a parallel
+    agent must not have its CPU starvation misread as a layout defect. A
+    single bounding_box() timeout/None is retried several times with a short
+    wait before it is recorded as a real error; a transiently-unready element
+    (mid-transition, or momentarily starved of a paint frame) gets a fair
+    chance to settle first. Returns the box dict, or None (already appended
+    to `errors`) once every attempt is exhausted.
+
+    Flake observed 2026-09-21 (ГРАБЛИ): on a loaded 6-core box the software
+    (SwiftShader) WebGL render loop can starve the renderer badly enough that
+    Locator.bounding_box() times out 6× in a row on an element that is
+    provably present, visible and correctly laid out — the smoke reported
+    "thrust button ▲ bounding_box unavailable" at 360x640 while an isolated
+    probe on the same build returned rect 284,422,56x56. So after the retries
+    are exhausted we ask the PAGE for the geometry (getBoundingClientRect +
+    computed style) — that path does not go through Playwright actionability
+    waiting. If the DOM itself says the element is visible with a non-zero
+    box, this was scheduler starvation, not a defect: record a warning and
+    return the JS-measured box. A missing / display:none / zero-size element
+    still fails the smoke, which is the property the check exists for.
+    """
+    last = None
+    for _ in range(attempts):
+        try:
+            box = locator.bounding_box(timeout=8000)
+        except Exception as ex:
+            box = None
+            last = f"raised {ex!r}"
+        if box:
+            return box
+        last = last or "bounding_box() returned None (not attached/visible)"
+        page.wait_for_timeout(wait_ms)
+
+    # Escape hatch: measure in-page, bypassing actionability waiting.
+    js_box = None
+    try:
+        js_box = page.evaluate(
+            """(sel) => { const e = document.querySelector(sel); if (!e) return null;
+                 const cs = getComputedStyle(e);
+                 if (cs.display === 'none' || cs.visibility === 'hidden') return null;
+                 const r = e.getBoundingClientRect();
+                 if (!(r.width > 0 && r.height > 0)) return null;
+                 return {x: r.x, y: r.y, width: r.width, height: r.height}; }""",
+            _locator_selector(locator))
+    except Exception:
+        js_box = None
+    if js_box:
+        _BBOX_STARVATION_WARNINGS.append(
+            f"{label}: Playwright bounding_box timed out {attempts}× but the DOM reports a "
+            f"visible {js_box['width']:.0f}x{js_box['height']:.0f} box at "
+            f"({js_box['x']:.0f},{js_box['y']:.0f}) — treated as renderer starvation, not a "
+            f"layout defect (last: {last})")
+        return js_box
+
+    errors.append(f"{label}: bounding_box unavailable after {attempts} retries (last: {last})")
+    return None
+
+
+# Warnings raised by _bbox_retry's escape hatch; drained per viewport by
+# _run_touch_viewport so they are printed with their viewport label.
+_BBOX_STARVATION_WARNINGS = []
+
+
+def _locator_selector(locator):
+    """The CSS selector a Locator was built from (Playwright keeps it in repr
+    as `<Locator frame=... selector='...'>`), needed because the escape hatch
+    above re-queries the DOM directly. Falls back to a selector that matches
+    nothing, so a repr change degrades to the old behaviour (a real error)
+    instead of silently passing."""
+    m = re.search(r"selector=[\'\"](.+)[\'\"]>?$", repr(locator))
+    return m.group(1) if m else "#__bbox_retry_selector_unavailable__"
+
+
+def _run_touch_viewport(browser, url, vp):
+    """Full sweep (items 1-5 of the ТЗ contract) against ONE viewport.
+
+    Returns (errors, warnings) — lists of plain strings, NOT yet labelled
+    with the viewport (the caller does that, so every message printed at the
+    end says which of the three viewports it came from, per the ТЗ's
+    "печатать, в каком viewport'е что упало").
+    """
+    errors = []
+    warnings = []
+    vw, vh, label = vp["width"], vp["height"], vp["label"]
+
+    context = browser.new_context(
+        viewport={"width": vw, "height": vh},
+        has_touch=True,
+        is_mobile=True,
+    )
+    page = context.new_page()
+    # Same beacon-noise filtering as the original single-viewport --touch
+    # (see _is_beacon_noise docstring): the native "Failed to load resource"
+    # console line carries the URL in m.location()['url'], not m.text.
+    page.on("console", lambda m: (
+        errors.append(f"console.{m.type}: {m.text}")
+        if m.type == "error" and not _is_beacon_noise(m.text)
+        and not _is_beacon_noise((m.location or {}).get("url", "")) else None))
+    page.on("pageerror", lambda e: (
+        None if _is_beacon_noise(str(e)) else errors.append(f"pageerror: {e}")))
+    page.on("requestfailed", lambda r: (
+        None if _is_beacon_noise(r.url) else errors.append(f"requestfailed: {r.url} {r.failure}")))
+
+    try:
+        try:
+            page.goto(url, wait_until="load", timeout=30000)
+            page.wait_for_function(
+                "() => !!window.SIM && !!window.SIM.ship && !!window.SIM.sim",
+                timeout=15000,
+            )
+        except Exception as ex:
+            errors.append(f"page bootstrap failed (goto/wait_for_function): {ex}")
+        else:
+            # Tap helper: page.touchscreen.tap() at a locator's own
+            # bounding-box centre — see the original --touch's long comment
+            # (kept in git history / ГРАБЛИ for why Locator.click()/.tap()
+            # is unreliable against the full-bleed WebGL canvas here).
+            def tap_locator(locator, tlabel):
+                box = _bbox_retry(page, locator, tlabel, errors)
+                if not box:
+                    return False
+                cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+                try:
+                    page.touchscreen.tap(cx, cy)
+                except Exception as ex:
+                    errors.append(f"{tlabel}: touchscreen.tap raised: {ex}")
+                    return False
+                return True
+
+            def element_hits(selector, x, y):
+                return page.evaluate(_ELEMENT_AT_POINT_JS, [x, y, selector])
+
+            def panel_is_open():
+                return page.evaluate(
+                    "() => { const e = document.getElementById('tpanel'); "
+                    "return !!e && e.classList.contains('open'); }")
+
+            def open_panel():
+                if panel_is_open():
+                    return
+                if not tap_locator(page.locator('[data-tap="panel"]'), '[data-tap="panel"] (open)'):
+                    return
+                page.wait_for_timeout(250)
+                if not panel_is_open():
+                    errors.append(
+                        "#tpanel did not gain class 'open' after tapping "
+                        '[data-tap="panel"]')
+
+            # --- item 3: flight controls reachable while panel is CLOSED ---
+            # (checked below, both before the panel is ever opened and again
+            # after the tap-outside-to-close test, per item 4 — closing must
+            # actually restore reachability, not just remove the 'open'
+            # class from #tpanel while something still visually blocks taps).
+            def check_flight_controls_reachable(when):
+                if panel_is_open():
+                    return  # only meaningful while closed, per the ТЗ
+                for selector, ctrl_label in _TOUCH_FLIGHT_CONTROLS:
+                    loc = page.locator(selector)
+                    if loc.count() == 0:
+                        errors.append(f"[{when}] {ctrl_label} ({selector}) not found in DOM")
+                        continue
+                    box = _bbox_retry(page, loc, f"[{when}] {ctrl_label}", errors)
+                    if not box:
+                        continue
+                    cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+                    res = element_hits(selector, cx, cy)
+                    if not res["hit"]:
+                        errors.append(
+                            f"[{when}] {ctrl_label} at ({cx:.0f},{cy:.0f}) is covered by "
+                            f"{res['tag']}#{res['id']}.{res['cls']!r} instead of receiving the tap "
+                            f"(reason={res.get('reason')})")
+
+            start_dismissed = tap_locator(page.locator("#startbtn"), "#startbtn (dismiss start screen)")
+            page.wait_for_timeout(300)
+
+            # --- mobile bootstrap: the coarse-pointer branch actually took ---
+            is_touch_body = page.evaluate("() => document.body.classList.contains('touch')")
+            if not is_touch_body:
+                errors.append(
+                    "document.body missing class 'touch' — js/main.js's isTouch "
+                    "detection did not fire for a has_touch+is_mobile context")
+
+            # NOTE on method: Locator.is_visible() on #touchui itself is the
+            # wrong check (its own box collapses to zero height because every
+            # direct child is position:fixed) — same reasoning as the
+            # original single-viewport --touch. Check computed style + a
+            # real fixed child's own bounding box instead.
+            touchui = page.locator("#touchui")
+            if touchui.count() == 0:
+                errors.append("#touchui not found in DOM")
+            else:
+                display = page.evaluate(
+                    "() => { const e = document.getElementById('touchui'); "
+                    "return e ? getComputedStyle(e).display : null; }")
+                if display == "none" or display is None:
+                    errors.append(
+                        f"#touchui computed display is {display!r}, expected != 'none' "
+                        "(CSS: body.touch #touchui should be display:block)")
+                joy_box = _bbox_retry(page, page.locator("#joy"), "#joy", errors)
+                if joy_box and (joy_box["width"] <= 0 or joy_box["height"] <= 0):
+                    errors.append(f"#joy has a zero-size bounding box: {joy_box}")
+
+            if start_dismissed:
+                check_flight_controls_reachable("panel closed, before opening it")
+
+            panel_btn = page.locator('[data-tap="panel"]')
+            if panel_btn.count() == 0:
+                errors.append('[data-tap="panel"] (the ☰ menu button) not found in DOM')
+
+            tpanel_present = page.locator("#tpanel").count() > 0
+            if not tpanel_present:
+                errors.append('#tpanel (the panel drawer) not found in DOM — aborting the panel sweep')
+
+            # The whole panel sweep is meaningless if the start screen never
+            # actually went away — already recorded as an error above, just
+            # skip further taps rather than pile on confusing secondary
+            # failures.
+            if start_dismissed and panel_btn.count() > 0 and tpanel_present:
+                open_panel()
+
+                # Wiring probe — BEFORE any tap flips state, or it is
+                # meaningless (see _TOUCH_PANEL_INITIALLY_ON docstring above).
+                for name, sim_key in _TOUCH_PANEL_INITIALLY_ON.items():
+                    if page.locator(f'[data-tap="{name}"]').count() == 0:
+                        continue  # already reported as missing by the sweep below
+                    has_on = page.evaluate(
+                        "(n) => { const e = document.querySelector(`[data-tap=\"${n}\"]`); "
+                        "return !!e && e.classList.contains('on'); }", name)
+                    if not has_on:
+                        warnings.append(
+                            f"panel button '{name}' has no 'on' highlight although "
+                            f"sim.{sim_key} defaults to true at load — TouchControls "
+                            "may have been constructed without its `sim` argument "
+                            "(js/main.js), leaving _updatePanelState() a silent "
+                            "no-op. Not fatal (cosmetic), flagged for dev-lead.")
+
+                # --- item 2: every one of the 10 buttons is REACHABLE, not
+                # just present — bbox exists, is >=44x44 CSS px, sits fully
+                # inside the viewport, and a tap at its own centre actually
+                # hits it (or a descendant of it) rather than something else
+                # covering it. This is the direct regression test for "the
+                # bottom REL row is clipped by max-height:44vh in landscape
+                # while touch-action is suppressed" — it must FAIL on the
+                # pre-fix code in the 844x390 viewport and PASS once the CSS
+                # is corrected.
+                for name in _TOUCH_PANEL_NAMES:
+                    open_panel()
+                    btn = page.locator(f'[data-tap="{name}"]')
+                    if btn.count() == 0:
+                        errors.append(f'[data-tap="{name}"] not found in #tpanel')
+                        continue
+
+                    box = _bbox_retry(page, btn, f'[data-tap="{name}"]', errors)
+                    if box:
+                        if box["width"] < _MIN_TAP_PX or box["height"] < _MIN_TAP_PX:
+                            errors.append(
+                                f'[data-tap="{name}"] too small to tap reliably: '
+                                f'{box["width"]:.1f}x{box["height"]:.1f}px '
+                                f'(< {_MIN_TAP_PX}px minimum) at viewport {vw}x{vh}')
+
+                        if (box["x"] < -0.5 or box["y"] < -0.5
+                                or box["x"] + box["width"] > vw + 0.5
+                                or box["y"] + box["height"] > vh + 0.5):
+                            errors.append(
+                                f'[data-tap="{name}"] box {box} extends outside the '
+                                f'{vw}x{vh} viewport')
+
+                        cx, cy = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+                        res = element_hits(f'[data-tap="{name}"]', cx, cy)
+                        if not res["hit"]:
+                            errors.append(
+                                f'[data-tap="{name}"] at ({cx:.0f},{cy:.0f}) is covered by '
+                                f"{res['tag']}#{res['id']}.{res['cls']!r} — a real tap there "
+                                "would not reach this button (reason="
+                                f"{res.get('reason')})")
+
+                    if not tap_locator(btn, f'[data-tap="{name}"]'):
+                        continue
+                    page.wait_for_timeout(200)
+                    if name in _TOUCH_PANEL_ACTION_CLOSERS and panel_is_open():
+                        errors.append(
+                            f"tapping action button '{name}' should close #tpanel "
+                            "(PANEL_ACTIONS kind:'action'), but it is still open")
+
+                # --- item 4: tapping outside the panel sheet closes it ---
+                # Deliberately NOT tied to a backdrop element's id (the ТЗ
+                # explicitly warns not to): probe all four viewport corners
+                # via elementFromPoint and use the first one that is
+                # confirmed NOT inside #tpanel itself, so the test's own
+                # premise (this point is backdrop, not sheet) is verified
+                # rather than assumed.
+                open_panel()
+                if panel_is_open():
+                    backdrop_point = None
+                    for (bx, by) in ((5, 5), (vw - 5, 5), (5, vh - 5), (vw - 5, vh - 5)):
+                        is_outside_sheet = page.evaluate(
+                            "([x, y]) => { const e = document.elementFromPoint(x, y); "
+                            "const sheet = document.getElementById('tpanel'); "
+                            "return !!e && !!sheet && !(e === sheet || sheet.contains(e)); }",
+                            [bx, by])
+                        if is_outside_sheet:
+                            backdrop_point = (bx, by)
+                            break
+                    if backdrop_point is None:
+                        errors.append(
+                            "could not find a point outside #tpanel in any of the 4 "
+                            f"viewport corners at {vw}x{vh} — cannot test tap-outside-"
+                            "to-close (the sheet may cover the entire viewport here)")
+                    else:
+                        bx, by = backdrop_point
+                        page.touchscreen.tap(bx, by)
+                        page.wait_for_timeout(250)
+                        if panel_is_open():
+                            errors.append(
+                                f"tapping outside the panel sheet at ({bx},{by}) "
+                                "did not close #tpanel")
+                        else:
+                            check_flight_controls_reachable(
+                                "panel closed, after tap-outside-to-close")
+
+            page.wait_for_timeout(300)
+            has_canvas = page.evaluate(
+                "() => { const c=document.querySelector('canvas'); return !!c && c.width>0 && c.height>0; }")
+            if not has_canvas:
+                errors.append("no sized <canvas> found after the sweep (WebGL context likely died)")
+    except Exception as ex:
+        errors.append(f"unexpected exception during {label} sweep: {ex!r}")
+    finally:
+        context.close()
+
+    # Drain the starvation warnings _bbox_retry collected for THIS viewport
+    # (module-level list, because _bbox_retry has no per-viewport handle) so
+    # they are printed under the right viewport label and the list does not
+    # leak into the next one.
+    while _BBOX_STARVATION_WARNINGS:
+        warnings.append(_BBOX_STARVATION_WARNINGS.pop(0))
+
+    return errors, warnings
+
+
+def run_touch():
+    from playwright.sync_api import sync_playwright
+
+    port = free_port()
+    httpd = serve(port)
+    url = f"http://127.0.0.1:{port}/index.html"
+
+    all_errors = []    # (viewport_label, message)
+    all_warnings = []  # (viewport_label, message)
+
+    try:
+        # ONE browser process for all three viewports (see module comment) —
+        # only the BrowserContext (and thus viewport/has_touch/is_mobile) is
+        # per-viewport.
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            for vp in _TOUCH_VIEWPORTS:
+                errs, warns = _run_touch_viewport(browser, url, vp)
+                all_errors.extend((vp["label"], e) for e in errs)
+                all_warnings.extend((vp["label"], w) for w in warns)
+            browser.close()
+    finally:
+        httpd.shutdown()
+
+    if all_warnings:
+        print("== touch smoke warnings (non-fatal) ==")
+        for vp_label, w in all_warnings:
+            print(f"  ! [{vp_label}] {w}")
+
+    if all_errors:
+        print("TOUCH SMOKE: FAIL")
+        by_viewport = {}
+        for vp_label, e in all_errors:
+            by_viewport.setdefault(vp_label, []).append(e)
+        for vp_label, errs in by_viewport.items():
+            print(f"  -- viewport: {vp_label} --")
+            for e in errs:
+                print(f"     - {e}")
+        sys.exit(1)
+
+    print("TOUCH SMOKE: PASS (all viewports: "
+          + ", ".join(v["label"] for v in _TOUCH_VIEWPORTS) + ")")
+
+
 def main():
     from playwright.sync_api import sync_playwright
 
@@ -397,6 +890,10 @@ def main():
             if i + 1 < len(argv):
                 out_dir = argv[i + 1]
         run_mirror(out_dir)
+        return
+
+    if "--touch" in argv:
+        run_touch()
         return
 
     extra_keys = sys.argv[1:]  # e.g. ["v", "t", "j"]
