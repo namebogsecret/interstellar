@@ -67,6 +67,14 @@ relative to the ground) and you **land**; faster and you **crash** — but eithe
 way you just sit on the surface, and pressing **W / Space** **lifts you off
 again**. Press **⌫** to reset to Earth orbit anytime.
 
+A **Landing radar** HUD line appears as you descend toward a surface (below 10 %
+of the body's radius in altitude, on a path that intersects the ground). It shows
+vertical speed, time to touchdown and the predicted impact speed, flagged red
+**CRASH** if that prediction exceeds 50 m/s (the same threshold as touchdown).
+It is an honest ballistic estimate of "what if I stop burning now": no
+atmosphere, and impact speed comes from energy conservation, so on fast-spinning
+bodies it overestimates by a few percent.
+
 ## Two flight models (press **M**)
 
 - **Arcade — infinite fuel.** Set any proper acceleration (up to ~1000 g).
@@ -280,8 +288,8 @@ js/
 
 ## Roadmap (designed-for)
 
-- **Landing**: terrain collision + surface frame + touchdown detection (the
-  atmosphere/altitude/reference-body plumbing is already in place).
+- **Landing**: touchdown, the surface frame and the landing radar are in place;
+  what remains is terrain collision (bodies are currently smooth spheres).
 
 ## Credits
 

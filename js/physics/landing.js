@@ -7,8 +7,9 @@
 // Honest model, documented: ballistic coast in a point-mass field, no thrust,
 // no atmosphere, no further rotation of the ground during the fall.
 //   impactSpeed — energy conservation:  v_imp² = |v|² + 2·GM·(1/R − 1/r)
-//   tImpact     — constant-g fall from current altitude h with g = GM/r²:
-//                 h + vVert·t − ½·g·t² = 0  →  t = (vVert + sqrt(vVert² + 2gh)) / g
+//   tImpact     — constant-gEff fall from altitude h, gEff = GM/r² − vHoriz²/r:
+//                 h + vVert·t − ½·gEff·t² = 0 → t = (vVert + sqrt(vVert² + 2·gEff·h)) / gEff
+//                 (gEff ≤ 1e-9, near-orbit: linear t = h / (−vVert))
 import * as THREE from 'three';
 
 // Touchdown speed (m/s, rel. co-rotating ground) above which contact is a crash.
@@ -54,7 +55,11 @@ export function landingRadar(rRel, vGround, body, impacting, out = {}) {
     const v2 = vGround.lengthSq();
     const impactSpeed = Math.sqrt(Math.max(0, v2 + 2 * GM * (1 / R - 1 / r)));
     const g = GM / (r * r);
-    const tImpact = (vVert + Math.sqrt(vVert * vVert + 2 * g * h)) / g;
+    // Effective radial acceleration: gravity minus the centrifugal term vHoriz²/r.
+    const gEff = g - (vHoriz * vHoriz) / r;
+    const tImpact = gEff > 1e-9
+      ? (vVert + Math.sqrt(vVert * vVert + 2 * gEff * h)) / gEff
+      : h / (-vVert);
 
     if (![vVert, vHoriz, impactSpeed, tImpact, g].every(Number.isFinite)) return inactive(out);
 
