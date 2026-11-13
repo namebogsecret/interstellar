@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { G0 } from '../physics/constants.js';
-import { orbitFromState } from '../physics/orbits.js';
+import { orbitFromState, groundVelocity } from '../physics/orbits.js';
+import { landingRadar } from '../physics/landing.js';
 // Only the phase→key MAPPING (the single such table in the project) — no
 // physics, no decisions: the HUD renders whatever the core already decided.
 import { autopilotHudKey } from '../physics/autopilot.js';
@@ -19,6 +20,33 @@ const _v = new THREE.Vector3();
 const _rRel = new THREE.Vector3();
 const _vRel = new THREE.Vector3();
 const _closePos = new THREE.Vector3();
+// Landing radar: dedicated scratch (ground velocity, velocity rel. ground) and
+// a reused result object -- no per-frame allocation.
+const _gVel = new THREE.Vector3();
+const _vGround = new THREE.Vector3();
+const _radar = {};
+
+// Landing radar row: velocity rel. the CO-ROTATING ground via groundVelocity()
+// -- the same helper (and so the same number) touchdown() uses for impact.
+function updateLandingRow(ship, nav, rRel, rPeri) {
+  const el = $('landing');
+  if (!el) return;
+  let txt = '—', crash = false;
+  if (!ship.landed && nav.refBody && nav.refPos && nav.refVel) {
+    groundVelocity(nav.refBody, ship.pos, nav.refPos, nav.refVel, _gVel);   // refVel READ-ONLY
+    _vGround.subVectors(ship.v, _gVel);
+    const impacting = Number.isFinite(rPeri) ? rPeri < nav.refBody.radius : false;
+    const R = landingRadar(rRel, _vGround, nav.refBody, impacting, _radar);
+    if (R.active) {
+      crash = R.willCrash;
+      txt = t(crash ? 'nav.landingCrash' : 'nav.landing', {
+        vv: fmtSpeed(-R.vVert), t: fmtTime(R.tImpact), imp: fmtSpeed(R.impactSpeed),
+      });
+    }
+  }
+  el.textContent = txt;
+  el.classList.toggle('warn', crash);
+}
 
 // Fallback felt-acceleration for the brachistochrone ETA when the ship is
 // coasting (lastAccel ~ 0) -- otherwise t = 2*sqrt(d/a) is infinite, which is
@@ -66,8 +94,10 @@ export function updateHUD(ship, sim, nav = {}) {
       ? fmtDist(rPeri - radius) + (rPeri < radius ? ` (${t('nav.impact')})` : '')
       : t('nav.escape'));
     setText('apoapsis', Number.isFinite(rApo) ? fmtDist(rApo - radius) : t('nav.escape'));
+    updateLandingRow(ship, nav, _r, rPeri);
   } else {
     setText('periapsis', '—'); setText('apoapsis', '—');
+    updateLandingRow(ship, nav, _r, NaN);
   }
 
   // --- Autopilot status line. ---

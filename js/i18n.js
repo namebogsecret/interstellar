@@ -58,6 +58,9 @@ const DICT = {
     'nav.periapsis': 'PERIAPSIS', 'nav.apoapsis': 'APOAPSIS', 'nav.closespeed': 'CLOSING SPEED',
     'nav.closedist': 'CLOSEST APPROACH', 'nav.closeeta': 'TIME TO CLOSEST',
     'nav.impact': 'impact', 'nav.escape': 'escape', 'nav.receding': 'receding',
+    'hud.landing': 'LANDING RADAR',
+    'nav.landing': '↓ {vv} · touchdown in {t} · ~{imp}',
+    'nav.landingCrash': '↓ {vv} · CRASH in {t} · ~{imp}',
 
     // --- dynamic ---
     'mode.arcade': 'ARCADE · unlimited fuel', 'mode.realistic': 'REALISTIC · limited fuel',
@@ -190,6 +193,9 @@ const DICT = {
     'nav.periapsis': 'ПЕРИГЕЙ', 'nav.apoapsis': 'АПОГЕЙ', 'nav.closespeed': 'СКОРОСТЬ СБЛИЖЕНИЯ',
     'nav.closedist': 'МИН. СБЛИЖЕНИЕ', 'nav.closeeta': 'ВРЕМЯ ДО СБЛИЖЕНИЯ',
     'nav.impact': 'падение', 'nav.escape': 'уход', 'nav.receding': 'удаляется',
+    'hud.landing': 'ПОСАДКА',
+    'nav.landing': '↓ {vv} · касание через {t} · ~{imp}',
+    'nav.landingCrash': '↓ {vv} · УДАР через {t} · ~{imp}',
 
     'mode.arcade': 'АРКАДА · бесконечное топливо', 'mode.realistic': 'РЕАЛИЗМ · ограниченное топливо',
     'val.infinite': 'бесконечно',

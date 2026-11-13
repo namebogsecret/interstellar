@@ -7,6 +7,7 @@ import { engageAutopilot, autopilotStep, buildObs } from './physics/autopilot.js
 import { Ship, MODES } from './physics/ship.js';
 import { momentumFromV } from './physics/relativity.js';
 import { G0 } from './physics/constants.js';
+import { CRASH_SPEED } from './physics/landing.js';
 import { createRenderer, createScene, createCamera, createBloom, handleResize,
          applyRenderPath, ensureCubeResources, releaseCubeResources } from './render/scene.js';
 import { updateRelativisticPass } from './render/relativisticPass.js';
@@ -400,7 +401,7 @@ function touchdown() {
   ship.v.copy(gvel); momentumFromV(gvel, ship.w);   // rest RELATIVE TO GROUND (matches landed-block)
   ship.landed = true; ship.landedBody = b.name; ship.throttle = 0;
   ship.touchdownSpeed = impact;
-  ship.crashed = impact > 50;
+  ship.crashed = impact > CRASH_SPEED;
   orientLanded(up);
   sound.impact(impact, ship.crashed);   // hull-borne thud/crash — self-guarded no-op while sound is off
 
