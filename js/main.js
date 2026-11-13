@@ -324,7 +324,7 @@ const controls = new FlightControls(ship, canvas, {
     const targetRadius = kind === 'hohmann'
       ? ((sim.target && b && sim.target.parent === b.name) ? sim.target.a : NaN)
       : undefined;
-    const obs = buildObs(ship, BODIES, positions, byName, sim.time, controls.inputSeq, 1 / 60, targetRadius);
+    const obs = buildObs(ship, BODIES, positions, byName, sim.time, controls.inputSeq, 1 / 60, targetRadius, kind === 'hohmann' && sim.target ? sim.target.name : undefined);
     ap.state = engageAutopilot({ kind, bodyName: b ? b.name : null, targetRadius }, obs);
     ap.applied = NaN;
     ap.lastSimDt = 0;

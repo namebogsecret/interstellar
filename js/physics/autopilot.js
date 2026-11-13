@@ -765,8 +765,10 @@ export function autopilotHudKey(state) {
  *  ONLY until the next buildObs() call — main.js must consume it the same frame
  *  and never store it (ГРАБЛИ #1).
  *  `targetRadius` (optional): Hohmann target orbit radius about the ref body;
- *  feeds obs.dominanceAtTarget (Infinity when absent/unusable). */
-export function buildObs(ship, bodies, positions, byName, simTime, inputSeq, dtReal, targetRadius) {
+ *  feeds obs.dominanceAtTarget (Infinity when absent/unusable).
+ *  `targetName` (optional): the target body is excluded from that metric only
+ *  (it is the destination; obs.dominance is unaffected). */
+export function buildObs(ship, bodies, positions, byName, simTime, inputSeq, dtReal, targetRadius, targetName) {
   const refB = ship.refBody || dominantBody(ship.pos, bodies, positions);
   const bp = refB ? positions.get(refB.name) : null;
   if (!refB || !bp) {
@@ -788,7 +790,7 @@ export function buildObs(ship, bodies, positions, byName, simTime, inputSeq, dtR
   let domTarget = Infinity;
   if (Number.isFinite(targetRadius) && targetRadius > 0 && _apR.lengthSq() > 0) {
     _apP.copy(_apR).normalize().multiplyScalar(targetRadius).add(bp);
-    domTarget = dominanceRatio(_apP, refB, bodies, positions);
+    domTarget = dominanceRatio(_apP, refB, bodies, positions, targetName);
   }
   return {
     mu: refB.GM,
