@@ -113,4 +113,99 @@ for (const over of [{ dominanceAtTarget: 1e6 }, { dominanceAtTarget: Infinity },
   const obs3 = buildObs(ship, BODIES, positions, byName, 0, 0, 1 / 60, 2e7);
   assert.ok(obs3.dominanceAtTarget >= DOM_MIN_HOLD, `(R3-1c) 2e7 target dominance ${obs3.dominanceAtTarget}`);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// (d) R3-4 — REGRESSION on R3-1's fix: a target that IS a moon must not break
+// its own dominance check. P = refPos + unit(rVec)*targetRadius coincides with
+// the moon when the ship is aimed at it; the moon's own pull gave a false
+// REFUSED. Contract: buildObs(..., targetRadius, targetName) — 9th optional
+// param; dominanceRatio(shipPos, refBody, bodies, positions, excludeName) —
+// 5th optional param, the named body is skipped when picking the "second"
+// pull. Without it dominanceRatio is unchanged.
+// ─────────────────────────────────────────────────────────────────────────────
+{
+  const positions = new Map();
+  for (const b of BODIES) {
+    const p = new THREE.Vector3();
+    if (b.parent) absolutePosition(b, 0, byName, p);
+    positions.set(b.name, p);
+  }
+  const mkShip = (refName, tgtName, r0) => {
+    const ref = byName(refName), tgt = byName(tgtName);
+    const rp = positions.get(refName);
+    const dir = new THREE.Vector3().subVectors(positions.get(tgtName), rp).normalize();
+    const tang = new THREE.Vector3(0, 0, 1).cross(dir).normalize();
+    const ship = new Ship();
+    const bv = new THREE.Vector3();
+    bodyVelocity(ref, 0, byName, bv);
+    ship.pos.copy(rp).addScaledVector(dir, r0);
+    ship.v.copy(bv).addScaledVector(tang, Math.sqrt(ref.GM / r0));
+    ship.refBody = ref;
+    ship.mode = 'arcade';
+    return { ship, ref, tgt, rp, dir };
+  };
+
+  // (d1) Jupiter -> Io, ship aimed straight at Io
+  {
+    const { ship, tgt } = mkShip('Jupiter', 'Io', 2e8);
+    const goal = { kind: 'hohmann', bodyName: 'Jupiter', targetRadius: tgt.a };
+    const obs = buildObs(ship, BODIES, positions, byName, 0, 0, 1 / 60, tgt.a, 'Io');
+    assert.ok(obs.dominanceAtTarget >= DOM_MIN_HOLD,
+      `(R3-4d1) dominanceAtTarget=${obs.dominanceAtTarget} must be >= ${DOM_MIN_HOLD} (Io must not count against itself)`);
+    assert.ok(obs.dominanceAtTarget > 1000, `(R3-4d1) expected ~3400, got ${obs.dominanceAtTarget}`);
+    const st = engageAutopilot(goal, obs);
+    assert.notEqual(st.phase, PHASES.REFUSED, `(R3-4d1) engage REFUSED/${st.reason}`);
+    const obsNo = buildObs(ship, BODIES, positions, byName, 0, 0, 1 / 60, tgt.a);
+    assert.ok(obsNo.dominanceAtTarget < obs.dominanceAtTarget,
+      '(R3-4d1) omitting targetName must keep the old, lower value');
+  }
+
+  // (d2) Earth -> Moon still REFUSED: the Sun, not the Moon, breaks dominance
+  {
+    const { ship, tgt, ref, rp, dir } = mkShip('Earth', 'Moon', 8e6);
+    const obs = buildObs(ship, BODIES, positions, byName, 0, 0, 1 / 60, tgt.a, 'Moon');
+    assert.ok(obs.dominanceAtTarget < DOM_MIN_HOLD,
+      `(R3-4d2) dominanceAtTarget=${obs.dominanceAtTarget} must stay < ${DOM_MIN_HOLD}`);
+    const st = engageAutopilot({ kind: 'hohmann', bodyName: 'Earth', targetRadius: tgt.a }, obs);
+    assert.equal(st.phase, PHASES.REFUSED, `(R3-4d2) got ${st.phase}/${st.reason}`);
+    assert.equal(st.reason, REASONS.PERTURBED);
+    const P = new THREE.Vector3().copy(rp).addScaledVector(dir, tgt.a);
+    const sun = byName('Sun');
+    const pullSun = sun.GM / Math.max(positions.get('Sun').distanceToSquared(P), sun.radius ** 2);
+    const pullEarth = ref.GM / Math.max(rp.distanceToSquared(P), ref.radius ** 2);
+    const expect = pullEarth / pullSun;
+    assert.ok(Math.abs(obs.dominanceAtTarget - expect) <= 1e-6 * Math.max(1, expect),
+      `(R3-4d2) ${obs.dominanceAtTarget} vs Sun-based ${expect}`);
+  }
+
+  // (d3) dominanceRatio without the 5th param == manual recomputation (unchanged)
+  {
+    const moonDir = new THREE.Vector3().subVectors(positions.get('Moon'), positions.get('Earth')).normalize();
+    const cases = [
+      ['Earth', positions.get('Earth').clone().add(new THREE.Vector3(8e6, 0, 0))],
+      ['Jupiter', positions.get('Jupiter').clone().add(new THREE.Vector3(2e8, 0, 0))],
+      ['Jupiter', positions.get('Io').clone()],
+      ['Earth', positions.get('Earth').clone().addScaledVector(moonDir, MOON.a)],
+    ];
+    for (const [refName, P] of cases) {
+      const ref = byName(refName);
+      let refPull = 0, second = 0;
+      for (const b of BODIES) {
+        if (!b.GM) continue;
+        const bp = positions.get(b.name);
+        if (!bp) continue;
+        const pull = b.GM / Math.max(bp.distanceToSquared(P), b.radius * b.radius);
+        if (b === ref) refPull = pull; else if (pull > second) second = pull;
+      }
+      const manual = !(refPull > 0) ? 0 : !(second > 0) ? Infinity : refPull / second;
+      const got = dominanceRatio(P, ref, BODIES, positions);
+      assert.ok(got === manual || Math.abs(got - manual) <= 1e-12 * Math.abs(manual),
+        `(R3-4d3) ${refName}: ${got} vs manual ${manual}`);
+      assert.equal(dominanceRatio(P, ref, BODIES, positions, undefined), got, '(R3-4d3) undefined exclude');
+    }
+    const P = cases[0][1];
+    assert.equal(dominanceRatio(P, byName('Earth'), BODIES, positions, 'Mercury'),
+                 dominanceRatio(P, byName('Earth'), BODIES, positions), '(R3-4d3) excluding a minor body is a no-op');
+  }
+}
 console.log('autopilot.repair3: OK');
