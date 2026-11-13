@@ -111,7 +111,8 @@ already uses.
 
 - **N** — circularize at your current radius.
 - **Shift+N** — Hohmann transfer to your current target's orbit radius (pick
-  a target with **Tab**, e.g. the Moon, then Shift+N from Earth orbit).
+  a target with **Tab** whose orbit lies inside the reference body's zone of
+  dominance, e.g. a moon of Jupiter, then Shift+N from orbit about Jupiter).
 
 The HUD's AUTOPILOT line tracks it: waiting for the right point in the orbit
 to burn, burning with a live Δv countdown, a trim pass or two to tighten up,
@@ -132,6 +133,10 @@ Said plainly, so it doesn't over-promise:
 - **Strong multi-body regions** — needs the reference body to out-pull
   everything else by 10× to engage, 5× to keep going; a real three-body tug
   ends the manoeuvre with an honest failure, not a silently wrong answer.
+- **A target whose orbit lies outside the reference body's zone of
+  dominance** — e.g. the Moon from Earth orbit: the transfer would leave the
+  Earth's dominance mid-flight, so it refuses up front (it does not burn and
+  then fail).
 - **An escaping (unbound) starting orbit**, for a transfer — you need to be
   captured first.
 - **A target radius under the destination's safe altitude, or not a real

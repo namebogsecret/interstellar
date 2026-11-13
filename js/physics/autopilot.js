@@ -85,6 +85,7 @@ const _apRad = new THREE.Vector3();    // radial unit
 const _apR = new THREE.Vector3();
 const _apV = new THREE.Vector3();
 const _apBVel = new THREE.Vector3();
+const _apP = new THREE.Vector3();      // point at targetRadius (dominanceAtTarget) — own scratch, never _apR
 const _apZeroR = new THREE.Vector3();
 const _apZeroV = new THREE.Vector3();
 
@@ -300,6 +301,10 @@ function _gateAtEngage(goal, obs, el) {
   if (goal.kind === 'hohmann') {                                             // 7
     const rT = goal.targetRadius;
     if (!Number.isFinite(rT) || !(rT > 0) || rT < obs.safeRadius) return REASONS.TARGET_UNREACHABLE;
+    // The transfer must stay inside the ref body's dominance out to the TARGET
+    // radius, else it ends FAILED(ref-changed) after the departure burn is spent
+    // (Earth→Moon). Undefined field = not checked (back-compat); NaN refuses.
+    if (obs.dominanceAtTarget !== undefined && !(obs.dominanceAtTarget >= DOM_MIN_HOLD)) return REASONS.PERTURBED;
   }
   const need = estimateManoeuvreDv(goal, obs) * DV_MARGIN;                   // 8
   if (!(obs.maxThrustAccel > 0)) return REASONS.NO_FUEL;
@@ -371,9 +376,10 @@ export function engageAutopilot(goal, obs) {
 
   // Whole-manoeuvre deadline, frozen at engage. 12 revolutions of the STARTING
   // orbit is the right scale for a circularization, but NOT for a transfer:
-  // Earth→Moon is a ~5-day coast from a ~2-hour parking orbit, so a deadline
-  // built only from the parking period would abort every real transfer long
-  // before it arrived. The transfer's own half-ellipse time is the honest
+  // a high-orbit transfer is a multi-day coast from a ~2-hour parking orbit, so
+  // a deadline built only from the parking period would abort every real
+  // transfer long before it arrived. (Earth→Moon is NOT such a transfer: it is
+  // refused at engage — target outside the ref body's dominance.) The transfer's own half-ellipse time is the honest
   // second scale; the 1e6 s cap of ТЗ §4 still bounds both.
   base.manoeuvreTimeout = _deadline(g, safeObs, el, base.orbitPeriod0);
 
@@ -439,7 +445,7 @@ function _blankObs() {
   return {
     mu: 0, bodyRadius: 0, safeRadius: 0, rVec: _apZeroR.set(0, 0, 0), vVec: _apZeroV.set(0, 0, 0),
     maxThrustAccel: 0, dvBudget: 0, beta: 0, landed: false, atmoDensity: 0,
-    dominance: 0, refBodyName: null, inputSeq: 0, dtReal: 1 / 60,
+    dominance: 0, dominanceAtTarget: Infinity, refBodyName: null, inputSeq: 0, dtReal: 1 / 60,
   };
 }
 
@@ -757,8 +763,12 @@ export function autopilotHudKey(state) {
  *  main.js, so that it is covered by the node gate.
  *  Writes into MODULE-PRIVATE scratch (_apR/_apV/_apBVel): the result is valid
  *  ONLY until the next buildObs() call — main.js must consume it the same frame
- *  and never store it (ГРАБЛИ #1). */
-export function buildObs(ship, bodies, positions, byName, simTime, inputSeq, dtReal) {
+ *  and never store it (ГРАБЛИ #1).
+ *  `targetRadius` (optional): Hohmann target orbit radius about the ref body;
+ *  feeds obs.dominanceAtTarget (Infinity when absent/unusable).
+ *  `targetName` (optional): the target body is excluded from that metric only
+ *  (it is the destination; obs.dominance is unaffected). */
+export function buildObs(ship, bodies, positions, byName, simTime, inputSeq, dtReal, targetRadius, targetName) {
   const refB = ship.refBody || dominantBody(ship.pos, bodies, positions);
   const bp = refB ? positions.get(refB.name) : null;
   if (!refB || !bp) {
@@ -775,6 +785,13 @@ export function buildObs(ship, bodies, positions, byName, simTime, inputSeq, dtR
   bodyVelocity(refB, simTime, byName, _apBVel);
   _apV.subVectors(ship.v, _apBVel);
   const vRelBeta = _apV.length() / C;
+  // Dominance at the TARGET radius along the ship's current direction from the
+  // ref body (separate scratch _apP — not _apR, ГРАБЛИ #1). Infinity = no target.
+  let domTarget = Infinity;
+  if (Number.isFinite(targetRadius) && targetRadius > 0 && _apR.lengthSq() > 0) {
+    _apP.copy(_apR).normalize().multiplyScalar(targetRadius).add(bp);
+    domTarget = dominanceRatio(_apP, refB, bodies, positions, targetName);
+  }
   return {
     mu: refB.GM,
     bodyRadius: refB.radius,
@@ -787,6 +804,7 @@ export function buildObs(ship, bodies, positions, byName, simTime, inputSeq, dtR
     landed: !!(ship.landed || ship.crashed),
     atmoDensity: ship.atmoDensity,
     dominance: dominanceRatio(ship.pos, refB, bodies, positions),
+    dominanceAtTarget: domTarget,
     refBodyName: refB.name,
     inputSeq: fin(inputSeq, 0),
     dtReal: fin(dtReal, 1 / 60),

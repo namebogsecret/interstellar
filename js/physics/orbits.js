@@ -252,10 +252,13 @@ export function safeRadius(b) {
 // to the strongest OTHER body's pull (∞ when refBody is the only massive body,
 // 0 when refBody itself has no pull here). An SOI proxy: how safely a two-body
 // model may stand in for the real N-body field.
-export function dominanceRatio(shipPos, refBody, bodies, positions) {
+// `excludeName` (optional): a body with this name is skipped when picking the
+// strongest OTHER pull (e.g. a transfer target — it is the destination).
+export function dominanceRatio(shipPos, refBody, bodies, positions, excludeName) {
   let refPull = 0, secondPull = 0;
   for (const b of bodies) {
     if (!b.GM) continue;
+    if (excludeName !== undefined && b !== refBody && b.name === excludeName) continue;
     const bp = positions.get(b.name);
     if (!bp) continue;
     const r2 = Math.max(bp.distanceToSquared(shipPos), b.radius * b.radius);
