@@ -9,8 +9,9 @@ invariants:
     cmd: node --no-warnings --loader "file://$PWD/tests/three-loader.mjs" tests/longitudinal.regression.test.mjs
     tolerance: 0.02   # 2% — допуск теста на γ=13
 
-  - id: INV-PHYS-03   # сохранение момента импульса при центральных силах — orbits.test.mjs
-                       # (circularizeVelocity/orbitFromState: v⟂r, эксцентриситет/периапсис/апоапсис)
+  - id: INV-PHYS-03   # элементы орбиты (a,e,rPeri,rApo) из состояния (r,v) — orbits.test.mjs
+                       # (circularizeVelocity/orbitFromState: v⟂r, эксцентриситет/периапсис/апоапсис;
+                       # само сохранение h при пропагации — отдельно, propagator.conservation.test.mjs)
     cmd: node --no-warnings --loader "file://$PWD/tests/three-loader.mjs" tests/orbits.test.mjs
     tolerance: 1e-3   # tol теста orbits.test.mjs для e/a против заданных aWant/eWant
 

@@ -224,6 +224,12 @@ orbital flight is untouched — then blooms dramatically as you burn toward *c*.
 > bodies don't perturb each other — appropriate simplifications for a real-time
 > sim. The *kinematics* of motion near light speed are fully special-relativistic.
 
+**How this is checked:** the claims above are covered by a 39-file regression
+suite (`bash tests/run.sh`) with explicit reference formulas and tolerances —
+see [`PHYSICS-VERIFICATION.md`](PHYSICS-VERIFICATION.md) for exactly what is,
+and isn't, gated (also published at
+[`/physics-verification.html`](physics-verification.html)).
+
 ## Known limitations
 
 - **Transverse thrust** — the sim models the honest relativistic 4-force: a
