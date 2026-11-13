@@ -118,6 +118,10 @@ export class FlightControls {
     window.addEventListener('keydown', (e) => {
       this.hooks.onGesture?.();
       const k = e.key.toLowerCase();
+      // OS auto-repeat of a discrete ACTION key is not a new press: no input
+      // note (a held Shift+N would cancel its own autopilot), no hook re-fire.
+      // Same table as the classifier — FLIGHT_ACTION_KEYS — not a per-key if.
+      if (e.repeat && FLIGHT_ACTION_KEYS.includes(k)) return;
       // Reporter #1: FLIGHT keys only (see the table above), counted BEFORE
       // dispatch. Order matters — the autopilot hook below reads the
       // already-incremented value as its arming baseline, so engaging cannot be
@@ -149,6 +153,11 @@ export class FlightControls {
       else if (/^[0-9]$/.test(k)) this.ship.throttle = k === '0' ? 0 : powerToThrottle(Number(k), this.ship);
     });
     window.addEventListener('keyup', (e) => this.keys.delete(e.key.toLowerCase()));
+    // A keyup lost to alt-tab / tab switch must not leave a phantom held key
+    // counting as pilot input forever.
+    const releaseAll = () => { this.keys.clear(); this.pitchYawFromMouse.set(0, 0); };
+    window.addEventListener('blur', releaseAll);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) releaseAll(); });
   }
 
   // Apply per-frame control state to the ship. Returns the thrust direction
