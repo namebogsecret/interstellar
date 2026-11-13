@@ -44,12 +44,14 @@
     padding: 12px 14px; overflow-x: auto; color: #d7f6ff; }
   .note { background: rgba(40,90,120,0.18); border-left: 2px solid #4a8fb0; padding: 10px 14px;
     border-radius: 5px; color: #bfe6f4; margin: 14px 0; }
+  .tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   table { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 12.5px; }
-  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid rgba(120,200,230,0.1); vertical-align: top; }
+  td:first-child, th:first-child { white-space: nowrap; }
+  th, td { overflow-wrap: break-word; text-align: left; padding: 7px 9px; border-bottom: 1px solid rgba(120,200,230,0.1); vertical-align: top; }
   th { color: var(--dim); font-weight: 600; letter-spacing: 0.03em; font-size: 11.5px; }
   td.mono, th.mono { font-family: inherit; }
   tr:hover td { background: rgba(120,200,230,0.04); }
-  .tolcol, .refcol { white-space: nowrap; color: #9fe7ff; }
+  .tolcol, .refcol { color: #9fe7ff; min-width: 7em; }
   footer.bottom { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line);
     color: var(--dim); font-size: 12px; }
   [data-lang] { display: none; }
@@ -91,13 +93,13 @@
   into any CI runner (no <code>.github/workflows</code>, and
   <code>tests/run.sh</code> doesn't read it) — reproduction is manual, not
   automated. These four are the project's load-bearing physical claims:</p>
-  <table>
+  <div class="tablewrap"><table>
     <tr><th>Invariant</th><th>Test file</th><th>Locks</th><th class="refcol">Reference</th><th class="tolcol">Tolerance</th></tr>
     <tr><td>INV-PHYS-01</td><td>longitudinal.regression</td><td>Longitudinal 4-force not divided by γ (1000g burn)</td><td class="refcol">γ(t)=√(1+(αt/c)²)</td><td class="tolcol">2%</td></tr>
     <tr><td>INV-PHYS-03</td><td>orbits</td><td>Orbit elements (a, e, periapsis, apoapsis) from state (r,v); actual conservation of h under propagation is checked separately in propagator.conservation, not this file</td><td class="refcol">v²=μ(2/r−1/a)</td><td class="tolcol">1e-3</td></tr>
     <tr><td>INV-PHYS-06</td><td>gravity</td><td>Φ&lt;0, decreasing with r (sign+monotonicity, no numeric reference); weak-field dτ→1 at large r</td><td class="refcol">Φ=−μ/r (sign/monotonicity only)</td><td class="tolcol">dτ→1: 1e-12 abs (not a tolerance on Φ)</td></tr>
     <tr><td>INV-PHYS-09</td><td>relativity</td><td>Aberration formula, round-trip, monotonicity</td><td class="refcol">(cp−β)/(1−β·cp)</td><td class="tolcol">1e-9</td></tr>
-  </table>
+  </table></div>
   <div class="note">The 2% tolerance on INV-PHYS-01 is not a convenience
   margin — it's the test's own bound at γ≈13, and the file is marked
   <b>NEVER DELETE, NEVER WEAKEN</b> in its header: if a future 4-force
@@ -112,12 +114,12 @@
   <h2>Full gate, by topic</h2>
 
   <h3>A — Special relativity</h3>
-  <table>
+  <div class="tablewrap"><table>
     <tr><th>File</th><th>Checks</th><th class="refcol">Reference</th><th class="tolcol">Tolerance</th></tr>
     <tr><td>relativity</td><td>Aberration formula, round-trip, monotonicity (INV-PHYS-09)</td><td class="refcol">(cp−β)/(1−β·cp)</td><td class="tolcol">1e-9</td></tr>
     <tr><td>longitudinal.regression</td><td>γ(t) under constant 1000g proper accel, longitudinal 4-force undivided (INV-PHYS-01, NEVER DELETE/WEAKEN)</td><td class="refcol">γ(t)=√(1+(αt/c)²)</td><td class="tolcol">2%</td></tr>
     <tr><td>gravity.relativistic</td><td>(a) Transverse factor — actually gated: hard guard ratio&gt;1.5 plus 3% tolerance vs (1+β²) at β=0.99 (INV-PHYS-10, not in physics-gate.yaml). (b) Longitudinal factor (1−3β²) — implemented in ship.js, but only printed via console.log in a try/catch; <b>not asserted</b> by the gate</td><td class="refcol">a⊥=(1+β²)g⊥ · a∥=(1−3β²)g∥</td><td class="tolcol">(a) guard&gt;1.5 + 3% rel · (b) none — diagnostic only</td></tr>
-  </table>
+  </table></div>
   <p>The <code>(1−3β²)</code> longitudinal factor is a fixed, deliberate
   decision by the project owner about the physics engine itself — an internal
   decision, not something independently verifiable from a source inside this
@@ -128,7 +130,7 @@
   hidden one.</p>
 
   <h3>B — Orbital mechanics / Kepler</h3>
-  <table>
+  <div class="tablewrap"><table>
     <tr><th>File</th><th>Checks</th><th class="refcol">Reference</th><th class="tolcol">Tolerance</th></tr>
     <tr><td>orbits</td><td>Kepler elements (a, e, rPeri, rApo) from state (r,v) (INV-PHYS-03) — does not itself assert conservation of angular momentum under propagation; see propagator.conservation below</td><td class="refcol">v²=μ(2/r−1/a)</td><td class="tolcol">1e-3</td></tr>
     <tr><td>orbits.classify</td><td>bound/unbound via specific energy, not e≥1 (ADR-8)</td><td class="refcol">ε=v²/2−μ/r&lt;0</td><td class="tolcol">exact identity</td></tr>
@@ -142,17 +144,17 @@
     <tr><td>cabotage.continuity</td><td>γ(w)≈γ(v) continuous across hand-off</td><td class="refcol">—</td><td class="tolcol">1e-12</td></tr>
     <tr><td>cabotage.periapsis</td><td>No periapsis overshoot on hand-off (NEVER DELETE/WEAKEN)</td><td class="refcol">—</td><td class="tolcol">regression corpus</td></tr>
     <tr><td>cabotage.dtau</td><td>Analytic dτ vs converged fine numeric reference</td><td class="refcol">dτ=dt/γ integrated</td><td class="tolcol">1e-6 rel</td></tr>
-  </table>
+  </table></div>
 
   <h3>C — Gravity</h3>
-  <table>
+  <div class="tablewrap"><table>
     <tr><th>File</th><th>Checks</th><th class="refcol">Reference</th><th class="tolcol">Tolerance</th></tr>
     <tr><td>gravity</td><td>Φ&lt;0, decreasing with r (sign+monotonicity, no numeric reference); weak-field dτ→1 at large r (INV-PHYS-06)</td><td class="refcol">Φ=−μ/r (sign/monotonicity only)</td><td class="tolcol">dτ→1: 1e-12 abs (not a tolerance on Φ)</td></tr>
     <tr><td>gravity.relativistic</td><td>see table A above</td><td class="refcol">a⊥=(1+β²)g⊥ · a∥=(1−3β²)g∥</td><td class="tolcol">(a) guard&gt;1.5 · (b) not asserted</td></tr>
-  </table>
+  </table></div>
 
   <h3>D — Autopilot (orbital-manoeuvre guidance)</h3>
-  <table>
+  <div class="tablewrap"><table>
     <tr><th>File</th><th>Checks</th><th class="tolcol">Tolerance</th></tr>
     <tr><td>autopilot.circular</td><td>Circularization burn converges to target radius</td><td class="tolcol">a: 1e-3–2e-3 rel · e: 1e-3</td></tr>
     <tr><td>autopilot.hohmann</td><td>Hohmann transfer converges to target orbit radius</td><td class="tolcol">final a within 5e-3 rel, e&lt;2e-3 (5e-3 for Earth–Moon)</td></tr>
@@ -162,21 +164,21 @@
     <tr><td>autopilot.invariants</td><td>500 pseudo-random states: determinism + totality</td><td class="tolcol">exact, no tolerance</td></tr>
     <tr><td>autopilot.repair</td><td>Regression corpus: 4 defects an earlier green gate missed</td><td class="tolcol">regression corpus</td></tr>
     <tr><td>autopilot.repair3</td><td>Repair round 3: a Hohmann whose <em>target</em> radius lies outside the reference body's dominance is refused at engage (reason <code>perturbed</code>, no impulse spent); <code>dominanceAtTarget</code> must equal <code>dominanceRatio</code> at the target radius; circularize ignores it; a target that is itself a moon is not counted against itself</td><td class="tolcol">vs formula: 1e-9 rel (R3-1), 1e-6 rel (R3-4) · refuse/accept: exact phase/reason</td></tr>
-  </table>
+  </table></div>
 
   <h3>E — Epoch / time</h3>
-  <table>
+  <div class="tablewrap"><table>
     <tr><th>File</th><th>Checks</th><th class="refcol">Reference</th></tr>
     <tr><td>epoch</td><td>J2000 mean-anomaly helper, fixed timestamps only</td><td class="refcol">—</td></tr>
     <tr><td>epoch.tt</td><td>J2000.0 = true TT, not UTC (ADR-4)</td><td class="refcol">J2000.0 = UTC noon − 64.184s</td></tr>
-  </table>
+  </table></div>
 
   <h3>F — Engineering structural guards (<em>not</em> physical-law checks)</h3>
   <p>These keep the <em>code</em> honest — layering, single-source-of-truth,
   UI/UX policy, i18n, sound framing — not a formula-vs-textbook check. A few
   do touch physically-meaningful quantities; where that's true it's flagged
   in the row rather than folded silently into the tables above.</p>
-  <table>
+  <div class="tablewrap"><table>
     <tr><th>File</th><th>Checks</th></tr>
     <tr><td>structure</td><td>Static source-text fitness functions (§9) — greps for forbidden duplicate-condition patterns, not a runtime test</td></tr>
     <tr><td>renderpath</td><td>resolveRenderPath truth table (plain/wide/cube render path)</td></tr>
@@ -194,15 +196,15 @@
     <tr><td>touchpanel</td><td>Touch-panel action table has exactly one row per keyboard-only feature, and the keyboard branch in controls.js calls the same hook — input-wiring single-source check, <em>not physics</em></td></tr>
     <tr><td>controls.repeat-blur</td><td>OS key auto-repeat of action keys neither bumps inputSeq nor re-fires the hook (held Shift+N must not cancel its own autopilot); window blur / hidden tab drops held keys and mouse look — <em>not physics</em></td></tr>
     <tr><td>missions.hyperbolic</td><td>Jupiter-flyby arming uses the canonical bound/unbound classifier, not ULP-unsafe e≥1 (ADR-8)</td></tr>
-  </table>
+  </table></div>
 
   <h3>G — Landing radar</h3>
   <p>The HUD landing radar (<code>landingRadar</code> in <code>js/physics/landing.js</code>) is a ballistic "what if I stop burning now" estimate. Its tests are written from the module's contract, not from the implementation.</p>
-  <table>
+  <div class="tablewrap"><table>
     <tr><th>File</th><th>Checks</th><th class="refcol">Reference</th><th class="tolcol">Tolerance</th></tr>
     <tr><td>landing.radar</td><td>Constants CRASH_SPEED = 50 and RADAR_MAX_ALT_FRAC = 0.1; Moon free fall from 100 m to 100 km: altitude, impact speed, time to impact; vVert/vHoriz sign and magnitude for oblique vectors; inactive cases (not impacting, ascending, vVert &gt; −0.1 m/s, altitude ≥ 0.1R or &lt; 0); willCrash is a strict impact &gt; 50 (exactly 50 is safe); bad inputs never throw and return inactive; inputs not mutated; out-object reuse; source wiring (main.js uses CRASH_SPEED, i18n keys in EN and RU)</td><td class="refcol">v²<sub>imp</sub> = v² + 2μ(1/R − 1/r) · t = (−v₀+√(v₀²+2gh))/g · t≈√(2h/g)</td><td class="tolcol">altitude 1e-12 · impact speed 1e-9 · tImpact closed form 1e-9 · vs √(2h/g) at 500 m: 1% · vVert/vHoriz 1e-9 abs · thresholds exact</td></tr>
     <tr><td>landing.timpact</td><td>Regression R1: time to impact accounts for horizontal speed (centrifugal term); at vHoriz = 0 it equals the plain closed form; when effective g ≤ 0 it falls back to h/|vVert|, finite and positive</td><td class="refcol">numerical inertial two-body integration (Earth, h = 1 km, vHoriz 0–7800 m/s)</td><td class="tolcol"><b>10%</b> vs the integration (wide, deliberately) · vHoriz = 0: 1e-12 · fallback: 1e-9</td></tr>
-  </table>
+  </table></div>
   <p>The radar's impact speed comes from energy conservation in the body's non-rotating frame, so on fast-spinning bodies it overestimates by a few percent; no test quantifies that, and there is no atmosphere model.</p>
 
   <h2>Relevant ADRs</h2>
@@ -265,13 +267,13 @@
   <code>tests/run.sh</code> его не читает) — воспроизведение ручное, не
   автоматическое. Это четыре физических утверждения, на которых держится
   проект:</p>
-  <table>
+  <div class="tablewrap"><table>
     <tr><th>Инвариант</th><th>Файл теста</th><th>Что закрепляет</th><th class="refcol">Эталон</th><th class="tolcol">Допуск</th></tr>
     <tr><td>INV-PHYS-01</td><td>longitudinal.regression</td><td>Продольная 4-сила не делится на γ (тяга 1000g)</td><td class="refcol">γ(t)=√(1+(αt/c)²)</td><td class="tolcol">2%</td></tr>
     <tr><td>INV-PHYS-03</td><td>orbits</td><td>Элементы орбиты (a, e, периапсис, апоапсис) из состояния (r,v); реальное сохранение h при пропагации проверяется отдельно в propagator.conservation, не в этом файле</td><td class="refcol">v²=μ(2/r−1/a)</td><td class="tolcol">1e-3</td></tr>
     <tr><td>INV-PHYS-06</td><td>gravity</td><td>Φ&lt;0, убывает с r (только знак+монотонность, без числового эталона); слабопольная dτ→1 при больших r</td><td class="refcol">Φ=−μ/r (только знак/монотонность)</td><td class="tolcol">dτ→1: 1e-12 абс. (не допуск на сам Φ)</td></tr>
     <tr><td>INV-PHYS-09</td><td>relativity</td><td>Формула аберрации, round-trip, монотонность</td><td class="refcol">(cp−β)/(1−β·cp)</td><td class="tolcol">1e-9</td></tr>
-  </table>
+  </table></div>
   <div class="note">Допуск 2% у INV-PHYS-01 — не удобная погрешность «с
   запасом», а собственный допуск теста при γ≈13, а сам файл помечен в
   заголовке <b>NEVER DELETE, NEVER WEAKEN</b>: если будущий рефакторинг
@@ -286,12 +288,12 @@
   <h2>Полный гейт по темам</h2>
 
   <h3>A — Специальная теория относительности</h3>
-  <table>
+  <div class="tablewrap"><table>
     <tr><th>Файл</th><th>Проверяет</th><th class="refcol">Эталон</th><th class="tolcol">Допуск</th></tr>
     <tr><td>relativity</td><td>Формула аберрации, round-trip, монотонность (INV-PHYS-09)</td><td class="refcol">(cp−β)/(1−β·cp)</td><td class="tolcol">1e-9</td></tr>
     <tr><td>longitudinal.regression</td><td>γ(t) при постоянном 1000g собственном ускорении, продольная 4-сила без деления (INV-PHYS-01, NEVER DELETE/WEAKEN)</td><td class="refcol">γ(t)=√(1+(αt/c)²)</td><td class="tolcol">2%</td></tr>
     <tr><td>gravity.relativistic</td><td>(a) Поперечный фактор — реально гейтится: жёсткий guard ratio&gt;1.5 плюс допуск 3% против (1+β²) при β=0.99 (INV-PHYS-10, нет в physics-gate.yaml). (b) Продольный фактор (1−3β²) — реализован в ship.js, но только выводится через console.log в try/catch; гейтом <b>не проверяется</b></td><td class="refcol">a⊥=(1+β²)g⊥ · a∥=(1−3β²)g∥</td><td class="tolcol">(a) guard&gt;1.5 + 3% отн. · (b) нет — только диагностика</td></tr>
-  </table>
+  </table></div>
   <p>Продольный фактор <code>(1−3β²)</code> — зафиксированное осознанное
   решение владельца проекта о самой физике движка — внутреннее решение, не
   проверяемое независимо по источнику внутри этого репозитория, и не то,
@@ -302,7 +304,7 @@
   пробел, а не скрытый.</p>
 
   <h3>B — Орбитальная механика / законы Кеплера</h3>
-  <table>
+  <div class="tablewrap"><table>
     <tr><th>Файл</th><th>Проверяет</th><th class="refcol">Эталон</th><th class="tolcol">Допуск</th></tr>
     <tr><td>orbits</td><td>Кеплеровы элементы (a, e, rPeri, rApo) из состояния (r,v) (INV-PHYS-03) — сам не проверяет сохранение момента импульса при пропагации; см. propagator.conservation ниже</td><td class="refcol">v²=μ(2/r−1/a)</td><td class="tolcol">1e-3</td></tr>
     <tr><td>orbits.classify</td><td>bound/unbound по удельной энергии, не по e≥1 (ADR-8)</td><td class="refcol">ε=v²/2−μ/r&lt;0</td><td class="tolcol">точное тождество</td></tr>
@@ -316,17 +318,17 @@
     <tr><td>cabotage.continuity</td><td>γ(w)≈γ(v) непрерывна при переключении</td><td class="refcol">—</td><td class="tolcol">1e-12</td></tr>
     <tr><td>cabotage.periapsis</td><td>Нет overshoot периапсиса при переключении (NEVER DELETE/WEAKEN)</td><td class="refcol">—</td><td class="tolcol">регресс-корпус</td></tr>
     <tr><td>cabotage.dtau</td><td>Аналитическое dτ vs сходящийся мелкий численный эталон</td><td class="refcol">dτ=dt/γ, интеграл</td><td class="tolcol">1e-6 отн.</td></tr>
-  </table>
+  </table></div>
 
   <h3>C — Гравитация</h3>
-  <table>
+  <div class="tablewrap"><table>
     <tr><th>Файл</th><th>Проверяет</th><th class="refcol">Эталон</th><th class="tolcol">Допуск</th></tr>
     <tr><td>gravity</td><td>Φ&lt;0, убывает с r (только знак+монотонность, без числового эталона); слабопольная dτ→1 при больших r (INV-PHYS-06)</td><td class="refcol">Φ=−μ/r (только знак/монотонность)</td><td class="tolcol">dτ→1: 1e-12 абс. (не допуск на сам Φ)</td></tr>
     <tr><td>gravity.relativistic</td><td>см. таблицу A выше</td><td class="refcol">a⊥=(1+β²)g⊥ · a∥=(1−3β²)g∥</td><td class="tolcol">(a) guard&gt;1.5 · (b) не проверяется</td></tr>
-  </table>
+  </table></div>
 
   <h3>D — Автопилот (орбитальные манёвры)</h3>
-  <table>
+  <div class="tablewrap"><table>
     <tr><th>Файл</th><th>Проверяет</th><th class="tolcol">Допуск</th></tr>
     <tr><td>autopilot.circular</td><td>Циркуляризация сходится к целевому радиусу</td><td class="tolcol">a: 1e-3–2e-3 отн. · e: 1e-3</td></tr>
     <tr><td>autopilot.hohmann</td><td>Хоман-трансфер сходится к целевому радиусу орбиты</td><td class="tolcol">финальная a ±5e-3 отн., e&lt;2e-3 (5e-3 для Земля–Луна)</td></tr>
@@ -336,14 +338,14 @@
     <tr><td>autopilot.invariants</td><td>500 псевдослучайных состояний: детерминизм + totality</td><td class="tolcol">точно, без допуска</td></tr>
     <tr><td>autopilot.repair</td><td>Регресс-корпус: 4 дефекта, пропущенных прошлым зелёным гейтом</td><td class="tolcol">регресс-корпус</td></tr>
     <tr><td>autopilot.repair3</td><td>Ремонт, раунд 3: Хоман, у которого <em>целевой</em> радиус вне зоны доминирования опорного тела, отклоняется при запуске (причина <code>perturbed</code>, импульс не тратится); <code>dominanceAtTarget</code> должен совпадать с <code>dominanceRatio</code> на целевом радиусе; циркуляризация поле игнорирует; цель-луна не считается против самой себя</td><td class="tolcol">против формулы: 1e-9 отн. (R3-1), 1e-6 отн. (R3-4) · отказ/допуск: точное совпадение фазы/причины</td></tr>
-  </table>
+  </table></div>
 
   <h3>E — Эпоха / время</h3>
-  <table>
+  <div class="tablewrap"><table>
     <tr><th>Файл</th><th>Проверяет</th><th class="refcol">Эталон</th></tr>
     <tr><td>epoch</td><td>Хелпер средней аномалии J2000, только фиксированные метки времени</td><td class="refcol">—</td></tr>
     <tr><td>epoch.tt</td><td>J2000.0 = истинный TT, не UTC (ADR-4)</td><td class="refcol">J2000.0 = полдень UTC − 64.184с</td></tr>
-  </table>
+  </table></div>
 
   <h3>F — Инженерные структурные гарды (<em>не</em> проверка физических законов)</h3>
   <p>Эти файлы следят за честностью <em>кода</em> — слоистость,
@@ -351,7 +353,7 @@
   соответствием формулы учебнику. Некоторые касаются физически осмысленных
   величин; где это так — отмечено прямо в строке, а не тихо смешано с
   таблицами выше.</p>
-  <table>
+  <div class="tablewrap"><table>
     <tr><th>Файл</th><th>Проверяет</th></tr>
     <tr><td>structure</td><td>Статические фитнес-функции по исходному тексту (§9) — grep запрещённых дублирующихся условий, не рантайм-тест</td></tr>
     <tr><td>renderpath</td><td>Таблица истинности resolveRenderPath (plain/wide/cube путь рендера)</td></tr>
@@ -369,15 +371,15 @@
     <tr><td>touchpanel</td><td>В таблице действий тач-панели ровно одна строка на каждую функцию, доступную только с клавиатуры, и клавиатурная ветка в controls.js вызывает тот же хук — проверка единого источника проводки ввода, <em>не физика</em></td></tr>
     <tr><td>controls.repeat-blur</td><td>Автоповтор клавиш действий ОС не увеличивает inputSeq и не вызывает хук повторно (удерживаемый Shift+N не должен отменять свой автопилот); потеря фокуса окна / скрытая вкладка сбрасывает зажатые клавиши и взгляд мышью — <em>не физика</em></td></tr>
     <tr><td>missions.hyperbolic</td><td>Взведение пролёта Юпитера — по каноническому классификатору bound/unbound, не по небезопасному e≥1 (ADR-8)</td></tr>
-  </table>
+  </table></div>
 
   <h3>G — Посадочный радар</h3>
   <p>Посадочный радар в HUD (<code>landingRadar</code> в <code>js/physics/landing.js</code>) — баллистическая оценка «что будет, если я сейчас перестану жечь». Тесты написаны по контракту модуля, а не по реализации.</p>
-  <table>
+  <div class="tablewrap"><table>
     <tr><th>Файл</th><th>Проверяет</th><th class="refcol">Эталон</th><th class="tolcol">Допуск</th></tr>
     <tr><td>landing.radar</td><td>Константы CRASH_SPEED = 50 и RADAR_MAX_ALT_FRAC = 0.1; свободное падение на Луне от 100 м до 100 км: высота, скорость удара, время до удара; знак и величина vVert/vHoriz для косых векторов; неактивные случаи (нет столкновения, подъём, vVert &gt; −0.1 м/с, высота ≥ 0.1R или &lt; 0); willCrash — строгое «удар &gt; 50» (ровно 50 безопасно); плохие входы не бросают исключение и дают «неактивно»; входы не мутируются; переиспользование out-объекта; проводка в исходниках (main.js использует CRASH_SPEED, ключи i18n в EN и RU)</td><td class="refcol">v²<sub>уд</sub> = v² + 2μ(1/R − 1/r) · t = (−v₀+√(v₀²+2gh))/g · t≈√(2h/g)</td><td class="tolcol">высота 1e-12 · скорость удара 1e-9 · tImpact замкнутая форма 1e-9 · против √(2h/g) на 500 м: 1% · vVert/vHoriz 1e-9 абс. · пороги точно</td></tr>
     <tr><td>landing.timpact</td><td>Регресс R1: время до удара учитывает горизонтальную скорость (центробежный член); при vHoriz = 0 совпадает с простой замкнутой формой; при эффективном g ≤ 0 — запасная оценка h/|vVert|, конечная и положительная</td><td class="refcol">численное инерциальное интегрирование двух тел (Земля, h = 1 км, vHoriz 0–7800 м/с)</td><td class="tolcol"><b>10%</b> против интегрирования (широкий, осознанно) · vHoriz = 0: 1e-12 · запас: 1e-9</td></tr>
-  </table>
+  </table></div>
   <p>Скорость удара радара берётся из сохранения энергии в невращающейся системе тела, поэтому на быстро вращающихся телах она завышена на несколько процентов; ни один тест это не измеряет, модели атмосферы нет.</p>
 
   <h2>Релевантные ADR</h2>
