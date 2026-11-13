@@ -21,7 +21,7 @@ Runs every `tests/*.test.mjs` file under Node (`tests/three-loader.mjs`
 resolves the vendored Three.js import), bare `assert`, no framework, no
 build step. Prints `PHYSICS GATE: PASS` and exits 0 only if every file's
 assertions hold; a single failing assertion throws and fails the whole run
-(exit 1). At the time of writing this is **39 files**, ~2 seconds.
+(exit 1). At the time of writing this is **45 files**, ~2 seconds.
 
 Separately, `tests/smoke_playwright.py` drives a real browser (Playwright)
 and catches frame-loop crashes the Node tests can't see — it self-contains
@@ -112,6 +112,7 @@ above and (b) in the row directly above.
 | `autopilot.cancel.test.mjs` | Manoeuvre cancellation via a single monotonic `inputSeq` counter (ADR-7) | — | exact condition |
 | `autopilot.invariants.test.mjs` | 500 pseudo-random states: determinism (same input → same output) and totality (every state produces a decision) | — | exact, no tolerance |
 | `autopilot.repair.test.mjs` | Regression corpus: 4 defects found by adversarial review that the previously-green gate missed | — | regression corpus |
+| `autopilot.repair3.test.mjs` | Repair round 3: a Hohmann (Shift+N) whose **target** radius lies outside the reference body's dominance is refused at engage (reason `perturbed`, no impulse spent) instead of failing in flight; `dominanceAtTarget` computed by `buildObs` must equal `dominanceRatio` at the target radius; circularize ignores the field; a target that is itself a moon (Io) is not counted against itself | `dominanceRatio(P, ref, bodies, positions)` at P = ref + r̂·targetRadius | `dominanceAtTarget` vs formula: 1e-9 rel (R3-1), 1e-6 rel (R3-4); manual recomputation 1e-12 rel; refuse/accept cases: exact phase/reason match |
 
 ### E — Epoch / time
 
@@ -144,7 +145,25 @@ folded silently into the physics tables above.
 | `ship.refpair.test.mjs` | Atomicity of the `(refBody, refBodyVel)` pair fed into `Ship.step()` within one frame |
 | `ship.test.mjs` | Fuel/dτ bookkeeping, transverse 4-force, drag-vs-rest-frame contract — *physics-adjacent: exercises the same formulas as the A/C tables, but as a code contract ("does the function honor its signature"), not an independent from-scratch derivation* |
 | `missions.test.mjs` | Student-mission pure predicates: Mars circular-orbit check, Moon landing check, Jupiter-flyby arming state machine |
+| `touchpanel.test.mjs` | Touch-panel action table (`PANEL_ACTIONS`) has exactly one row per keyboard-only feature and the keyboard branch in `controls.js` calls the same hook — a single-source-of-truth check on input wiring; *not physics* |
+| `controls.repeat-blur.test.mjs` | OS key auto-repeat of action keys neither bumps `inputSeq` nor re-fires the hook (a held Shift+N must not cancel its own autopilot); window blur / hidden tab drops all held keys and mouse look; *not physics* |
 | `missions.hyperbolic.test.mjs` | Regression: Jupiter-flyby arming threshold uses the canonical bound/unbound classifier, not the ULP-unsafe `e ≥ 1` check (ADR-8) |
+
+### G — Landing radar
+
+The HUD landing radar (`landingRadar` in `js/physics/landing.js`) is a
+ballistic "what if I stop burning now" estimate. Its tests are written from
+the module's contract, not from the implementation.
+
+| File | Checks | Reference | Tolerance |
+|---|---|---|---|
+| `landing.radar.test.mjs` | Constants `CRASH_SPEED = 50` and `RADAR_MAX_ALT_FRAC = 0.1`; free fall on the Moon from h = 100 m … 100 km: altitude, impact speed (energy conservation) and time to impact; sign/magnitude of vVert/vHoriz for oblique and arbitrary-direction vectors; inactive cases (not impacting, ascending, vVert > −0.1 m/s, altitude ≥ 0.1R or < 0); `willCrash` is a strict `impactSpeed > 50` (50 exactly is safe, 50.001 crashes); non-finite / zero inputs never throw and return inactive; inputs are not mutated; `out` object reuse; source-text wiring (`main.js` uses `CRASH_SPEED`, i18n keys exist in EN and RU) | v_imp² = v² + 2μ(1/R − 1/r) · t = (−v₀ + √(v₀²+2gh))/g · t ≈ √(2h/g) for small h | altitude 1e-12 rel · impact speed 1e-9 rel · tImpact closed form 1e-9 rel · tImpact vs √(2h/g) at h = 500 m: 1% · vVert/vHoriz 1e-9 abs · thresholds exact |
+| `landing.timpact.test.mjs` | Regression R1: time to impact accounts for horizontal speed (centrifugal term, effective g); at vHoriz = 0 it reduces to the plain closed form; when effective g ≤ 0 (near/over orbital speed) it falls back to the linear estimate h/\|vVert\| and stays finite and positive | numerical inertial two-body integration (velocity-Verlet, Earth, h = 1 km, vHoriz 0…7800 m/s) | **10%** vs the numerical integration (wide, deliberately — it is a one-line estimate) · vHoriz = 0: 1e-12 rel · fallback: 1e-9 rel |
+
+The radar's impact speed comes from energy conservation in the body's
+non-rotating frame, so on fast-spinning bodies it overestimates by a few
+percent (see `README.md`); no test quantifies that overestimate, and there is
+no atmosphere model.
 
 ## Relevant ADRs
 
@@ -171,6 +190,9 @@ not cited here as ADR numbers to avoid conflating the two.
 - Transverse thrust is reduced by an extra factor of γ relative to
   longitudinal thrust — the honest relativistic 4-force result, documented as
   a known limitation in `README.md`, not something this gate hides.
+- The landing radar's time-to-impact is checked against a numerical two-body
+  integration only to 10%, and its impact-speed overestimate on fast-spinning
+  bodies is documented but not quantified by any test.
 - A green `tests/run.sh` is a **regression gate**, not a proof of absolute
   correctness: it proves the code still agrees with the reference formulas
   and tolerances above. Any formula this document doesn't list has no

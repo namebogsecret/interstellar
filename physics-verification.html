@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Physics verification — Interstellar</title>
-<meta name="description" content="How the physics in Interstellar is checked: the 39-file test suite, reference formulas and tolerances behind every physics claim, honestly reported." />
+<meta name="description" content="How the physics in Interstellar is checked: the 45-file test suite, reference formulas and tolerances behind every physics claim, honestly reported." />
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="icon" type="image/png" sizes="120x120" href="/favicon-120.png" />
@@ -76,7 +76,7 @@
   <pre>bash tests/run.sh</pre>
   <p>Runs every <code>tests/*.test.mjs</code> file under Node, bare
   <code>assert</code>, no framework, no build step — currently
-  <b>39 files</b>, about 2 seconds. Prints <code>PHYSICS GATE: PASS</code> and
+  <b>45 files</b>, about 2 seconds. Prints <code>PHYSICS GATE: PASS</code> and
   exits 0 only if every assertion in every file holds. Separately,
   <code>tests/smoke_playwright.py</code> drives a real browser to catch
   frame-loop crashes the Node tests can't see — a crash/console-error smoke
@@ -161,6 +161,7 @@
     <tr><td>autopilot.cancel</td><td>Cancellation via a single monotonic inputSeq counter (ADR-7)</td><td class="tolcol">exact condition</td></tr>
     <tr><td>autopilot.invariants</td><td>500 pseudo-random states: determinism + totality</td><td class="tolcol">exact, no tolerance</td></tr>
     <tr><td>autopilot.repair</td><td>Regression corpus: 4 defects an earlier green gate missed</td><td class="tolcol">regression corpus</td></tr>
+    <tr><td>autopilot.repair3</td><td>Repair round 3: a Hohmann whose <em>target</em> radius lies outside the reference body's dominance is refused at engage (reason <code>perturbed</code>, no impulse spent); <code>dominanceAtTarget</code> must equal <code>dominanceRatio</code> at the target radius; circularize ignores it; a target that is itself a moon is not counted against itself</td><td class="tolcol">vs formula: 1e-9 rel (R3-1), 1e-6 rel (R3-4) · refuse/accept: exact phase/reason</td></tr>
   </table>
 
   <h3>E — Epoch / time</h3>
@@ -190,8 +191,19 @@
     <tr><td>ship.refpair</td><td>Atomicity of the (refBody, refBodyVel) pair fed into Ship.step() within one frame</td></tr>
     <tr><td>ship</td><td>Fuel/dτ bookkeeping, transverse 4-force, drag-vs-rest-frame — <em>exercises the same formulas as A/C, as a code contract, not an independent derivation</em></td></tr>
     <tr><td>missions</td><td>Student-mission pure predicates: Mars circular orbit, Moon landing, Jupiter-flyby state machine</td></tr>
+    <tr><td>touchpanel</td><td>Touch-panel action table has exactly one row per keyboard-only feature, and the keyboard branch in controls.js calls the same hook — input-wiring single-source check, <em>not physics</em></td></tr>
+    <tr><td>controls.repeat-blur</td><td>OS key auto-repeat of action keys neither bumps inputSeq nor re-fires the hook (held Shift+N must not cancel its own autopilot); window blur / hidden tab drops held keys and mouse look — <em>not physics</em></td></tr>
     <tr><td>missions.hyperbolic</td><td>Jupiter-flyby arming uses the canonical bound/unbound classifier, not ULP-unsafe e≥1 (ADR-8)</td></tr>
   </table>
+
+  <h3>G — Landing radar</h3>
+  <p>The HUD landing radar (<code>landingRadar</code> in <code>js/physics/landing.js</code>) is a ballistic "what if I stop burning now" estimate. Its tests are written from the module's contract, not from the implementation.</p>
+  <table>
+    <tr><th>File</th><th>Checks</th><th class="refcol">Reference</th><th class="tolcol">Tolerance</th></tr>
+    <tr><td>landing.radar</td><td>Constants CRASH_SPEED = 50 and RADAR_MAX_ALT_FRAC = 0.1; Moon free fall from 100 m to 100 km: altitude, impact speed, time to impact; vVert/vHoriz sign and magnitude for oblique vectors; inactive cases (not impacting, ascending, vVert &gt; −0.1 m/s, altitude ≥ 0.1R or &lt; 0); willCrash is a strict impact &gt; 50 (exactly 50 is safe); bad inputs never throw and return inactive; inputs not mutated; out-object reuse; source wiring (main.js uses CRASH_SPEED, i18n keys in EN and RU)</td><td class="refcol">v²<sub>imp</sub> = v² + 2μ(1/R − 1/r) · t = (−v₀+√(v₀²+2gh))/g · t≈√(2h/g)</td><td class="tolcol">altitude 1e-12 · impact speed 1e-9 · tImpact closed form 1e-9 · vs √(2h/g) at 500 m: 1% · vVert/vHoriz 1e-9 abs · thresholds exact</td></tr>
+    <tr><td>landing.timpact</td><td>Regression R1: time to impact accounts for horizontal speed (centrifugal term); at vHoriz = 0 it equals the plain closed form; when effective g ≤ 0 it falls back to h/|vVert|, finite and positive</td><td class="refcol">numerical inertial two-body integration (Earth, h = 1 km, vHoriz 0–7800 m/s)</td><td class="tolcol"><b>10%</b> vs the integration (wide, deliberately) · vHoriz = 0: 1e-12 · fallback: 1e-9</td></tr>
+  </table>
+  <p>The radar's impact speed comes from energy conservation in the body's non-rotating frame, so on fast-spinning bodies it overestimates by a few percent; no test quantifies that, and there is no atmosphere model.</p>
 
   <h2>Relevant ADRs</h2>
   <p>The project's append-only decision log documents several of the choices
@@ -211,6 +223,7 @@
     <li>No general relativity (no frame-dragging, no curved-spacetime geodesics beyond the weak-field approximation) — Newtonian gravity + special-relativistic kinematics, by design.</li>
     <li>Bodies don't perturb each other's orbits — a stated simplification.</li>
     <li>Transverse thrust is reduced by an extra factor of γ vs longitudinal — the honest relativistic 4-force result, a documented known limitation, not hidden here.</li>
+    <li>The landing radar's time-to-impact is checked against a numerical integration only to 10%; its impact-speed overestimate on fast-spinning bodies is documented but not quantified by any test.</li>
     <li>A green <code>tests/run.sh</code> is a <b>regression gate</b>, not a proof of absolute correctness — it proves the code still agrees with the formulas and tolerances above. Anything not listed here has no automated check.</li>
   </ul>
 
@@ -235,7 +248,7 @@
   <pre>bash tests/run.sh</pre>
   <p>Гоняет каждый файл <code>tests/*.test.mjs</code> под Node, голые
   <code>assert</code>, без фреймворка и без сборки — сейчас
-  <b>39 файлов</b>, около 2 секунд. Печатает <code>PHYSICS GATE: PASS</code>
+  <b>45 файлов</b>, около 2 секунд. Печатает <code>PHYSICS GATE: PASS</code>
   и выходит с кодом 0, только если верны все утверждения во всех файлах.
   Отдельно <code>tests/smoke_playwright.py</code> гоняет реальный браузер и
   ловит крэши игрового цикла, которых Node-тесты не видят — это
@@ -322,6 +335,7 @@
     <tr><td>autopilot.cancel</td><td>Отмена через единый монотонный счётчик inputSeq (ADR-7)</td><td class="tolcol">точное условие</td></tr>
     <tr><td>autopilot.invariants</td><td>500 псевдослучайных состояний: детерминизм + totality</td><td class="tolcol">точно, без допуска</td></tr>
     <tr><td>autopilot.repair</td><td>Регресс-корпус: 4 дефекта, пропущенных прошлым зелёным гейтом</td><td class="tolcol">регресс-корпус</td></tr>
+    <tr><td>autopilot.repair3</td><td>Ремонт, раунд 3: Хоман, у которого <em>целевой</em> радиус вне зоны доминирования опорного тела, отклоняется при запуске (причина <code>perturbed</code>, импульс не тратится); <code>dominanceAtTarget</code> должен совпадать с <code>dominanceRatio</code> на целевом радиусе; циркуляризация поле игнорирует; цель-луна не считается против самой себя</td><td class="tolcol">против формулы: 1e-9 отн. (R3-1), 1e-6 отн. (R3-4) · отказ/допуск: точное совпадение фазы/причины</td></tr>
   </table>
 
   <h3>E — Эпоха / время</h3>
@@ -352,8 +366,19 @@
     <tr><td>ship.refpair</td><td>Атомарность пары (refBody, refBodyVel), передаваемой в Ship.step() за один кадр</td></tr>
     <tr><td>ship</td><td>Учёт топлива/dτ, поперечная 4-сила, сопротивление относительно системы покоя — <em>те же формулы, что в A/C, но как контракт кода, не независимый вывод</em></td></tr>
     <tr><td>missions</td><td>Чистые предикаты ученических миссий: круговая орбита у Марса, посадка на Луну, машина состояний пролёта Юпитера</td></tr>
+    <tr><td>touchpanel</td><td>В таблице действий тач-панели ровно одна строка на каждую функцию, доступную только с клавиатуры, и клавиатурная ветка в controls.js вызывает тот же хук — проверка единого источника проводки ввода, <em>не физика</em></td></tr>
+    <tr><td>controls.repeat-blur</td><td>Автоповтор клавиш действий ОС не увеличивает inputSeq и не вызывает хук повторно (удерживаемый Shift+N не должен отменять свой автопилот); потеря фокуса окна / скрытая вкладка сбрасывает зажатые клавиши и взгляд мышью — <em>не физика</em></td></tr>
     <tr><td>missions.hyperbolic</td><td>Взведение пролёта Юпитера — по каноническому классификатору bound/unbound, не по небезопасному e≥1 (ADR-8)</td></tr>
   </table>
+
+  <h3>G — Посадочный радар</h3>
+  <p>Посадочный радар в HUD (<code>landingRadar</code> в <code>js/physics/landing.js</code>) — баллистическая оценка «что будет, если я сейчас перестану жечь». Тесты написаны по контракту модуля, а не по реализации.</p>
+  <table>
+    <tr><th>Файл</th><th>Проверяет</th><th class="refcol">Эталон</th><th class="tolcol">Допуск</th></tr>
+    <tr><td>landing.radar</td><td>Константы CRASH_SPEED = 50 и RADAR_MAX_ALT_FRAC = 0.1; свободное падение на Луне от 100 м до 100 км: высота, скорость удара, время до удара; знак и величина vVert/vHoriz для косых векторов; неактивные случаи (нет столкновения, подъём, vVert &gt; −0.1 м/с, высота ≥ 0.1R или &lt; 0); willCrash — строгое «удар &gt; 50» (ровно 50 безопасно); плохие входы не бросают исключение и дают «неактивно»; входы не мутируются; переиспользование out-объекта; проводка в исходниках (main.js использует CRASH_SPEED, ключи i18n в EN и RU)</td><td class="refcol">v²<sub>уд</sub> = v² + 2μ(1/R − 1/r) · t = (−v₀+√(v₀²+2gh))/g · t≈√(2h/g)</td><td class="tolcol">высота 1e-12 · скорость удара 1e-9 · tImpact замкнутая форма 1e-9 · против √(2h/g) на 500 м: 1% · vVert/vHoriz 1e-9 абс. · пороги точно</td></tr>
+    <tr><td>landing.timpact</td><td>Регресс R1: время до удара учитывает горизонтальную скорость (центробежный член); при vHoriz = 0 совпадает с простой замкнутой формой; при эффективном g ≤ 0 — запасная оценка h/|vVert|, конечная и положительная</td><td class="refcol">численное инерциальное интегрирование двух тел (Земля, h = 1 км, vHoriz 0–7800 м/с)</td><td class="tolcol"><b>10%</b> против интегрирования (широкий, осознанно) · vHoriz = 0: 1e-12 · запас: 1e-9</td></tr>
+  </table>
+  <p>Скорость удара радара берётся из сохранения энергии в невращающейся системе тела, поэтому на быстро вращающихся телах она завышена на несколько процентов; ни один тест это не измеряет, модели атмосферы нет.</p>
 
   <h2>Релевантные ADR</h2>
   <p>Append-only журнал решений проекта документирует часть закреплённых
@@ -373,6 +398,7 @@
     <li>Нет общей теории относительности (нет frame-dragging, нет геодезических искривлённого пространства-времени за пределами слабопольного приближения) — ньютоновская гравитация + специально-релятивистская кинематика, осознанно.</li>
     <li>Тела не возмущают орбиты друг друга — заявленное упрощение.</li>
     <li>Поперечная тяга уменьшена на дополнительный множитель γ относительно продольной — честный релятивистский результат 4-силы, задокументированное известное ограничение, не скрытое здесь.</li>
+    <li>Время до удара посадочного радара сверяется с численным интегрированием лишь до 10%; завышение скорости удара на быстро вращающихся телах задокументировано, но ни одним тестом не измеряется.</li>
     <li>Зелёный <code>tests/run.sh</code> — это <b>регресс-гейт</b>, не доказательство абсолютной корректности: он доказывает, что код по-прежнему согласуется с формулами и допусками выше. У всего, чего нет в этом списке, нет автоматической проверки.</li>
   </ul>
 
