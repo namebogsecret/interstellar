@@ -142,6 +142,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 6px 0; }
 }
 #status .ok { color: #9fe7ff; }
 #status .warn { color: #ffcf7a; }
+#hud b.warn { color: #ff7a6b; }
 
 #eventlog {
   position: fixed; top: 92px; left: 50%; transform: translateX(-50%);
