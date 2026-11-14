@@ -1,0 +1,19 @@
+{
+  "@context": "https://doi.org/10.5063/schema/codemeta-2.0",
+  "@type": "SoftwareSourceCode",
+  "name": "interstellar: relativistic spaceflight simulator with a reproducible validation suite",
+  "description": "Browser simulator of relativistic spaceflight (specific-momentum integrator, proper time, Doppler, weak-field gravitational time dilation) together with a one-command validation suite against analytic references: hyperbolic motion, the twin paradox, relativistic Doppler and gravitational redshift.",
+  "author": [
+    { "@type": "Person", "givenName": "Vladimir", "familyName": "Podlevskikh" }
+  ],
+  "codeRepository": "https://github.com/namebogsecret/interstellar",
+  "url": "https://space.podlevskikh.com",
+  "programmingLanguage": "JavaScript",
+  "keywords": [
+    "special relativity",
+    "hyperbolic motion",
+    "twin paradox",
+    "redshift",
+    "validation"
+  ]
+}

@@ -1,0 +1,38 @@
+| case | quantity | analytic | simulated | abs_err | rel_err | tolerance | status |
+|---|---|---|---|---|---|---|---|
+| A1_hyperbolic_1g_1yr | gamma | 1.581845e+0 | 1.581845e+0 | 2.196021e-13 | 1.388265e-13 | rel<=2.842171e-10 | PASS |
+| A1_hyperbolic_1g_1yr | beta | 7.748273e-1 | 7.748273e-1 | 7.172041e-14 | 9.256309e-14 | rel<=2.842171e-10 | PASS |
+| A1_hyperbolic_1g_1yr | w=gamma*v [m/s] | 3.674427e+8 | 3.674427e+8 | 8.499622e-5 | 2.313183e-13 | rel<=2.842171e-10 | PASS |
+| A1_hyperbolic_1g_1yr | tau [s] | 3.155760e+7 | 3.155726e+7 | 3.445532e+2 | 1.091823e-5 | rel<=2.183675e-5 | PASS |
+| A1_hyperbolic_1g_1yr | x [m] | 5.332469e+15 | 5.332687e+15 | 2.175857e+11 | 4.080392e-5 | rel<=8.160813e-5 | PASS |
+| A2_hyperbolic_1000g_gamma13 | gamma | 1.300000e+1 | 1.300000e+1 | 8.171241e-13 | 6.285570e-14 | rel<=5.684342e-11 | PASS |
+| A2_hyperbolic_1000g_gamma13 | beta | 9.970370e-1 | 9.970370e-1 | 5.551115e-16 | 5.567612e-16 | rel<=5.684342e-11 | PASS |
+| A2_hyperbolic_1000g_gamma13 | w=gamma*v [m/s] | 3.885754e+9 | 3.885754e+9 | 2.455711e-4 | 6.319780e-14 | rel<=5.684342e-11 | PASS |
+| A2_hyperbolic_1000g_gamma13 | tau [s] | 9.955574e+4 | 9.951002e+4 | 4.571977e+1 | 4.592379e-4 | rel<=9.184760e-4 | PASS |
+| A2_hyperbolic_1000g_gamma13 | x [m] | 1.099770e+14 | 1.099918e+14 | 1.479658e+10 | 1.345425e-4 | rel<=2.690851e-4 | PASS |
+| A3_convergence_1g_N1000-2000-4000 | convergence_order_tau | 1.000000e+0 | 1.000062e+0 | 6.202108e-5 | 6.202108e-5 | value>=9.000000e-1 | PASS |
+| A3_convergence_1g_N1000-2000-4000 | convergence_order_x | 1.000000e+0 | 9.998578e-1 | 1.421509e-4 | 1.421509e-4 | value>=9.000000e-1 | PASS |
+| B1_twin_1g_tau1=2yr_tauC=1yr | tau_ship [s] | 3.155760e+8 | 3.155760e+8 | 9.256577e-2 | 2.933232e-10 | rel<=1.457790e-9 | PASS |
+| B1_twin_1g_tau1=2yr_tauC=1yr | dtau=t_earth-tau_ship [s] | 4.113248e+8 | 4.113248e+8 | 9.292221e-2 | 2.259095e-10 | rel<=1.989882e-9 | PASS |
+| B1_twin_1g_tau1=2yr_tauC=1yr | tau_at_turnaround [s] | 1.577880e+8 | 1.577880e+8 | 4.628310e-2 | 2.933246e-10 | rel<=1.457790e-9 | PASS |
+| B1_twin_1g_tau1=2yr_tauC=1yr | x_turnaround [m] | 9.175538e+16 | 9.175537e+16 | 2.261005e+8 | 2.464167e-9 | rel<=5.799516e-9 | PASS |
+| B1_twin_1g_tau1=2yr_tauC=1yr | w_turnaround/c | 0.000000e+0 | 5.533556e-18 | 5.533556e-18 | 5.533556e-18 | rel<=3.379088e-9 | PASS |
+| B1_twin_1g_tau1=2yr_tauC=1yr | x_final/x_turnaround | 0.000000e+0 | -1.161164e-16 | 1.161164e-16 | 1.161164e-16 | rel<=8.714380e-10 | PASS |
+| B1_twin_1g_tau1=2yr_tauC=1yr | w_final/c | 0.000000e+0 | -5.533556e-18 | 5.533556e-18 | 5.533556e-18 | rel<=3.379088e-9 | PASS |
+| B2_inertial_beta=0.8 | tau=t/gamma [s] | 1.893456e+8 | 1.893456e+8 | 3.427267e-6 | 1.810059e-14 | rel<=3.947460e-11 | PASS |
+| B2_inertial_beta=0.8 | x=beta*c*t [m] | 7.568584e+16 | 7.568584e+16 | 7.680000e+2 | 1.014721e-14 | rel<=3.947460e-11 | PASS |
+| B2_inertial_beta=0.99 | tau=t/gamma [s] | 4.451747e+7 | 4.451747e+7 | 1.549721e-6 | 3.481152e-14 | rel<=7.141133e-10 | PASS |
+| B2_inertial_beta=0.99 | x=beta*c*t [m] | 9.366123e+16 | 9.366123e+16 | 9.120000e+2 | 9.737220e-15 | rel<=7.141133e-10 | PASS |
+| C1_doppler_approach | D(beta=0.1) | 1.105542e+0 | 1.105542e+0 | 0.000000e+0 | 0.000000e+0 | rel<=2.673507e-15 | PASS |
+| C1_doppler_recede | D(beta=-0.1) | 9.045340e-1 | 9.045340e-1 | 0.000000e+0 | 0.000000e+0 | rel<=2.673507e-15 | PASS |
+| C1_doppler_approach | D(beta=0.5) | 1.732051e+0 | 1.732051e+0 | 0.000000e+0 | 0.000000e+0 | rel<=2.960595e-15 | PASS |
+| C1_doppler_recede | D(beta=-0.5) | 5.773503e-1 | 5.773503e-1 | 0.000000e+0 | 0.000000e+0 | rel<=2.960595e-15 | PASS |
+| C1_doppler_approach | D(beta=0.9) | 4.358899e+0 | 4.358899e+0 | 2.664535e-15 | 6.112863e-16 | rel<=6.450980e-15 | PASS |
+| C1_doppler_recede | D(beta=-0.9) | 2.294157e-1 | 2.294157e-1 | 1.387779e-16 | 6.049187e-16 | rel<=6.450980e-15 | PASS |
+| C1_doppler_approach | D(beta=0.99) | 1.410674e+1 | 1.410674e+1 | 7.993606e-14 | 5.666517e-15 | rel<=4.640844e-14 | PASS |
+| C1_doppler_recede | D(beta=-0.99) | 7.088812e-2 | 7.088812e-2 | 4.024558e-16 | 5.677338e-15 | rel<=4.640844e-14 | PASS |
+| C2_transverse_doppler | 1/gamma at cos(theta')=0 | n/a | n/a | n/a | n/a | n/a | NOT_COVERED |
+| C3_grav_Earth_surface | 1-dtau/dt (Schwarzschild exact) | 6.961275e-10 | 6.961274e-10 | 8.093772e-17 | 1.162685e-7 | rel<=1.276581e-6 | PASS |
+| C3_grav_Sun_surface | 1-dtau/dt (Schwarzschild exact) | 2.122505e-6 | 2.122505e-6 | 4.760071e-17 | 2.242667e-11 | rel<=2.122921e-6 | PASS |
+| C3_grav_Sun_at_1AU | 1-dtau/dt (Schwarzschild exact) | 9.870629e-9 | 9.870629e-9 | 1.059900e-16 | 1.073792e-8 | rel<=9.985258e-8 | PASS |
+| C4_aberration_shader | GLSL aberration/Doppler pixels | n/a | n/a | n/a | n/a | n/a | NOT_COVERED |
