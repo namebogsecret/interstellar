@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>How accurate is it? — Interstellar</title>
+<meta name="description" content="Relativistic flight in Interstellar vs closed-form special-relativity references: 34 checks, tolerances and residual charts; what is not covered is stated openly." />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="120x120" href="/favicon-120.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<style>
+  :root {
+    --fg: #9fe7ff; --dim: #5b7c88; --bg: rgba(6, 14, 20, 0.66);
+    --line: rgba(120, 200, 230, 0.18); --card: rgba(8, 16, 24, 0.92);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #05070c; }
+  body {
+    color: #cfeefc; font: 14px/1.65 "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    padding: 0 0 60px;
+  }
+  a { color: #7fb3ff; }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 22px 0; }
+  header.top {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    flex-wrap: wrap; margin-bottom: 22px;
+  }
+  header.top a.home { color: var(--dim); text-decoration: none; }
+  header.top a.home:hover { color: var(--fg); }
+  #langtoggle { display: flex; gap: 3px; background: var(--bg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 3px; }
+  #langtoggle span { cursor: pointer; padding: 3px 10px; border-radius: 5px; color: var(--dim); font-size: 12px; }
+  #langtoggle span.active { color: #eaffff; background: rgba(60,116,148,0.5); }
+  h1 { font-size: 22px; letter-spacing: 0.06em; color: #bfeeff; margin: 0 0 6px; }
+  h2 { font-size: 15px; letter-spacing: 0.05em; color: #d7f6ff; margin: 34px 0 10px;
+    border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  h3 { font-size: 13px; color: #bfe6f4; margin: 22px 0 8px; }
+  p { color: #b9d8e6; margin: 10px 0; }
+  b, strong { color: #eaffff; }
+  code { background: rgba(120,200,230,0.1); border-radius: 3px; padding: 1px 5px; color: #d7f6ff; }
+  pre { background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 14px; overflow-x: auto; color: #d7f6ff; }
+  .note { background: rgba(40,90,120,0.18); border-left: 2px solid #4a8fb0; padding: 10px 14px;
+    border-radius: 5px; color: #bfe6f4; margin: 14px 0; }
+  .tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 12.5px; }
+  td:first-child, th:first-child { white-space: nowrap; }
+  th, td { overflow-wrap: break-word; text-align: left; padding: 7px 9px; border-bottom: 1px solid rgba(120,200,230,0.1); vertical-align: top; }
+  th { color: var(--dim); font-weight: 600; letter-spacing: 0.03em; font-size: 11.5px; }
+  td.mono, th.mono { font-family: inherit; }
+  tr:hover td { background: rgba(120,200,230,0.04); }
+  .tolcol, .refcol { color: #9fe7ff; min-width: 7em; }
+  footer.bottom { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line);
+    color: var(--dim); font-size: 12px; }
+  [data-lang] { display: none; }
+  [data-lang].active { display: block; }
+  .cards { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+  .card { flex: 1 1 150px; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+  .card b { display: block; font-size: 20px; color: #bfeeff; }
+  .card span { color: var(--dim); font-size: 12px; }
+  .chartwrap { overflow-x: auto; }
+  svg.chart text { fill: #b9d8e6; font: 11px "SF Mono", Menlo, Consolas, monospace; }
+  .st-PASS { color: #7be3a0; } .st-FAIL { color: #ff7b7b; } .st-NOT_COVERED { color: #e8c46a; }
+  tr.nc td { color: #e8c46a; }
+  #err { color: #ff9b9b; }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <a class="home" href="/">← Interstellar</a>
+    <div id="langtoggle"><span data-set="en">EN</span><span data-set="ru">RU</span></div>
+  </header>
+
+<div data-lang="en" class="active">
+  <h1>HOW ACCURATE IS IT?</h1>
+  <p>The simulator's relativistic flight code is compared against closed-form
+  reference formulas from special relativity and the weak gravitational field.
+  Every number below is produced by running the project's real modules
+  (<code>ship.js</code>, <code>relativity.js</code>, <code>gravity.js</code>) and
+  comparing with an independently written formula. The tolerance of each row is
+  fixed in advance from the integrator's error estimate, not tuned afterwards.</p>
+</div>
+<div data-lang="ru">
+  <h1>НАСКОЛЬКО ЭТО ТОЧНО</h1>
+  <p>Релятивистский полёт в симуляторе сверен с эталонными формулами специальной
+  теории относительности и слабого гравитационного поля. Каждое число ниже —
+  результат прогона настоящих модулей проекта (<code>ship.js</code>,
+  <code>relativity.js</code>, <code>gravity.js</code>) против независимо записанной
+  формулы. Допуск каждой строки задан заранее по оценке ошибки интегратора, а не
+  подгонялся потом.</p>
+</div>
+
+<div id="err"></div>
+<div class="cards" id="cards"></div>
+
+<div data-lang="en" class="active"><h2>Residuals vs tolerance</h2>
+  <p>Each row: the actual relative error (bar) and the allowed tolerance (tick),
+  log scale. A bar that stays left of its tick passes. Zero errors (exact in
+  double precision) sit at the left edge.</p></div>
+<div data-lang="ru"><h2>Невязки и допуски</h2>
+  <p>Каждая строка: фактическая относительная ошибка (полоса) и допустимый допуск
+  (риска), логарифмическая шкала. Полоса левее риски — проверка пройдена. Нулевые
+  ошибки (точно в двойной точности) стоят у левого края.</p></div>
+<div class="chartwrap" id="chart"></div>
+
+<div data-lang="en" class="active"><h2>Full table</h2></div>
+<div data-lang="ru"><h2>Полная таблица</h2></div>
+<div id="tables"></div>
+
+<div data-lang="en" class="active">
+  <h2>What is not covered</h2>
+  <div class="note">Two checks are marked <b>NOT_COVERED</b> and carry no numbers:
+  the transverse Doppler effect and the aberration/Doppler shader pixels. Their
+  math lives in GLSL, which Node cannot run, so we do not claim a figure for them.
+  The longitudinal gravitational factor is likewise not asserted by the gate — see
+  <a href="physics-verification.html">physics verification</a>.</div>
+  <h2>Reproduce it</h2>
+  <pre>bash validation/run.sh          # regenerates validation/results/*
+bash validation/run.sh --check  # fails if results drift from the committed ones</pre>
+  <p>Needs only <code>node</code> ≥ 18. Raw data:
+  <a href="validation/results/results.json">results.json</a>,
+  <a href="validation/results/table.csv">table.csv</a>.</p>
+</div>
+<div data-lang="ru">
+  <h2>Что не покрыто</h2>
+  <div class="note">Две проверки помечены <b>NOT_COVERED</b> и чисел не имеют: поперечный
+  эффект Доплера и пиксели шейдера аберрации/Доплера. Их математика живёт в GLSL,
+  который Node запустить не может, поэтому мы не называем для них точность.
+  Продольный гравитационный фактор тоже не проверяется гейтом — см.
+  <a href="physics-verification.html">проверку физики</a>.</div>
+  <h2>Воспроизвести</h2>
+  <pre>bash validation/run.sh          # пересчитывает validation/results/*
+bash validation/run.sh --check  # падает, если результаты разошлись с закоммиченными</pre>
+  <p>Нужен только <code>node</code> ≥ 18. Сырые данные:
+  <a href="validation/results/results.json">results.json</a>,
+  <a href="validation/results/table.csv">table.csv</a>.</p>
+</div>
+
+<footer class="bottom">
+  <div data-lang="en" class="active">See also: <a href="physics-verification.html">how the whole physics test suite is built</a>.</div>
+  <div data-lang="ru">См. также: <a href="physics-verification.html">как устроен весь набор физических тестов</a>.</div>
+</footer>
+</main>
+<script type="module">
+import { parseResults, summarize, chartRows, headroom, fmtSci, CASE_GROUPS } from './js/accuracy/model.js';
+var rows = null, lang = 'en';
+function T(en, ru) { return lang === 'ru' ? ru : en; }
+function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]; }); }
+function render() {
+  if (!rows) return;
+  var s = summarize(rows);
+  document.getElementById('cards').innerHTML =
+    '<div class="card"><b>' + s.pass + '/' + (s.pass + s.fail) + '</b><span>' + T('checks within tolerance', 'проверок в допуске') + '</span></div>' +
+    '<div class="card"><b>' + fmtSci(s.maxRelErr) + '</b><span>' + T('largest relative error', 'наибольшая относительная ошибка') + '</span></div>' +
+    '<div class="card"><b>' + (s.minHeadroom ? s.minHeadroom.toFixed(1) + '×' : '—') + '</b><span>' + T('smallest tolerance margin', 'наименьший запас допуска') + '</span></div>' +
+    '<div class="card"><b>' + s.notCovered + '</b><span>' + T('not covered (stated openly)', 'не покрыто (честно указано)') + '</span></div>';
+  // chart
+  var ch = chartRows(rows), W = 760, L = 330, R = 20, rowH = 18, top = 28, H = top + ch.length * rowH + 24;
+  var lo = -17, hi = 0, x = function (v) { return L + (Math.log10(v) - lo) / (hi - lo) * (W - L - R); };
+  var g = '';
+  for (var e = lo; e <= hi; e += 3) g += '<line x1="' + x(Math.pow(10, e)) + '" x2="' + x(Math.pow(10, e)) + '" y1="' + top + '" y2="' + (H - 20) + '" stroke="rgba(120,200,230,.12)"/><text x="' + x(Math.pow(10, e)) + '" y="' + (H - 6) + '" text-anchor="middle">1e' + e + '</text>';
+  ch.forEach(function (c, i) {
+    var y = top + i * rowH, lab = c.label.length > 46 ? c.label.slice(0, 45) + '…' : c.label;
+    g += '<text x="' + (L - 8) + '" y="' + (y + 12) + '" text-anchor="end">' + esc(lab) + '</text>' +
+      '<rect x="' + L + '" y="' + (y + 3) + '" width="' + Math.max(1, x(c.err) - L) + '" height="10" fill="' + (c.exact ? '#4a8fb0' : '#7be3a0') + '" opacity=".85"><title>' + esc(c.label) + ': ' + fmtSci(c.exact ? 0 : c.err) + ' / ' + fmtSci(c.tol) + '</title></rect>' +
+      '<line x1="' + x(c.tol) + '" x2="' + x(c.tol) + '" y1="' + y + '" y2="' + (y + 16) + '" stroke="#ffd36b" stroke-width="2"/>';
+  });
+  g += '<text x="' + L + '" y="14">' + T('relative error (bar) vs tolerance (yellow tick)', 'относительная ошибка (полоса) и допуск (жёлтая риска)') + '</text>';
+  document.getElementById('chart').innerHTML = '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '" role="img" aria-label="' + T('Residuals vs tolerance', 'Невязки и допуски') + '">' + g + '</svg>';
+  // tables
+  var out = '';
+  CASE_GROUPS.forEach(function (gr) {
+    var rs = rows.filter(function (r) { return r.group === gr.id; });
+    out += '<h3>' + gr.id + ' — ' + esc(lang === 'ru' ? gr.ru : gr.en) + '</h3><div class="tablewrap"><table><tr><th>' + T('case', 'случай') + '</th><th>' + T('quantity', 'величина') + '</th><th>' + T('analytic', 'эталон') + '</th><th>' + T('simulated', 'симулятор') + '</th><th>' + T('rel. error', 'отн. ошибка') + '</th><th>' + T('tolerance', 'допуск') + '</th><th>' + T('status', 'статус') + '</th></tr>';
+    rs.forEach(function (r) {
+      var nc = r.status === 'NOT_COVERED';
+      var tol = nc ? '—' : (r.tolerance_kind === 'min' ? '≥ ' + r.tolerance : '≤ ' + fmtSci(r.tolerance));
+      out += '<tr class="' + (nc ? 'nc' : '') + '"><td>' + esc(r.case) + '</td><td>' + esc(r.quantity) + '</td><td>' + (nc ? '—' : fmtSci(r.analytic)) + '</td><td>' + (nc ? '—' : fmtSci(r.simulated)) + '</td><td>' + (nc ? '—' : fmtSci(r.rel_err)) + '</td><td>' + tol + '</td><td class="st-' + r.status + '">' + (nc ? 'NOT_COVERED' : r.status) + '</td></tr>';
+      if (nc && r.note) out += '<tr class="nc"><td colspan="7">↳ ' + esc(r.note) + '</td></tr>';
+    });
+    out += '</table></div>';
+  });
+  document.getElementById('tables').innerHTML = out;
+}
+function apply(l) {
+  lang = l;
+  document.querySelectorAll('[data-lang]').forEach(function (el) { el.classList.toggle('active', el.getAttribute('data-lang') === l); });
+  document.querySelectorAll('#langtoggle span').forEach(function (el) { el.classList.toggle('active', el.getAttribute('data-set') === l); });
+  render();
+}
+var saved = null; try { saved = localStorage.getItem('iss_lang'); } catch (e) {}
+apply(saved || ((navigator.language || 'en').slice(0, 2) === 'ru' ? 'ru' : 'en'));
+document.getElementById('langtoggle').addEventListener('click', function (ev) {
+  var s = ev.target.closest('span'); if (!s) return;
+  var l = s.getAttribute('data-set'); apply(l);
+  try { localStorage.setItem('iss_lang', l); } catch (e) {}
+});
+fetch('validation/results/results.json').then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+  .then(function (j) { rows = parseResults(j); render(); })
+  .catch(function (e) { document.getElementById('err').textContent = T('Could not load results: ', 'Не удалось загрузить результаты: ') + e.message; });
+</script>
+<script defer src="https://stats.podlevskikh.com/a/static/network-footer.js"></script>
+</body>
+</html>

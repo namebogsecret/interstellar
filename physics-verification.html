@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Physics verification — Interstellar</title>
-<meta name="description" content="How the physics in Interstellar is checked: the 45-file test suite, reference formulas and tolerances behind every physics claim, honestly reported." />
+<meta name="description" content="How the physics in Interstellar is checked: the 49-file test suite, reference formulas and tolerances behind every physics claim, honestly reported." />
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="icon" type="image/png" sizes="120x120" href="/favicon-120.png" />
@@ -74,11 +74,12 @@
   aspirational — every row maps to a real, currently-passing test file. If a
   check isn't listed here, it isn't part of the gate.</p>
 
+  <p><a href="accuracy.html">Measured accuracy of relativistic flight vs reference formulas →</a></p>
   <h2>Reproduce it</h2>
   <pre>bash tests/run.sh</pre>
   <p>Runs every <code>tests/*.test.mjs</code> file under Node, bare
   <code>assert</code>, no framework, no build step — currently
-  <b>45 files</b>, about 2 seconds. Prints <code>PHYSICS GATE: PASS</code> and
+  <b>49 files</b>, about 2 seconds. Prints <code>PHYSICS GATE: PASS</code> and
   exits 0 only if every assertion in every file holds. Separately,
   <code>tests/smoke_playwright.py</code> drives a real browser to catch
   frame-loop crashes the Node tests can't see — a crash/console-error smoke
@@ -250,7 +251,7 @@
   <pre>bash tests/run.sh</pre>
   <p>Гоняет каждый файл <code>tests/*.test.mjs</code> под Node, голые
   <code>assert</code>, без фреймворка и без сборки — сейчас
-  <b>45 файлов</b>, около 2 секунд. Печатает <code>PHYSICS GATE: PASS</code>
+  <b>49 файлов</b>, около 2 секунд. Печатает <code>PHYSICS GATE: PASS</code>
   и выходит с кодом 0, только если верны все утверждения во всех файлах.
   Отдельно <code>tests/smoke_playwright.py</code> гоняет реальный браузер и
   ловит крэши игрового цикла, которых Node-тесты не видят — это

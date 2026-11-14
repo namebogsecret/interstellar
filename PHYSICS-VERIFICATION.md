@@ -21,7 +21,7 @@ Runs every `tests/*.test.mjs` file under Node (`tests/three-loader.mjs`
 resolves the vendored Three.js import), bare `assert`, no framework, no
 build step. Prints `PHYSICS GATE: PASS` and exits 0 only if every file's
 assertions hold; a single failing assertion throws and fails the whole run
-(exit 1). At the time of writing this is **45 files**, ~2 seconds.
+(exit 1). At the time of writing this is **49 files**, ~2 seconds.
 
 Separately, `tests/smoke_playwright.py` drives a real browser (Playwright)
 and catches frame-loop crashes the Node tests can't see — it self-contains
