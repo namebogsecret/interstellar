@@ -31,8 +31,8 @@ export const ENGINES = [
   {
     id: 'fusion', kind: 'rocket',
     name: { en: 'Fusion (Daedalus, stage 1)', ru: 'Термоядерный (Дедал, 1-я ступень)' },
-    // exhaust velocity 10 600 km/s -> isp = ve/g0; dry stage 1 690 t (no engine/tank split in the source)
-    isp: 10.6e6 / G0, F: 7.54e6, engineMass: 0, propMass: 46e6, tankMass: 1.69e6,
+    // ve 10 600 km/s -> isp = ve/g0; dry stage 1 690 t total (source gives no split: 190 t engine / 1500 t structure+tanks is nominal, only the sum matters)
+    isp: 10.6e6 / G0, F: 7.54e6, engineMass: 190e3, propMass: 46e6, tankMass: 1.5e6,
     sources: [wiki('Project Daedalus', 'Project_Daedalus')],
   },
   {
