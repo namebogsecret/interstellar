@@ -5,6 +5,7 @@ export const G        = 6.67430e-11;          // gravitational constant
 export const AU       = 1.495978707e11;       // astronomical unit, m
 export const DAY      = 86400;                // seconds
 export const YEAR     = 365.25 * DAY;
+export const LY       = C * YEAR;             // light-year, m
 export const DEG      = Math.PI / 180;
 
 // One Earth gravity, handy for thrust limits / human-tolerance display.

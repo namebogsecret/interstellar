@@ -224,11 +224,20 @@ orbital flight is untouched — then blooms dramatically as you burn toward *c*.
 > bodies don't perturb each other — appropriate simplifications for a real-time
 > sim. The *kinematics* of motion near light speed are fully special-relativistic.
 
-**How this is checked:** the claims above are covered by a 46-file regression
+**How this is checked:** the claims above are covered by a 47-file regression
 suite (`bash tests/run.sh`) with explicit reference formulas and tolerances —
 see [`PHYSICS-VERIFICATION.md`](PHYSICS-VERIFICATION.md) for exactly what is,
 and isn't, gated (also published at
 [`/physics-verification.html`](physics-verification.html)).
+
+## Where we reach in a lifetime
+
+[`where-we-reach.html`](where-we-reach.html) — a public calculator for a
+flip-and-burn flight at constant proper acceleration (0.1–10 g, 1–80 years of
+ship time): distance, Earth time, peak β/γ and which nearby stars are
+reachable. Pure maths in `js/physics/flight.js`, star data in
+`js/data/stars.js`, tests in `tests/where-we-reach.test.mjs`. Kinematics only —
+no gravity, no fuel.
 
 ## Known limitations
 

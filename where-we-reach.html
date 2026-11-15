@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Where we reach in a lifetime — Interstellar</title>
+<meta name="description" content="How far can you fly in one lifetime at constant acceleration? Pick acceleration and ship time: distance, Earth time, peak speed and which nearby stars are reachable (special relativity, flip-and-burn)." />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="120x120" href="/favicon-120.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<style>
+  :root { --fg: #9fe7ff; --dim: #5b7c88; --bg: rgba(6, 14, 20, 0.66); --line: rgba(120, 200, 230, 0.18); --card: rgba(8, 16, 24, 0.92); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #05070c; }
+  body { color: #cfeefc; font: 14px/1.65 "SF Mono", "Cascadia Code", Menlo, Consolas, monospace; padding: 0 0 60px; overflow-x: hidden; }
+  a { color: #7fb3ff; }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 22px 0; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  header.top a.home { color: var(--dim); text-decoration: none; }
+  header.top a.home:hover { color: var(--fg); }
+  #langtoggle { display: flex; gap: 3px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+  #langtoggle span { cursor: pointer; padding: 3px 10px; border-radius: 5px; color: var(--dim); font-size: 12px; }
+  #langtoggle span.active { color: #eaffff; background: rgba(60,116,148,0.5); }
+  h1 { font-size: 22px; letter-spacing: 0.06em; color: #bfeeff; margin: 0 0 6px; overflow-wrap: anywhere; }
+  h2 { font-size: 15px; letter-spacing: 0.05em; color: #d7f6ff; margin: 30px 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  p { color: #b9d8e6; margin: 10px 0; }
+  b, strong { color: #eaffff; }
+  code { background: rgba(120,200,230,0.1); border-radius: 3px; padding: 1px 5px; color: #d7f6ff; overflow-wrap: anywhere; }
+  .note { background: rgba(40,90,120,0.18); border-left: 2px solid #4a8fb0; padding: 10px 14px; border-radius: 5px; color: #bfe6f4; margin: 14px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 14px 0; min-width: 0; }
+  .ctl { margin: 10px 0 14px; }
+  .ctl label { display: flex; justify-content: space-between; gap: 10px; color: var(--dim); font-size: 12px; }
+  .ctl label output { color: #eaffff; font-weight: 700; }
+  .ctl input[type=range] { width: 100%; min-width: 0; margin: 6px 0 2px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+  .presets button { background: rgba(60,116,148,0.25); color: #cfeefc; border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+  .presets button:hover, .presets button.on { background: rgba(60,116,148,0.55); }
+  .big { font-size: 15px; color: #eaffff; margin: 6px 0 10px; overflow-wrap: anywhere; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0; }
+  .stat { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0; }
+  .stat span { display: block; color: var(--dim); font-size: 11.5px; }
+  .stat b { font-size: 14px; overflow-wrap: anywhere; }
+  .warn { color: #ffd28a; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid rgba(120,200,230,0.1); overflow-wrap: anywhere; }
+  th { color: var(--dim); font-weight: 600; font-size: 11.5px; }
+  tr.yes td { background: rgba(95,227,161,0.07); }
+  .yes-mark { color: #5fe3a1; font-weight: 700; }
+  .no-mark { color: var(--dim); }
+  footer.bottom { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
+  @media (max-width: 480px) {
+    main { padding: 28px 14px 0; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    thead { display: none; }
+    tr { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; padding: 4px 8px; }
+    td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 10px; text-align: right; }
+    td::before { content: attr(data-label); color: var(--dim); text-align: left; flex: 0 0 42%; }
+  }
+  [data-lang] { display: none; }
+  [data-lang].active { display: block; }
+  span[data-lang].active, b[data-lang].active { display: inline; }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <a class="home" href="/">&larr; Interstellar</a>
+    <div id="langtoggle"><span data-set="en">EN</span><span data-set="ru">RU</span></div>
+  </header>
+
+<h1><span data-lang="en" class="active">HOW FAR IN A LIFETIME</span><span data-lang="ru">КУДА ДОЛЕТИМ ЗА ЖИЗНЬ</span></h1>
+
+<div data-lang="en" class="active">
+  <p>Accelerate at a constant rate for half the trip, turn the ship around, brake for the other half. Pick the acceleration you feel and how many years pass <em>on your own clock</em>. Special relativity tells you how far you get &mdash; and how many years pass at home meanwhile.</p>
+</div>
+<div data-lang="ru">
+  <p>Половину пути разгоняемся с постоянным ускорением, разворачиваем корабль и столько же тормозим. Выберите ускорение, которое чувствуете, и сколько лет проходит <em>по вашим часам</em>. Специальная теория относительности говорит, как далеко вы окажетесь &mdash; и сколько лет за это время пройдёт дома.</p>
+</div>
+
+<div class="card">
+  <div class="ctl">
+    <label for="a"><span><span data-lang="en" class="active">Acceleration (felt, proper)</span><span data-lang="ru">Ускорение (ощущаемое, собственное)</span></span><output id="aout"></output></label>
+    <input id="a" type="range" min="0" max="1000" step="1" value="500" />
+    <div class="presets" id="apre">
+      <button data-g="0.1">0.1 g</button><button data-g="1">1 g</button><button data-g="3">3 g</button><button data-g="10">10 g</button>
+    </div>
+  </div>
+  <div class="ctl">
+    <label for="t"><span><span data-lang="en" class="active">Ship time, whole trip</span><span data-lang="ru">Бортовое время, весь путь</span></span><output id="tout"></output></label>
+    <input id="t" type="range" min="1" max="80" step="0.5" value="40" />
+  </div>
+</div>
+
+<div class="card" id="result" aria-live="polite"></div>
+
+<h2><span data-lang="en" class="active">Nearby stars</span><span data-lang="ru">Ближайшие звёзды</span></h2>
+<div id="starsout"></div>
+
+<h2><span data-lang="en" class="active">Honest caveats</span><span data-lang="ru">Честные оговорки</span></h2>
+<div data-lang="en" class="active">
+  <div class="note">
+    <p><b>This is a deliberately simple model.</b> Constant proper acceleration, a straight line, no gravity, no fuel, no dust, no obstacles. The kinematics are exact special relativity; the engineering is not modelled.</p>
+    <p><b>Energy is the real obstacle.</b> A perfect photon rocket (the best physics allows) needs a start-to-finish mass ratio of e<sup>aτ/c</sup>, shown above as a power of ten. At 1 g for a few years that is already thousands to millions of times the ship's mass in fuel &mdash; and the energy grows by orders of magnitude beyond what humanity produces.</p>
+    <p><b>&ldquo;For you years, at home more.&rdquo;</b> Your clock runs slow compared with Earth's: the ship-time column is what you live through, the Earth-time column is what passes at home. The longer and harder you burn, the wider that gap.</p>
+    <p>Star distances are from parallax catalogues (Gaia / SIMBAD), accurate to about 1%. Stars are treated as stationary; the trip ends at rest next to the target.</p>
+  </div>
+</div>
+<div data-lang="ru">
+  <div class="note">
+    <p><b>Модель намеренно простая.</b> Постоянное собственное ускорение, прямая линия, без гравитации, топлива, пыли и препятствий. Кинематика &mdash; точная специальная теория относительности; инженерия не моделируется.</p>
+    <p><b>Настоящее препятствие &mdash; энергия.</b> Идеальной фотонной ракете (лучшее, что допускает физика) нужно отношение стартовой массы к конечной e<sup>aτ/c</sup>, оно показано выше как степень десяти. На 1 g за несколько лет это уже тысячи&ndash;миллионы масс корабля в топливе, а энергия на порядки превосходит всё, что производит человечество.</p>
+    <p><b>&laquo;Для вас годы, дома &mdash; больше&raquo;.</b> Ваши часы идут медленнее земных: колонка бортового времени &mdash; то, что проживёте вы, колонка земного &mdash; что пройдёт дома. Чем дольше и сильнее разгон, тем шире разрыв.</p>
+    <p>Расстояния до звёзд взяты из параллаксных каталогов (Gaia / SIMBAD), точность около 1%. Звёзды считаются неподвижными; путь заканчивается остановкой рядом с целью.</p>
+  </div>
+</div>
+
+<p>
+  <a href="/"><span data-lang="en" class="active">Fly it yourself in the simulator</span><span data-lang="ru">Пролететь самому в симуляторе</span></a> &middot;
+  <a href="physics-verification.html"><span data-lang="en" class="active">How the physics is verified</span><span data-lang="ru">Как проверяется физика</span></a>
+</p>
+
+<footer class="bottom">
+  <span data-lang="en" class="active">Formulas: D = (4c&sup2;/a)&middot;sinh&sup2;(x/2), T = (2c/a)&middot;sinh x, &gamma;<sub>max</sub> = cosh x, &beta;<sub>max</sub> = tanh x, where x = aτ/(2c).</span>
+  <span data-lang="ru">Формулы: D = (4c&sup2;/a)&middot;sinh&sup2;(x/2), T = (2c/a)&middot;sinh x, &gamma;<sub>max</sub> = cosh x, &beta;<sub>max</sub> = tanh x, где x = aτ/(2c).</span>
+</footer>
+</main>
+
+<script type="module">
+import { G0, YEAR } from './js/physics/constants.js';
+import { LY, flightForTau, reachable } from './js/physics/flight.js';
+import { STARS } from './js/data/stars.js';
+
+const T = {
+  en: {
+    cover: 'In {tau} y of ship time you cover', ly: 'light-years', earth: 'Earth time', peak: 'Peak speed', gamma: 'Peak γ',
+    mass: 'Photon-rocket mass ratio', mass2: 'at least 10^', star: 'Star', dist: 'Distance, ly', shipT: 'Ship time, y', earthT: 'Earth time, y',
+    ok: 'reachable in your time', no: 'not in your time', y: 'y', bad: 'Cannot compute: ', c: 'c',
+  },
+  ru: {
+    cover: 'За {tau} лет бортового времени вы пролетите', ly: 'св. лет', earth: 'Время на Земле', peak: 'Макс. скорость', gamma: 'Макс. γ',
+    mass: 'Масса фотонной ракеты (старт/финиш)', mass2: 'не меньше 10^', star: 'Звезда', dist: 'Расстояние, св. лет', shipT: 'Бортовое время, лет', earthT: 'Земное время, лет',
+    ok: 'долетим за ваше время', no: 'не успеваем', y: 'лет', bad: 'Не посчитать: ', c: 'c',
+  },
+};
+let lang = 'en';
+try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en' ? s : ((navigator.language || 'en').slice(0, 2) === 'ru' ? 'ru' : 'en'); } catch (e) {}
+
+const $ = (id) => document.getElementById(id);
+const aIn = $('a'), tIn = $('t');
+const A_MIN = 0.1, A_MAX = 10;
+const gOf = (v) => A_MIN * Math.pow(A_MAX / A_MIN, v / 1000);
+const vOf = (g) => Math.round(1000 * Math.log(g / A_MIN) / Math.log(A_MAX / A_MIN));
+aIn.value = vOf(1);
+
+function fmt(n) {
+  if (!Number.isFinite(n)) return '—';
+  const x = Math.abs(n);
+  if (x === 0) return '0';
+  if (x >= 1e6) { const e = Math.floor(Math.log10(x)); return (n / Math.pow(10, e)).toFixed(2) + '·10^' + e; }
+  if (x >= 1000) return Math.round(n).toLocaleString('en-US').replace(/,/g, ' ');
+  if (x >= 100) return n.toFixed(0);
+  if (x >= 10) return n.toFixed(1);
+  return n.toFixed(2);
+}
+function fmtBeta(b) { return b < 0.999 ? b.toFixed(3) + ' c' : '1 − ' + (1 - b).toExponential(1) + ' (c)'; }
+
+function render() {
+  const g = gOf(+aIn.value), tauY = +tIn.value, a = g * G0, tau = tauY * YEAR, t = T[lang];
+  $('aout').textContent = g.toFixed(g < 1 ? 2 : 1) + ' g';
+  $('tout').textContent = tauY + ' ' + t.y;
+  document.querySelectorAll('#apre button').forEach((b) => b.classList.toggle('on', Math.abs(+b.dataset.g - g) / g < 0.02));
+
+  const f = flightForTau(a, tau);
+  if (!f.valid) { $('result').innerHTML = '<p class="warn">' + t.bad + f.reason + '</p>'; $('starsout').innerHTML = ''; return; }
+  const log10m = f.x * 2 / Math.LN10;
+  $('result').innerHTML =
+    '<div class="big">' + t.cover.replace('{tau}', tauY) + ' <b>' + fmt(f.D / LY) + ' ' + t.ly + '</b></div>' +
+    '<div class="stats">' +
+    '<div class="stat"><span>' + t.earth + '</span><b>' + fmt(f.T / YEAR) + ' ' + t.y + '</b></div>' +
+    '<div class="stat"><span>' + t.peak + ' β</span><b>' + fmtBeta(f.betaMax) + '</b></div>' +
+    '<div class="stat"><span>' + t.gamma + '</span><b>' + fmt(f.gammaMax) + '</b></div>' +
+    '<div class="stat"><span>' + t.mass + '</span><b class="warn">' + (log10m < 2 ? fmt(Math.pow(10, log10m)) : t.mass2 + Math.floor(log10m)) + '</b></div>' +
+    '</div>';
+
+  const rows = reachable(STARS, a, tau).map((s) =>
+    '<tr class="' + (s.reachable ? 'yes' : 'no') + '"><td data-label="' + t.star + '">' + (lang === 'ru' ? s.ru : s.name) + '</td>' +
+    '<td data-label="' + t.dist + '">' + s.ly + '</td>' +
+    '<td data-label="' + t.shipT + '">' + fmt(s.tau / YEAR) + '</td>' +
+    '<td data-label="' + t.earthT + '">' + fmt(s.T / YEAR) + '</td>' +
+    '<td>' + (s.reachable ? '<span class="yes-mark">&#10003; ' + t.ok + '</span>' : '<span class="no-mark">' + t.no + '</span>') + '</td></tr>').join('');
+  $('starsout').innerHTML = '<table><thead><tr><th>' + t.star + '</th><th>' + t.dist + '</th><th>' + t.shipT + '</th><th>' + t.earthT + '</th><th></th></tr></thead><tbody>' + rows + '</tbody></table>';
+}
+
+function applyLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  document.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el.getAttribute('data-lang') === l));
+  document.querySelectorAll('#langtoggle span').forEach((el) => el.classList.toggle('active', el.getAttribute('data-set') === l));
+  render();
+}
+aIn.addEventListener('input', render);
+tIn.addEventListener('input', render);
+$('apre').addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (b) { aIn.value = vOf(+b.dataset.g); render(); } });
+$('langtoggle').addEventListener('click', (ev) => {
+  const s = ev.target.closest('span'); if (!s) return;
+  const l = s.getAttribute('data-set'); applyLang(l);
+  try { localStorage.setItem('iss_lang', l); } catch (e) {}
+});
+applyLang(lang);
+</script>
+</body>
+</html>
