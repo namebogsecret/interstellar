@@ -18,14 +18,13 @@ export const ENGINES = [
     id: 'ion', kind: 'rocket',
     name: { en: 'Ion (NASA NEXT-C, xenon)', ru: 'Ионный (NASA NEXT-C, ксенон)' },
     // engineMass = whole propulsion system (thruster + PPU + solar arrays), 1500 kg
-    isp: 4190, F: 0.236, engineMass: 1500, propMass: 800, tankMass: 80,
-    sources: [wiki('NEXT (ion thruster)', 'NEXT_(ion_thruster)'),
-      { title: 'NASA Glenn: NEXT-C ion propulsion', url: 'https://www.nasa.gov/glenn/' }],
+    isp: 4170, F: 0.237, engineMass: 1500, propMass: 800, tankMass: 80,
+    sources: [wiki('NEXT (ion thruster)', 'NEXT_(ion_thruster)')],
   },
   {
     id: 'ntr', kind: 'rocket',
     name: { en: 'Nuclear-thermal (NERVA)', ru: 'Ядерно-тепловой (NERVA)' },
-    isp: 841, F: 333.6e3, engineMass: 18144, propMass: 40000, tankMass: 6000,
+    isp: 841, F: 246.663e3, engineMass: 18144, propMass: 40000, tankMass: 6000,
     sources: [wiki('NERVA', 'NERVA')],
   },
   {

@@ -69,7 +69,10 @@
   .crow .lbl { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: #cfeefc; }
   .crow .lbl em { font-style: normal; color: #eaffff; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
   .crow svg { display: block; width: 100%; height: 16px; margin-top: 3px; }
-  .axis { display: flex; justify-content: space-between; color: var(--dim); font-size: 10.5px; margin-top: 2px; }
+  .axis { position: relative; height: 16px; color: var(--dim); font-size: 10.5px; margin-top: 2px; }
+  .axis span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+  .axis span.first { transform: none; } .axis span.last { transform: translateX(-100%); }
+  .oos { color: #ffd28a; font-size: 10.5px; margin-left: 5px; font-weight: 400; }
   .badge { display: inline-block; border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; margin: 1px 3px 1px 0; font-size: 11px; color: #ffd28a; white-space: nowrap; }
   .badge.bad { color: #ff9c9c; }
   .legend { color: var(--dim); font-size: 11.5px; margin: 4px 0; }
@@ -128,8 +131,8 @@
     <p><b>Order of magnitude, not a trajectory.</b> A straight line over the distance, <b>no solar gravity</b>, classical mechanics (no relativity &mdash; flagged where speed exceeds 0.1&thinsp;c). Real missions use gravity assists and curved orbits.</p>
     <p><b>Rocket engines</b> have constant thrust and a fixed &ldquo;typical stage&rdquo; (engine, tank, propellant); your payload is added. The whole &Delta;v budget is spent (Tsiolkovsky: &Delta;v = v<sub>e</sub>&middot;ln(m<sub>0</sub>/m<sub>dry</sub>)): accelerate to half, coast, brake with the other half. If the burns alone would overshoot the distance, the cruise speed is lowered so they fit exactly. &ldquo;Flyby&rdquo; spends it all on acceleration. Tank and propellant masses are illustrative round numbers, not a specific vehicle.</p>
     <p><b>Solar sail</b> starts at rest at 1&nbsp;AU, thrust falls as 1/r&sup2;, sail efficiency 0.9, always a flyby. Its &ldquo;&Delta;v&rdquo; is the speed it reaches at the target. Nothing is carried, so its budget is zero.</p>
-    <p><b>Hohmann reference</b> (planets only): the minimum heliocentric &Delta;v between circular orbits &mdash; the number real planetary missions are measured against, including gravity.</p>
-    <p>The ion engine's time can beat chemical on long routes and lose on short ones: low thrust needs a long burn. &ldquo;Unreachable&rdquo; means the engine has no &Delta;v budget at all.</p>
+    <p><b>Hohmann reference</b> (planets only): the two-impulse heliocentric &Delta;v between circular orbits &mdash; the usual yardstick for planetary missions, with gravity. For r<sub>2</sub>/r<sub>1</sub> &gt; 11.94 (Pluto) a bi-elliptic transfer is cheaper, so there it is a reference, not a minimum.</p>
+    <p>Ion versus chemical depends on payload: with a light payload on a distant route the ion engine's far larger &Delta;v wins, but at around 1000&nbsp;t its 0.24&nbsp;N of thrust makes it the slowest. Low thrust needs a very long burn.</p>
   </div>
 </div>
 <div data-lang="ru">
@@ -137,8 +140,8 @@
     <p><b>Порядок величин, не траектория.</b> Прямая линия на заданное расстояние, <b>без гравитации Солнца</b>, классическая механика (без релятивизма &mdash; помечено там, где скорость выше 0,1&thinsp;c). Настоящие миссии используют гравитационные манёвры и криволинейные орбиты.</p>
     <p><b>Реактивные двигатели</b> имеют постоянную тягу и фиксированную «типовую ступень» (двигатель, бак, топливо); сверху добавляется ваша нагрузка. Тратится весь бюджет &Delta;v (Циолковский: &Delta;v = v<sub>e</sub>&middot;ln(m<sub>0</sub>/m<sub>сух</sub>)): разгон на половину, полёт по инерции, торможение второй половиной. Если одни только участки тяги перелетели бы дистанцию, крейсерская скорость уменьшается, чтобы они уложились ровно. «Пролёт» тратит всё на разгон. Массы баков и топлива &mdash; условные круглые числа, не конкретная машина.</p>
     <p><b>Солнечный парус</b> стартует с покоя на 1&nbsp;а.е., тяга падает как 1/r&sup2;, эффективность паруса 0,9, всегда пролёт. Его «&Delta;v» &mdash; скорость, набранная к цели. Рабочего тела нет, поэтому бюджет равен нулю.</p>
-    <p><b>Эталон Хомана</b> (только планеты): минимальное гелиоцентрическое &Delta;v между круговыми орбитами &mdash; мерка настоящих межпланетных миссий, с учётом гравитации.</p>
-    <p>Ионный двигатель выигрывает у химического на длинных маршрутах и проигрывает на коротких: малой тяге нужен долгий разгон. «Недостижимо» &mdash; у двигателя вообще нет бюджета &Delta;v.</p>
+    <p><b>Эталон Хомана</b> (только планеты): двухимпульсное гелиоцентрическое &Delta;v между круговыми орбитами &mdash; обычная мерка межпланетных миссий, с гравитацией. При r<sub>2</sub>/r<sub>1</sub> &gt; 11,94 (Плутон) биэллиптический перелёт дешевле, так что там это ориентир, а не минимум.</p>
+    <p>Ион против химии зависит от нагрузки: при лёгкой нагрузке на дальнем маршруте ионный двигатель выигрывает за счёт куда большего &Delta;v, а при ~1000&nbsp;т тяга 0,24&nbsp;Н делает его самым медленным. Малой тяге нужен очень долгий разгон.</p>
   </div>
 </div>
 
@@ -163,15 +166,15 @@ import { fmtTime, fmtDv, fmtMass, barFraction, sliderToPayload, payloadToSlider 
 
 const T = {
   en: { engine: 'Engine', time: 'Flight time', dv: 'Δv spent', budget: 'Δv budget', cruise: 'Cruise speed', unreach: 'unreachable',
-    flyby: 'flyby', relativistic: 'classical estimate inaccurate (>0.1 c)', noBudget: 'no Δv budget', hoh: 'Hohmann reference (planets, with gravity)', hohT: 'Hohmann transfer time',
-    src: 'Engines', srcR: 'Routes', ax: 'log scale', axT: ['1 day', '1 year', '1000 years', '1 Myr'], axD: ['100 m/s', '10 km/s', '1000 km/s', '100 000 km/s'], plus: '(sail: speed at target)' },
+    flyby: 'flyby', relativistic: 'classical estimate inaccurate (>0.1 c)', noBudget: 'no Δv budget', hoh: 'Hohmann reference (two-impulse; for r2/r1 > 11.94 a bi-elliptic transfer is cheaper)', hohT: 'Hohmann transfer time',
+    src: 'Engines', srcR: 'Routes', ax: 'log scale', axT: [[86400, '1 day'], [3.15576e7, '1 year'], [3.15576e10, '1000 y'], [3.15576e13, '1 Myr'], [3.15576e16, '1 Gyr']], axD: [[10, '10 m/s'], [1e3, '1 km/s'], [1e5, '100 km/s'], [1e7, '10 000 km/s']], plus: 'Sail bar = flyby speed at the target, not spent Δv.', sailLbl: 'flyby speed', oosHi: 'off scale', oosLo: 'off scale' },
   ru: { engine: 'Двигатель', time: 'Время полёта', dv: 'Затрачено Δv', budget: 'Бюджет Δv', cruise: 'Крейсерская скорость', unreach: 'недостижимо',
-    flyby: 'пролёт', relativistic: 'классика неточна (>0,1 c)', noBudget: 'нет бюджета Δv', hoh: 'Эталон Хомана (планеты, с гравитацией)', hohT: 'Время перелёта по Хоману',
-    src: 'Двигатели', srcR: 'Маршруты', ax: 'лог. шкала', axT: ['1 сутки', '1 год', '1000 лет', '1 млн лет'], axD: ['100 м/с', '10 км/с', '1000 км/с', '100 000 км/с'], plus: '(парус: скорость у цели)' },
+    flyby: 'пролёт', relativistic: 'классика неточна (>0,1 c)', noBudget: 'нет бюджета Δv', hoh: 'Эталон Хомана (двухимпульсный перелёт; при r2/r1 > 11,94 биэллиптический дешевле)', hohT: 'Время перелёта по Хоману',
+    src: 'Двигатели', srcR: 'Маршруты', ax: 'лог. шкала', axT: [[86400, '1 сутки'], [3.15576e7, '1 год'], [3.15576e10, '1000 лет'], [3.15576e13, '1 млн лет'], [3.15576e16, '1 млрд лет']], axD: [[10, '10 м/с'], [1e3, '1 км/с'], [1e5, '100 км/с'], [1e7, '10 000 км/с']], plus: 'Столбик паруса — скорость пролёта у цели, а не затраченное Δv.', sailLbl: 'скорость пролёта', oosHi: 'за шкалой', oosLo: 'за шкалой' },
 };
 const COLORS = { chemical: '#ff9c6b', ion: '#7fb3ff', ntr: '#5fe3a1', fusion: '#ffd28a', sail: '#d9a6ff' };
-const T_MIN = 1e5, T_MAX = 1e14;   // s (about 1 day .. 3 Myr)
-const V_MIN = 1e2, V_MAX = 1e8;    // m/s
+const T_MIN = 1e5, T_MAX = 1e17;   // s (about 1 day .. 3 Gyr), log axis
+const V_MIN = 10, V_MAX = 1e8;     // m/s, log axis
 
 let lang = 'en';
 try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en' ? s : ((navigator.language || 'en').slice(0, 2) === 'ru' ? 'ru' : 'en'); } catch (e) {}
@@ -191,16 +194,21 @@ function badges(row, t) {
 }
 
 function chart(rows, key, min, max, fmtVal, hohLine, t, ticks) {
-  const lines = [0.0, 1 / 3, 2 / 3, 1].map((f) => '<line x1="' + (f * 100) + '%" x2="' + (f * 100) + '%" y1="0" y2="16" stroke="rgba(120,200,230,0.18)" />').join('');
-  const hoh = hohLine == null ? '' : '<line x1="' + (barFraction(hohLine, min, max) * 100) + '%" x2="' + (barFraction(hohLine, min, max) * 100) + '%" y1="0" y2="16" stroke="#ff6b8a" stroke-width="2" />';
+  const pct = (v) => (barFraction(v, min, max) * 100).toFixed(3) + '%';
+  const lines = ticks.map(([v]) => '<line class="grid" x1="' + pct(v) + '" x2="' + pct(v) + '" y1="0" y2="16" stroke="rgba(120,200,230,0.18)" />').join('');
+  const hoh = hohLine == null ? '' : '<line class="hoh" x1="' + pct(hohLine) + '" x2="' + pct(hohLine) + '" y1="0" y2="16" stroke="#ff6b8a" stroke-width="2" />';
+  const axis = ticks.map(([v, lbl], i) => '<span class="' + (i === 0 ? 'first' : i === ticks.length - 1 ? 'last' : '') + '" data-v="' + v + '" style="left:' + pct(v) + '">' + lbl + '</span>').join('');
   return rows.map((r) => {
     const v = r[key], f = barFraction(v, min, max), name = engById[r.id].name[lang];
-    const val = Number.isFinite(v) ? fmtVal(v) : t.unreach;
-    return '<div class="crow"><div class="lbl"><span>' + name + '</span><em>' + val + '</em></div>' +
+    const finite = Number.isFinite(v), oos = finite && (v > max || v < min);
+    const sail = key === 'dvUsed' && r.id === 'sail';
+    const val = finite ? (sail ? t.sailLbl + ' ' : '') + fmtVal(v) : t.unreach;
+    const mark = oos ? '<span class="oos">' + (v > max ? '› ' : '‹ ') + t.oosHi + '</span>' : '';
+    return '<div class="crow"><div class="lbl"><span>' + name + '</span><em>' + val + mark + '</em></div>' +
       '<svg width="100%" height="16" aria-hidden="true">' +
       '<rect class="track" x="0" y="0" width="100%" height="16" fill="rgba(120,200,230,0.06)" />' + lines +
-      '<rect class="bar" x="0" y="2" width="' + (f * 100) + '%" height="12" fill="' + COLORS[r.id] + '" opacity="' + (Number.isFinite(v) ? 0.85 : 0.3) + '" />' + hoh + '</svg></div>';
-  }).join('') + '<div class="axis">' + ticks.map((x) => '<span>' + x + '</span>').join('') + '</div>';
+      '<rect class="bar' + (sail ? ' sailv' : '') + '" x="0" y="2" width="' + (f * 100) + '%" height="12" fill="' + COLORS[r.id] + '" opacity="' + (finite ? 0.85 : 0.3) + '"' + (sail ? ' fill-opacity="0.55" stroke="' + COLORS[r.id] + '" stroke-dasharray="3 2"' : '') + ' />' + hoh + '</svg></div>';
+  }).join('') + '<div class="axis">' + axis + '</div>';
 }
 
 function render() {
@@ -216,8 +224,8 @@ function render() {
   $('chartTime').innerHTML = chart(rows, 'time', T_MIN, T_MAX, (v) => fmtTime(v, lang), null, t, t.axT);
   $('chartDv').innerHTML = chart(rows, 'dvUsed', V_MIN, V_MAX, (v) => fmtDv(v, lang), hoh && hoh.dv, t, t.axD);
   $('hohLegend').innerHTML = hoh
-    ? '<span style="color:#ff6b8a">&#9632;</span> ' + t.hoh + ': Δv ' + fmtDv(hoh.dv, lang) + ', ' + t.hohT + ' ' + fmtTime(hoh.t, lang) + ' &middot; ' + t.ax + ' &middot; ' + t.plus
-    : t.ax + ' &middot; ' + t.plus;
+    ? '<span style="color:#ff6b8a">&#9632;</span> ' + t.hoh + ': Δv ' + fmtDv(hoh.dv, lang) + ', ' + t.hohT + ' ' + fmtTime(hoh.t, lang) + ' &middot; ' + t.ax + '. ' + t.plus
+    : t.ax + '. ' + t.plus;
 
   const body = rows.map((r) =>
     '<tr><td data-label="' + t.engine + '">' + engById[r.id].name[lang] + '</td>' +
