@@ -224,7 +224,7 @@ orbital flight is untouched — then blooms dramatically as you burn toward *c*.
 > bodies don't perturb each other — appropriate simplifications for a real-time
 > sim. The *kinematics* of motion near light speed are fully special-relativistic.
 
-**How this is checked:** the claims above are covered by a 45-file regression
+**How this is checked:** the claims above are covered by a 46-file regression
 suite (`bash tests/run.sh`) with explicit reference formulas and tolerances —
 see [`PHYSICS-VERIFICATION.md`](PHYSICS-VERIFICATION.md) for exactly what is,
 and isn't, gated (also published at
@@ -280,6 +280,8 @@ js/
     relativisticPass.js # SR aberration + Doppler + beaming post-process
     cockpit.js          # procedural cabin frame overlay (key I, off by default)
     hud.js              # HUD readouts
+  verify/
+    live.js             # pure logic of the "Check it yourself" widgets on physics-verification.html
   audio/
     soundPolicy.js      # pure sound-parameter policy (no Web Audio/DOM)
     audio.js            # thin Web Audio layer (procedural synthesis, key Z)

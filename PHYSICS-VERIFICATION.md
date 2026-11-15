@@ -21,7 +21,7 @@ Runs every `tests/*.test.mjs` file under Node (`tests/three-loader.mjs`
 resolves the vendored Three.js import), bare `assert`, no framework, no
 build step. Prints `PHYSICS GATE: PASS` and exits 0 only if every file's
 assertions hold; a single failing assertion throws and fails the whole run
-(exit 1). At the time of writing this is **45 files**, ~2 seconds.
+(exit 1). At the time of writing this is **46 files**, ~2 seconds.
 
 Separately, `tests/smoke_playwright.py` drives a real browser (Playwright)
 and catches frame-loop crashes the Node tests can't see — it self-contains
@@ -67,6 +67,7 @@ oversight being hidden here.
 | `relativity.test.mjs` | Aberration formula, round-trip, monotonicity (INV-PHYS-09) | aberratedCos(cp,β) = (cp−β)/(1−β·cp) | 1e-9 |
 | `longitudinal.regression.test.mjs` | γ(t) under constant 1000g proper acceleration, longitudinal 4-force undivided by γ (INV-PHYS-01, **NEVER DELETE/WEAKEN**) | γ(t) = √(1+(αt/c)²) | 2% |
 | `gravity.relativistic.test.mjs` | **(a) Transverse** coordinate-acceleration factor — actually gated: hard guard `ratio > 1.5` plus a 3% tolerance against `(1+β²)` at β=0.99 (internally labeled INV-PHYS-10, not yet in `physics-gate.yaml`). **(b) Longitudinal** factor `(1−3β²)` — implemented in `js/physics/ship.js`, but only printed via `console.log` inside a `try/catch`; it is **not asserted** by the gate at all | a⊥ = (1+β²)·g⊥ · a∥ = (1−3β²)·g∥ (both at β=0.99 for (a); β=0.5 for the (b) diagnostic) | (a) hard guard ratio>1.5 + 3% rel · (b) none — diagnostic only |
+| `verify-live.test.mjs` | Pure logic behind the interactive "Check it yourself" section of `physics-verification.html` (`js/verify/live.js`): every preset PASSES; a deliberately wrong sim value FAILS (verdict is not always-true); degenerate inputs are refused with no NaN | γ = cosh(aτ/c); √(μ/r); 2π√(r³/μ); Lorentz-boosted photon 4-vector; μ/r² | 1e-9 (closed forms, orbit) · 1e-3 (integrated proper time) · 1e-12 (gravity) |
 
 The `(1−3β²)` longitudinal factor is a fixed, deliberate decision by the
 project owner about the physics engine itself — an internal decision, not
@@ -193,6 +194,10 @@ not cited here as ADR numbers to avoid conflating the two.
 - The landing radar's time-to-impact is checked against a numerical two-body
   integration only to 10%, and its impact-speed overestimate on fast-spinning
   bodies is documented but not quantified by any test.
+- The interactive "Check it yourself" section compares the simulator's
+  *implementation* with textbook closed forms. It does not compare those
+  formulas with the real world, and it does not exercise the GLSL aberration
+  shader (only its JS mirror `aberratedCos`).
 - A green `tests/run.sh` is a **regression gate**, not a proof of absolute
   correctness: it proves the code still agrees with the reference formulas
   and tolerances above. Any formula this document doesn't list has no

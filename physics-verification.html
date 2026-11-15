@@ -4,12 +4,15 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Physics verification — Interstellar</title>
-<meta name="description" content="How the physics in Interstellar is checked: the 45-file test suite, reference formulas and tolerances behind every physics claim, honestly reported." />
+<meta name="description" content="How the physics in Interstellar is checked: the 46-file test suite, reference formulas and tolerances behind every physics claim, honestly reported." />
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="icon" type="image/png" sizes="120x120" href="/favicon-120.png" />
 <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
 <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<script type="importmap">
+{ "imports": { "three": "./lib/three.module.js" } }
+</script>
 <style>
   :root {
     --fg: #9fe7ff; --dim: #5b7c88; --bg: rgba(6, 14, 20, 0.66);
@@ -54,6 +57,33 @@
   .tolcol, .refcol { color: #9fe7ff; min-width: 7em; }
   footer.bottom { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line);
     color: var(--dim); font-size: 12px; }
+  /* live "Check it yourself" widgets */
+  .toc { font-size: 12.5px; color: var(--dim); margin: 6px 0 4px; }
+  .toc a { margin-right: 4px; }
+  .live-card { background: var(--card); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 14px; margin: 14px 0; min-width: 0; }
+  .live-card h3 { margin: 0 0 6px; }
+  .live-card .desc { margin: 4px 0 8px; font-size: 12.5px; }
+  .live-fields { display: flex; flex-wrap: wrap; gap: 10px 14px; margin: 8px 0; }
+  .live-fields label { display: flex; flex-direction: column; gap: 3px; font-size: 11.5px; color: var(--dim);
+    min-width: 0; flex: 1 1 140px; }
+  .live-fields input[type=number] { width: 100%; min-width: 0; background: #050c12; color: #eaffff;
+    border: 1px solid var(--line); border-radius: 5px; padding: 6px 8px; font: inherit; font-size: 13px; }
+  .live-fields input[type=range] { width: 100%; min-width: 0; }
+  .live-presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+  .live-presets button { background: rgba(60,116,148,0.25); color: #cfeefc; border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+  .live-presets button:hover { background: rgba(60,116,148,0.5); }
+  .live-out table { font-size: 12px; }
+  .live-out td, .live-out th { padding: 6px 7px; }
+  .live-out td:first-child { white-space: normal; min-width: 11em; }
+  .pass { color: #5fe3a1; font-weight: 700; }
+  .fail { color: #ff8a8a; font-weight: 700; }
+  .live-reason { color: #ffd28a; margin: 6px 0; font-size: 12.5px; }
+  .live-tols { font-size: 11.5px; color: var(--dim); margin: 6px 0 0; padding-left: 16px; }
+  .live-tols li { margin: 2px 0; overflow-wrap: anywhere; }
+  .live-overall { margin: 6px 0 2px; font-size: 13px; }
+  @media (max-width: 480px) { main { padding: 28px 14px 0; } .live-card { padding: 10px; } }
   [data-lang] { display: none; }
   [data-lang].active { display: block; }
 </style>
@@ -74,11 +104,35 @@
   aspirational — every row maps to a real, currently-passing test file. If a
   check isn't listed here, it isn't part of the gate.</p>
 
-  <h2>Reproduce it</h2>
+  <p class="toc">On this page:
+    <a href="#check-it-yourself">Check it yourself</a> ·
+    <a href="#reproduce">Reproduce it</a> ·
+    <a href="#full-gate">Full gate</a> ·
+    <a href="#adrs">ADRs</a> ·
+    <a href="#not-claimed">What this does not claim</a></p>
+
+  <h2 id="check-it-yourself">Check it yourself</h2>
+  <p>Type your own numbers. This page imports the <b>live simulator modules</b>
+  (<code>js/physics/relativity.js</code>, <code>gravity.js</code>,
+  <code>orbits.js</code>, <code>ship.js</code>) — not a copy of the formulas —
+  runs them in your browser, and compares the result with an independently
+  written closed-form value. You see the simulator value, the analytic value,
+  the relative discrepancy, the tolerance and a PASS/FAIL verdict. Inputs that
+  have no defined answer (e.g. β ≥ 1, radius ≤ 0, NaN) are refused with a
+  reason instead of printing garbage.</p>
+  <div class="note"><b>What this does and does not show.</b> It checks that the
+  simulator's <em>implementation</em> agrees with the textbook equations. It
+  does <b>not</b> check those equations against the real world: general
+  relativity, n-body effects and measurement are out of scope. A PASS here means
+  “the code does what the formula says”, nothing more. Tolerances are shown
+  under each check, with the reason for their size.</div>
+  <div data-live data-live-lang="en"></div>
+
+  <h2 id="reproduce">Reproduce it</h2>
   <pre>bash tests/run.sh</pre>
   <p>Runs every <code>tests/*.test.mjs</code> file under Node, bare
   <code>assert</code>, no framework, no build step — currently
-  <b>45 files</b>, about 2 seconds. Prints <code>PHYSICS GATE: PASS</code> and
+  <b>46 files</b>, about 2 seconds. Prints <code>PHYSICS GATE: PASS</code> and
   exits 0 only if every assertion in every file holds. Separately,
   <code>tests/smoke_playwright.py</code> drives a real browser to catch
   frame-loop crashes the Node tests can't see — a crash/console-error smoke
@@ -111,7 +165,7 @@
   but don't have an individual entry with their own exit code — a real gap,
   stated here rather than hidden.</p>
 
-  <h2>Full gate, by topic</h2>
+  <h2 id="full-gate">Full gate, by topic</h2>
 
   <h3>A — Special relativity</h3>
   <div class="tablewrap"><table>
@@ -119,6 +173,7 @@
     <tr><td>relativity</td><td>Aberration formula, round-trip, monotonicity (INV-PHYS-09)</td><td class="refcol">(cp−β)/(1−β·cp)</td><td class="tolcol">1e-9</td></tr>
     <tr><td>longitudinal.regression</td><td>γ(t) under constant 1000g proper accel, longitudinal 4-force undivided (INV-PHYS-01, NEVER DELETE/WEAKEN)</td><td class="refcol">γ(t)=√(1+(αt/c)²)</td><td class="tolcol">2%</td></tr>
     <tr><td>gravity.relativistic</td><td>(a) Transverse factor — actually gated: hard guard ratio&gt;1.5 plus 3% tolerance vs (1+β²) at β=0.99 (INV-PHYS-10, not in physics-gate.yaml). (b) Longitudinal factor (1−3β²) — implemented in ship.js, but only printed via console.log in a try/catch; <b>not asserted</b> by the gate</td><td class="refcol">a⊥=(1+β²)g⊥ · a∥=(1−3β²)g∥</td><td class="tolcol">(a) guard&gt;1.5 + 3% rel · (b) none — diagnostic only</td></tr>
+    <tr><td>verify-live</td><td>Pure logic behind the interactive “Check it yourself” section: every preset PASSES, a deliberately wrong sim value FAILS (verdict is not always-true), degenerate inputs are refused with no NaN</td><td class="refcol">γ=cosh(aτ/c) · √(μ/r) · 2π√(r³/μ) · Lorentz-boosted photon 4-vector · μ/r²</td><td class="tolcol">1e-9 (closed forms, orbit) · 1e-3 (integrated proper time) · 1e-12 (gravity)</td></tr>
   </table></div>
   <p>The <code>(1−3β²)</code> longitudinal factor is a fixed, deliberate
   decision by the project owner about the physics engine itself — an internal
@@ -207,7 +262,7 @@
   </table></div>
   <p>The radar's impact speed comes from energy conservation in the body's non-rotating frame, so on fast-spinning bodies it overestimates by a few percent; no test quantifies that, and there is no atmosphere model.</p>
 
-  <h2>Relevant ADRs</h2>
+  <h2 id="adrs">Relevant ADRs</h2>
   <p>The project's append-only decision log documents several of the choices
   locked in above. These are the actual <code>ADR.md</code> entry numbers —
   not the internal "ТЗ item" labels used in a few test-file comments (like
@@ -220,7 +275,7 @@
     <li><b>ADR-12</b> — AudioContext created lazily, only on a real user gesture; sound off by default.</li>
   </ul>
 
-  <h2>What this gate does not claim</h2>
+  <h2 id="not-claimed">What this gate does not claim</h2>
   <ul>
     <li>No general relativity (no frame-dragging, no curved-spacetime geodesics beyond the weak-field approximation) — Newtonian gravity + special-relativistic kinematics, by design.</li>
     <li>Bodies don't perturb each other's orbits — a stated simplification.</li>
@@ -246,11 +301,34 @@
   сейчас-зелёному тестовому файлу. Если проверки нет в этом списке — она не
   часть гейта.</p>
 
-  <h2>Как воспроизвести</h2>
+  <p class="toc">На странице:
+    <a href="#proverit-sam">Проверь сам</a> ·
+    <a href="#kak-vosproizvesti">Как воспроизвести</a> ·
+    <a href="#polnyj-gejt">Полный гейт</a> ·
+    <a href="#adr-ru">ADR</a> ·
+    <a href="#ne-utverzhdaet">Чего гейт не утверждает</a></p>
+
+  <h2 id="proverit-sam">Проверь сам</h2>
+  <p>Введите свои числа. Страница импортирует <b>живые модули симулятора</b>
+  (<code>js/physics/relativity.js</code>, <code>gravity.js</code>,
+  <code>orbits.js</code>, <code>ship.js</code>) — не копию формул — считает ими
+  прямо в вашем браузере и сверяет результат с независимо записанным
+  замкнутым значением. Вы видите значение симулятора, аналитику, относительное
+  расхождение, допуск и вердикт PASS/FAIL. Входы, для которых ответа нет
+  (β ≥ 1, радиус ≤ 0, NaN), отклоняются с причиной, а не выводят мусор.</p>
+  <div class="note"><b>Что это показывает и что нет.</b> Проверяется, что
+  <em>реализация</em> симулятора совпадает с учебными формулами. Сами формулы
+  с реальным миром <b>не</b> сверяются: общая теория относительности, взаимное
+  притяжение тел и измерения вне области проверки. PASS здесь означает «код
+  делает то, что говорит формула», и ничего сверх этого. Допуски показаны под
+  каждой проверкой вместе с обоснованием их величины.</div>
+  <div data-live data-live-lang="ru"></div>
+
+  <h2 id="kak-vosproizvesti">Как воспроизвести</h2>
   <pre>bash tests/run.sh</pre>
   <p>Гоняет каждый файл <code>tests/*.test.mjs</code> под Node, голые
   <code>assert</code>, без фреймворка и без сборки — сейчас
-  <b>45 файлов</b>, около 2 секунд. Печатает <code>PHYSICS GATE: PASS</code>
+  <b>46 файлов</b>, около 2 секунд. Печатает <code>PHYSICS GATE: PASS</code>
   и выходит с кодом 0, только если верны все утверждения во всех файлах.
   Отдельно <code>tests/smoke_playwright.py</code> гоняет реальный браузер и
   ловит крэши игрового цикла, которых Node-тесты не видят — это
@@ -285,7 +363,7 @@
   внутри <code>tests/run.sh</code>, но не имеют отдельной записи со своим
   кодом выхода — реальный пробел, названный здесь, а не скрытый.</p>
 
-  <h2>Полный гейт по темам</h2>
+  <h2 id="polnyj-gejt">Полный гейт по темам</h2>
 
   <h3>A — Специальная теория относительности</h3>
   <div class="tablewrap"><table>
@@ -293,6 +371,7 @@
     <tr><td>relativity</td><td>Формула аберрации, round-trip, монотонность (INV-PHYS-09)</td><td class="refcol">(cp−β)/(1−β·cp)</td><td class="tolcol">1e-9</td></tr>
     <tr><td>longitudinal.regression</td><td>γ(t) при постоянном 1000g собственном ускорении, продольная 4-сила без деления (INV-PHYS-01, NEVER DELETE/WEAKEN)</td><td class="refcol">γ(t)=√(1+(αt/c)²)</td><td class="tolcol">2%</td></tr>
     <tr><td>gravity.relativistic</td><td>(a) Поперечный фактор — реально гейтится: жёсткий guard ratio&gt;1.5 плюс допуск 3% против (1+β²) при β=0.99 (INV-PHYS-10, нет в physics-gate.yaml). (b) Продольный фактор (1−3β²) — реализован в ship.js, но только выводится через console.log в try/catch; гейтом <b>не проверяется</b></td><td class="refcol">a⊥=(1+β²)g⊥ · a∥=(1−3β²)g∥</td><td class="tolcol">(a) guard&gt;1.5 + 3% отн. · (b) нет — только диагностика</td></tr>
+    <tr><td>verify-live</td><td>Чистая логика интерактивного раздела «Проверь сам»: каждый пресет PASS, заведомо неверное значение симулятора даёт FAIL (вердикт не всегда-true), вырожденные входы отклоняются без NaN</td><td class="refcol">γ=cosh(aτ/c) · √(μ/r) · 2π√(r³/μ) · буст 4-вектора фотона · μ/r²</td><td class="tolcol">1e-9 (замкнутые формы, орбита) · 1e-3 (интегрированное собственное время) · 1e-12 (гравитация)</td></tr>
   </table></div>
   <p>Продольный фактор <code>(1−3β²)</code> — зафиксированное осознанное
   решение владельца проекта о самой физике движка — внутреннее решение, не
@@ -382,7 +461,7 @@
   </table></div>
   <p>Скорость удара радара берётся из сохранения энергии в невращающейся системе тела, поэтому на быстро вращающихся телах она завышена на несколько процентов; ни один тест это не измеряет, модели атмосферы нет.</p>
 
-  <h2>Релевантные ADR</h2>
+  <h2 id="adr-ru">Релевантные ADR</h2>
   <p>Append-only журнал решений проекта документирует часть закреплённых
   выше решений. Ниже — реальные номера записей <code>ADR.md</code>, не
   внутренние метки «пунктов ТЗ» из комментариев некоторых тестов (как
@@ -395,7 +474,7 @@
     <li><b>ADR-12</b> — AudioContext создаётся лениво, только по реальному жесту пользователя; звук по умолчанию выключен.</li>
   </ul>
 
-  <h2>Чего этот гейт не утверждает</h2>
+  <h2 id="ne-utverzhdaet">Чего этот гейт не утверждает</h2>
   <ul>
     <li>Нет общей теории относительности (нет frame-dragging, нет геодезических искривлённого пространства-времени за пределами слабопольного приближения) — ньютоновская гравитация + специально-релятивистская кинематика, осознанно.</li>
     <li>Тела не возмущают орбиты друг друга — заявленное упрощение.</li>
@@ -434,6 +513,166 @@
     try { localStorage.setItem('iss_lang', l); } catch (e) {}
   });
 })();
+</script>
+<script type="module">
+let LIVE = null, LIVE_ERR = '';
+try { LIVE = await import('./js/verify/live.js'); } catch (e) { LIVE_ERR = String(e && e.message || e); }
+const { PRESETS, TOL, checkGammaBeta, checkConstantAccel, checkCircularOrbit,
+  checkDopplerAberration, checkGravityAccel } = LIVE || {};
+
+const T = {
+  en: {
+    pass: 'PASS', fail: 'FAIL', refused: 'Refused', overall: 'Overall',
+    cols: ['quantity', 'simulator', 'analytic', 'rel. discrepancy', 'tolerance', 'verdict'],
+    presets: 'Presets', tols: 'Tolerances and why', load: 'Could not load the simulator modules in this browser: ',
+  },
+  ru: {
+    pass: 'PASS', fail: 'FAIL', refused: 'Отказ', overall: 'Итог',
+    cols: ['величина', 'симулятор', 'аналитика', 'отн. расхождение', 'допуск', 'вердикт'],
+    presets: 'Пресеты', tols: 'Допуски и почему такие', load: 'Не удалось загрузить модули симулятора в этом браузере: ',
+  },
+};
+
+const TOLWHY_RU = {
+  closedForm: 'Обе стороны — замкнутые формулы в double; округление ~1e-16, у края допустимого β из-за вычитания 1-β² вырастает до ~5e-12 (измерено). 1e-9 даёт запас более чем в 100 раз.',
+  orbit: 'Измеренная ошибка на круговых орбитах ~1e-16; итерация Ньютона универсальной переменной останавливается около 1e-12, а период восстанавливается из пройденного угла (acos теряет несколько знаков). 1e-9 оставляет запас, не пряча настоящий дефект.',
+  integrated: 'Собственное время накапливается интегратором корабля шаг за шагом (первый порядок по dt) — это ошибка интегрирования, а не округления. 1e-3 на 20000 геометрических шагов (измерено ~2e-4); сам γ точен в w-пространстве и держится 1e-9.',
+  gravity: 'Одно деление и корень в double; 1e-12 — примерно на 4 порядка выше округления.',
+};
+
+const ROWS = {
+  gamma: { en: ['γ = γ(β)  vs  1/√(1−β²)', 'time dilation dτ/dt  vs  √(1−β²)'], ru: ['γ(β)  и  1/√(1−β²)', 'замедление времени dτ/dt  и  √(1−β²)'] },
+  accel: { en: ['γ after proper time τ  vs  cosh(aτ/c)', 'proper time aboard  vs  τ (the burn is run for the coordinate time T=(c/a)·sinh(aτ/c))'],
+           ru: ['γ после собственного времени τ  и  cosh(aτ/c)', 'собственное время на борту  и  τ (разгон идёт координатное время T=(c/a)·sinh(aτ/c))'] },
+  orbit: { en: ['circular speed  vs  √(μ/r)', 'semi-major axis (orbitFromState)  vs  r', 'period via propagateUniversal  vs  2π√(r³/μ)'],
+           ru: ['круговая скорость  и  √(μ/r)', 'большая полуось (orbitFromState)  и  r', 'период через propagateUniversal  и  2π√(r³/μ)'] },
+  doppler: { en: ['Doppler factor (head-on)  vs  √((1+β)/(1−β))', 'aberration cosθ′  vs  Lorentz boost of a photon 4-vector'],
+             ru: ['доплер-фактор (в лоб)  и  √((1+β)/(1−β))', 'аберрация cosθ′  и  буст 4-вектора фотона'] },
+  gravity: { en: ['|g| at distance r  vs  μ/r²', 'direction (cos to the centre)  vs  1'], ru: ['|g| на расстоянии r  и  μ/r²', 'направление (cos к центру)  и  1'] },
+};
+
+const CARDS = [
+  { id: 'gamma', fn: (x) => checkGammaBeta(x), tols: ['closedForm'],
+    title: { en: '1a · Lorentz factor and time dilation', ru: '1а · Лоренц-фактор и замедление времени' },
+    desc: { en: 'relativity.js gammaFromV against 1/√(1−β²). Allowed: 0 ≤ β ≤ 0.999999.', ru: 'relativity.js gammaFromV против 1/√(1−β²). Допустимо: 0 ≤ β ≤ 0.999999.' },
+    fields: [{ k: 'beta', l: { en: 'β = v/c', ru: 'β = v/c' }, min: 0, max: 0.999, step: 0.001, slider: true }],
+    names: { 'beta-0p5': 'β=0.5', 'beta-0p99': 'β=0.99', 'beta-near-1': 'β=1−1e-6' } },
+  { id: 'accel', fn: (x) => checkConstantAccel(x), tols: ['closedForm', 'integrated'],
+    title: { en: '1b · Constant proper acceleration (live Ship integrator)', ru: '1б · Постоянное собственное ускорение (живой интегратор Ship)' },
+    desc: { en: 'Runs the real Ship.step in arcade mode with thrust along the velocity for the matching coordinate time (20000 steps) and reads γ and proper time. Allowed: 0 < a ≤ 1000 g, aτ/c ≤ 20.', ru: 'Гоняет настоящий Ship.step в arcade-режиме с тягой вдоль скорости нужное координатное время (20000 шагов) и читает γ и собственное время. Допустимо: 0 < a ≤ 1000 g, aτ/c ≤ 20.' },
+    fields: [{ k: 'aG', l: { en: 'a, in g', ru: 'a, в g' }, min: 0.01, max: 1000, step: 'any' }, { k: 'tauS', l: { en: 'proper time τ, s', ru: 'собственное время τ, с' }, min: 1, step: 'any' }],
+    names: { 'regress-1000g-gamma13': { en: '1000 g → γ≈13 (regression)', ru: '1000 g → γ≈13 (регресс)' }, '1g-one-year': { en: '1 g, 1 year', ru: '1 g, 1 год' }, '10g-one-day': { en: '10 g, 1 day', ru: '10 g, 1 сутки' } } },
+  { id: 'orbit', fn: (x) => checkCircularOrbit(x), tols: ['closedForm', 'orbit'],
+    title: { en: '2 · Circular orbit', ru: '2 · Круговая орбита' },
+    desc: { en: 'orbits.js circularizeVelocity, orbitFromState and propagateUniversal against √(μ/r), a=r and 2π√(r³/μ). The period is measured from the angle swept in a quarter analytic period.', ru: 'orbits.js circularizeVelocity, orbitFromState и propagateUniversal против √(μ/r), a=r и 2π√(r³/μ). Период измеряется по углу, пройденному за четверть аналитического периода.' },
+    fields: [{ k: 'r', l: { en: 'radius r, km', ru: 'радиус r, км' }, min: 0.001, step: 'any', scale: 1000 }, { k: 'mu', l: { en: 'μ = GM, m³/s²', ru: 'μ = GM, м³/с²' }, min: 1, step: 'any' }],
+    names: { 'earth-leo': { en: 'Earth LEO', ru: 'Земля, НОО' }, 'earth-geo': { en: 'Earth GEO', ru: 'Земля, ГЕО' }, 'sun-1au': { en: 'Sun, 1 AU', ru: 'Солнце, 1 а.е.' } } },
+  { id: 'doppler', fn: (x) => checkDopplerAberration(x), tols: ['closedForm'],
+    title: { en: '3 · Doppler and aberration', ru: '3 · Доплер и аберрация' },
+    desc: { en: 'relativity.js dopplerFactor and aberratedCos against a Lorentz boost of a photon 4-vector. β>0 means approaching. This checks the JS function, not the GLSL shader mirror.', ru: 'relativity.js dopplerFactor и aberratedCos против буста 4-вектора фотона. β>0 — сближение. Проверяется JS-функция, а не GLSL-зеркало в шейдере.' },
+    fields: [{ k: 'beta', l: { en: 'β (closing speed / c)', ru: 'β (скорость сближения / c)' }, min: -0.999, max: 0.999, step: 0.001, slider: true }, { k: 'cosTheta', l: { en: 'cos θ′', ru: 'cos θ′' }, min: -1, max: 1, step: 0.01, slider: true }],
+    names: { 'beta-0p6-side': 'β=0.6, cosθ′=0', 'beta-minus-0p9': 'β=−0.9, cosθ′=0.5', 'beta-0p99': 'β=0.99, cosθ′=0.95' } },
+  { id: 'gravity', fn: (x) => checkGravityAccel(x), tols: ['gravity'],
+    title: { en: '4 · Gravitational acceleration', ru: '4 · Гравитационное ускорение' },
+    desc: { en: 'gravity.js gravityAccel for a point mass against μ/r², and its direction towards the centre.', ru: 'gravity.js gravityAccel для точечной массы против μ/r² и направление к центру.' },
+    fields: [{ k: 'r', l: { en: 'distance r, km', ru: 'расстояние r, км' }, min: 0.001, step: 'any', scale: 1000 }, { k: 'mu', l: { en: 'μ = GM, m³/s²', ru: 'μ = GM, м³/с²' }, min: 1, step: 'any' }],
+    names: { 'earth-surface': { en: 'Earth surface', ru: 'поверхность Земли' }, 'moon-distance': { en: 'Moon distance', ru: 'расстояние до Луны' } } },
+];
+
+const fmt = (x) => (x === 0 ? '0' : (Math.abs(x) >= 1e5 || Math.abs(x) < 1e-3) ? x.toExponential(6) : String(+x.toPrecision(10)));
+const fmtErr = (x) => (x === 0 ? '0' : x.toExponential(1));
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const tr = (lang, o) => o[lang] || o;
+
+function buildCard(lang, card) {
+  const t = T[lang];
+  const root = el('div', 'live-card');
+  root.appendChild(el('h3', null, tr(lang, card.title)));
+  root.appendChild(el('p', 'desc', tr(lang, card.desc)));
+  const presetBox = el('div', 'live-presets');
+  const fieldsBox = el('div', 'live-fields');
+  const out = el('div', 'live-out');
+  root.append(presetBox, fieldsBox, out);
+
+  const inputs = {};
+  const wire = (num, rng) => {
+    num.addEventListener('input', () => { if (rng && num.value !== '') rng.value = num.value; run(); });
+    if (rng) rng.addEventListener('input', () => { num.value = rng.value; run(); });
+  };
+  for (const f of card.fields) {
+    const lab = el('label', null, tr(lang, f.l));
+    const num = el('input'); num.type = 'number'; num.step = f.step; num.inputMode = 'decimal';
+    lab.appendChild(num);
+    let rng = null;
+    if (f.slider) { rng = el('input'); rng.type = 'range'; rng.min = f.min; rng.max = f.max; rng.step = f.step; lab.appendChild(rng); }
+    fieldsBox.appendChild(lab);
+    inputs[f.k] = { num, rng, scale: f.scale || 1 };
+    wire(num, rng);
+  }
+
+  function setInput(input) {
+    for (const f of card.fields) {
+      const v = input[f.k] / (f.scale || 1);
+      inputs[f.k].num.value = String(+v.toPrecision(12));
+      if (inputs[f.k].rng) inputs[f.k].rng.value = inputs[f.k].num.value;
+    }
+    run();
+  }
+  presetBox.appendChild(el('span', null, t.presets + ':'));
+  for (const p of PRESETS[card.id]) {
+    const b = el('button', null, tr(lang, card.names[p.id] || p.id)); b.type = 'button';
+    b.addEventListener('click', () => setInput(p.input));
+    presetBox.appendChild(b);
+  }
+
+  function readInput() {
+    const o = {};
+    for (const f of card.fields) {
+      const raw = inputs[f.k].num.value;
+      o[f.k] = raw === '' ? NaN : Number(raw) * inputs[f.k].scale;
+    }
+    return o;
+  }
+
+  function run() {
+    out.textContent = '';
+    let res;
+    try { res = card.fn(readInput()); } catch (e) { res = { valid: false, reason: String(e && e.message || e), rows: [], pass: false }; }
+    if (!res.valid) {
+      out.appendChild(el('div', 'live-reason', t.refused + ': ' + res.reason));
+    } else {
+      const wrap = el('div', 'tablewrap'); const table = el('table');
+      const head = el('tr'); t.cols.forEach((c) => head.appendChild(el('th', null, c))); table.appendChild(head);
+      const labels = ROWS[card.id][lang];
+      res.rows.forEach((r, i) => {
+        const row = el('tr');
+        row.appendChild(el('td', null, labels[i]));
+        [fmt(r.sim), fmt(r.analytic), fmtErr(r.relErr), '≤ ' + fmtErr(r.tol)].forEach((x) => row.appendChild(el('td', 'mono', x)));
+        row.appendChild(el('td', r.pass ? 'pass' : 'fail', r.pass ? t.pass : t.fail));
+        table.appendChild(row);
+      });
+      wrap.appendChild(table); out.appendChild(wrap);
+      const ov = el('div', 'live-overall'); ov.append(t.overall + ': ');
+      ov.appendChild(el('span', res.pass ? 'pass' : 'fail', res.pass ? t.pass : t.fail));
+      out.appendChild(ov);
+    }
+  }
+
+  const tolBox = el('ul', 'live-tols');
+  tolBox.appendChild(el('li', null, t.tols + ':'));
+  for (const k of card.tols) {
+    tolBox.appendChild(el('li', null, '≤ ' + fmtErr(TOL[k].value) + ' — ' + (lang === 'ru' ? TOLWHY_RU[k] : TOL[k].why)));
+  }
+  root.appendChild(tolBox);
+  setInput(PRESETS[card.id][0].input);
+  return root;
+}
+
+document.querySelectorAll('[data-live]').forEach((box) => {
+  const lang = box.getAttribute('data-live-lang');
+  if (!LIVE) { box.appendChild(el('div', 'live-reason', T[lang].load + LIVE_ERR)); return; }
+  CARDS.forEach((c) => box.appendChild(buildCard(lang, c)));
+});
 </script>
 <script defer src="https://stats.podlevskikh.com/a/static/network-footer.js"></script>
 </body>
