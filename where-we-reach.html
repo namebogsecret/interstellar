@@ -56,6 +56,7 @@
     thead { display: none; }
     tr { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; padding: 4px 8px; }
     td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 10px; text-align: right; }
+    td:not([data-label])::before { content: none; }
     td::before { content: attr(data-label); color: var(--dim); text-align: left; flex: 0 0 42%; }
   }
   [data-lang] { display: none; }
@@ -130,16 +131,17 @@
 <script type="module">
 import { G0, YEAR } from './js/physics/constants.js';
 import { LY, flightForTau, reachable } from './js/physics/flight.js';
+import { gOf, vOf, fmt, fmtBeta, massLog10, yearWord } from './js/verify/wwr-view.js';
 import { STARS } from './js/data/stars.js';
 
 const T = {
   en: {
-    cover: 'In {tau} y of ship time you cover', ly: 'light-years', earth: 'Earth time', peak: 'Peak speed', gamma: 'Peak γ',
+    cover: 'In {tau} {y} of ship time you cover', ly: 'light-years', earth: 'Earth time', peak: 'Peak speed', gamma: 'Peak γ',
     mass: 'Photon-rocket mass ratio', mass2: 'at least 10^', star: 'Star', dist: 'Distance, ly', shipT: 'Ship time, y', earthT: 'Earth time, y',
     ok: 'reachable in your time', no: 'not in your time', y: 'y', bad: 'Cannot compute: ', c: 'c',
   },
   ru: {
-    cover: 'За {tau} лет бортового времени вы пролетите', ly: 'св. лет', earth: 'Время на Земле', peak: 'Макс. скорость', gamma: 'Макс. γ',
+    cover: 'За {tau} {y} бортового времени вы пролетите', ly: 'св. лет', earth: 'Время на Земле', peak: 'Макс. скорость', gamma: 'Макс. γ',
     mass: 'Масса фотонной ракеты (старт/финиш)', mass2: 'не меньше 10^', star: 'Звезда', dist: 'Расстояние, св. лет', shipT: 'Бортовое время, лет', earthT: 'Земное время, лет',
     ok: 'долетим за ваше время', no: 'не успеваем', y: 'лет', bad: 'Не посчитать: ', c: 'c',
   },
@@ -149,37 +151,22 @@ try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en
 
 const $ = (id) => document.getElementById(id);
 const aIn = $('a'), tIn = $('t');
-const A_MIN = 0.1, A_MAX = 10;
-const gOf = (v) => A_MIN * Math.pow(A_MAX / A_MIN, v / 1000);
-const vOf = (g) => Math.round(1000 * Math.log(g / A_MIN) / Math.log(A_MAX / A_MIN));
 aIn.value = vOf(1);
-
-function fmt(n) {
-  if (!Number.isFinite(n)) return '—';
-  const x = Math.abs(n);
-  if (x === 0) return '0';
-  if (x >= 1e6) { const e = Math.floor(Math.log10(x)); return (n / Math.pow(10, e)).toFixed(2) + '·10^' + e; }
-  if (x >= 1000) return Math.round(n).toLocaleString('en-US').replace(/,/g, ' ');
-  if (x >= 100) return n.toFixed(0);
-  if (x >= 10) return n.toFixed(1);
-  return n.toFixed(2);
-}
-function fmtBeta(b) { return b < 0.999 ? b.toFixed(3) + ' c' : '1 − ' + (1 - b).toExponential(1) + ' (c)'; }
 
 function render() {
   const g = gOf(+aIn.value), tauY = +tIn.value, a = g * G0, tau = tauY * YEAR, t = T[lang];
   $('aout').textContent = g.toFixed(g < 1 ? 2 : 1) + ' g';
-  $('tout').textContent = tauY + ' ' + t.y;
+  $('tout').textContent = tauY + ' ' + yearWord(tauY, lang);
   document.querySelectorAll('#apre button').forEach((b) => b.classList.toggle('on', Math.abs(+b.dataset.g - g) / g < 0.02));
 
   const f = flightForTau(a, tau);
   if (!f.valid) { $('result').innerHTML = '<p class="warn">' + t.bad + f.reason + '</p>'; $('starsout').innerHTML = ''; return; }
-  const log10m = f.x * 2 / Math.LN10;
+  const log10m = massLog10(f.x);
   $('result').innerHTML =
-    '<div class="big">' + t.cover.replace('{tau}', tauY) + ' <b>' + fmt(f.D / LY) + ' ' + t.ly + '</b></div>' +
+    '<div class="big">' + t.cover.replace('{tau}', tauY).replace('{y}', yearWord(tauY, lang)) + ' <b>' + fmt(f.D / LY) + ' ' + t.ly + '</b></div>' +
     '<div class="stats">' +
-    '<div class="stat"><span>' + t.earth + '</span><b>' + fmt(f.T / YEAR) + ' ' + t.y + '</b></div>' +
-    '<div class="stat"><span>' + t.peak + ' β</span><b>' + fmtBeta(f.betaMax) + '</b></div>' +
+    '<div class="stat"><span>' + t.earth + '</span><b>' + fmt(f.T / YEAR) + ' ' + yearWord(f.T / YEAR, lang) + '</b></div>' +
+    '<div class="stat"><span>' + t.peak + ' β</span><b>' + fmtBeta(f.x) + '</b></div>' +
     '<div class="stat"><span>' + t.gamma + '</span><b>' + fmt(f.gammaMax) + '</b></div>' +
     '<div class="stat"><span>' + t.mass + '</span><b class="warn">' + (log10m < 2 ? fmt(Math.pow(10, log10m)) : t.mass2 + Math.floor(log10m)) + '</b></div>' +
     '</div>';

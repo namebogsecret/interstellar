@@ -36,6 +36,18 @@ function fromX(a, x) {
   return out;
 }
 
+// 1 - tanh(x) = 2/(e^{2x}+1), as {mant, exp10} (value = mant * 10^exp10, 1 <= mant < 10).
+// 1 - Math.tanh(x) is exactly 0 for x > ~19 (double rounding) and e^{2x} overflows near
+// x ~ 355, so work in log10 using only exp(-2x), which never overflows for x >= 0.
+export function oneMinusBeta(x) {
+  if (!(typeof x === 'number' && Number.isFinite(x) && x >= 0)) return { mant: NaN, exp10: NaN };
+  const L = Math.log10(2) - 2 * x / Math.LN10 - Math.log10(1 + Math.exp(-2 * x));
+  let exp10 = Math.floor(L);
+  let mant = Math.pow(10, L - exp10);
+  if (mant >= 10) { mant /= 10; exp10 += 1; }
+  return { mant, exp10 };
+}
+
 // Given acceleration a (m/s^2) and total ship time tau (s) -> distance reached.
 export function flightForTau(a, tau) {
   if (!okNum(a)) return refuse('acceleration must be a finite number > 0');

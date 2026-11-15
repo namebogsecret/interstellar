@@ -7,8 +7,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { C, G0, YEAR } from '../js/physics/constants.js';
-import { LY, flightForTau, flightForDistance, reachable, X_MAX } from '../js/physics/flight.js';
+import { LY, flightForTau, flightForDistance, reachable, X_MAX, oneMinusBeta } from '../js/physics/flight.js';
 import { STARS } from '../js/data/stars.js';
+import { gOf, vOf, fmt, fmtBeta, massLog10, yearWord } from '../js/verify/wwr-view.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 let checks = 0;
@@ -182,6 +183,46 @@ for (const [ag, t] of [[0.1, 5], [1, 3.6], [1, 40], [3, 10], [10, 2]]) {
   ok(STARS[0].name === 'Proxima Centauri' && Math.abs(STARS[0].ly - 4.2465) < 0.01, 'Proxima first');
 }
 
+// (i2) stars added after review: present, within range, still sorted
+for (const n of ['EZ Aquarii', '61 Cygni', 'Procyon A/B', 'Struve 2398', 'Groombridge 34', 'DX Cancri', 'Epsilon Indi']) ok(STARS.some((s) => s.name === n), `star ${n}`);
+near(STARS.find((s) => s.name === '61 Cygni').ly, 11.40, 0.01, '61 Cyg');
+
+// (k) 1 - beta in log form
+{
+  const val = (o) => o.mant * Math.pow(10, o.exp10);
+  near(val(oneMinusBeta(1)), 1 - Math.tanh(1), 1e-12, '1-beta x=1');
+  near(val(oneMinusBeta(0.1)), 1 - Math.tanh(0.1), 1e-12, '1-beta x=0.1');
+  const o = oneMinusBeta(20.65); // 2/(e^41.3+1) ~ 2.3e-18 (tanh is exactly 1 here)
+  ok(Math.tanh(20.65) === 1, 'premise: tanh saturates');
+  near(o.mant * Math.pow(10, o.exp10 + 18), 2 / (Math.exp(41.3) + 1) * 1e18, 1e-12, 'x=20.65');
+  ok(o.exp10 === -18 && o.mant > 2.2 && o.mant < 2.4, 'x=20.65 -> ~2.3e-18');
+  const big = oneMinusBeta(412.9); // e^{2x} overflows; log10 = log10(2) - 2x/ln10
+  ok(Number.isFinite(big.mant) && big.mant >= 1 && big.mant < 10 && Number.isInteger(big.exp10), 'x=412.9 finite');
+  near(Math.log10(big.mant) + big.exp10, Math.log10(2) - 2 * 412.9 / Math.LN10, 1e-12, 'x=412.9 log10');
+  ok(Number.isNaN(oneMinusBeta(-1).mant) && Number.isNaN(oneMinusBeta(NaN).mant), 'bad input -> NaN');
+}
+
+// (l) page helpers (js/verify/wwr-view.js)
+{
+  near(gOf(0), 0.1, 1e-12, 'gOf(0)'); near(gOf(1000), 10, 1e-12, 'gOf(1000)'); near(gOf(500), 1, 1e-12, 'gOf(500)=1g');
+  ok(vOf(0.1) === 0 && vOf(10) === 1000 && vOf(1) === 500, 'vOf bounds');
+  for (const v of [0, 137, 500, 999, 1000]) ok(vOf(gOf(v)) === v, `slider roundtrip ${v}`);
+  ok(fmt(NaN) === '—' && fmt(0) === '0' && fmt(1.234) === '1.23' && fmt(12.34) === '12.3' && fmt(123.4) === '123', 'fmt small');
+  ok(fmt(12345) === '12 345' && fmt(2.5e7) === '2.50·10^7', 'fmt large');
+  // peak speed
+  ok(fmtBeta(1) === Math.tanh(1).toFixed(3) + ' c', 'fmtBeta plain');
+  ok(fmtBeta(20.65) === '1 − 2.3·10^-18 (c)', `fmtBeta saturated: ${fmtBeta(20.65)}`);
+  ok(!/e\+|0\.0e/.test(fmtBeta(20.65)) && !/NaN|Infinity/.test(fmtBeta(412.9)), 'fmtBeta no garbage');
+  ok(/^1 − [1-9]\.\d·10\^-\d+ \(c\)$/.test(fmtBeta(5)), 'fmtBeta x=5 form');
+  // mass ratio exponent: e^{2x} -> 2x/ln10 (a mutation f.x instead of 2x is caught)
+  near(massLog10(1), 2 / Math.LN10, 1e-14, 'massLog10(1)'); near(massLog10(Math.LN10), 2, 1e-14, 'massLog10(ln10)=2');
+  // year declension
+  const ru = (n) => yearWord(n, 'ru');
+  ok(ru(1) === 'год' && ru(21) === 'год' && ru(2) === 'года' && ru(4) === 'года' && ru(5) === 'лет' && ru(11) === 'лет' && ru(14) === 'лет' && ru(12) === 'лет' && ru(80) === 'лет' && ru(22) === 'года' && ru(0) === 'лет', 'ru integer years');
+  ok(ru(2.5) === 'года' && ru(1.5) === 'года' && ru(11.5) === 'года' && ru(150.4) === 'лет' && ru(3e6) === 'лет' && ru(NaN) === 'лет', 'ru fractional/large');
+  ok(yearWord(1, 'en') === 'year' && yearWord(2, 'en') === 'years' && yearWord(2.5, 'en') === 'years' && yearWord(0.5, 'en') === 'years', 'en years');
+}
+
 // (j) HTML contract
 {
   const html = fs.readFileSync(path.join(ROOT, 'where-we-reach.html'), 'utf8');
@@ -194,6 +235,8 @@ for (const [ag, t] of [[0.1, 5], [1, 3.6], [1, 40], [3, 10], [10, 2]]) {
   for (const s of ext) ok(!/^(https?:)?\/\//.test(s), `no external script: ${s}`);
   ok(!/<link[^>]+href=["']https?:\/\/[^"']+\.css/.test(html), 'no external css');
   // the page's module (if separate) must exist
+  ok(/from '\.\/js\/verify\/wwr-view\.js'/.test(html), 'page uses wwr-view helpers');
+  ok(/td:not\(\[data-label\]\)::before \{ content: none/.test(html), 'unlabelled cell has no reserved label');
   for (const s of ext) ok(fs.existsSync(path.join(ROOT, s.replace(/^\.?\//, ''))), `script exists ${s}`);
   const sm = fs.readFileSync(path.join(ROOT, 'sitemap.xml'), 'utf8');
   ok(sm.includes('where-we-reach.html'), 'sitemap');
