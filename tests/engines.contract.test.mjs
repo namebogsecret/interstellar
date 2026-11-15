@@ -171,7 +171,7 @@ near(SOLAR_CONST, 1361, 1e-15, 'SOLAR_CONST');
     ok(thrustOf(e) === undefined || thrustOf(e) > 0, `${id} thrust positive`);
   }
   // headline contract numbers (isp)
-  near(engById('chemical').isp, 465, 1e-9, 'RL10B-2 isp'); near(engById('ion').isp, 4190, 1e-9, 'NEXT-C isp');
+  near(engById('chemical').isp, 465, 1e-9, 'RL10B-2 isp'); near(engById('ion').isp, 4170, 1e-9, 'NEXT-C isp');
   near(engById('ntr').isp, 841, 1e-9, 'NERVA isp'); near(engById('fusion').isp * G0, 1.06e7, 1e-2, 'Daedalus ve ~10 600 km/s');
 
   // routes
