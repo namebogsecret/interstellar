@@ -12,7 +12,7 @@
 // textbook formula. It does NOT prove the formula describes the real world.
 import * as THREE from 'three';
 import { C, G0 } from '../physics/constants.js';
-import { gammaFromV, dopplerFactor, aberratedCos } from '../physics/relativity.js';
+import { gammaFromV, aberratedCos } from '../physics/relativity.js';
 import { gravityAccel } from '../physics/gravity.js';
 import { circularizeVelocity, orbitFromState, propagateUniversal } from '../physics/orbits.js';
 import { Ship } from '../physics/ship.js';
@@ -29,7 +29,7 @@ export const TOL = {
   },
   integrated: {
     value: 1e-3,
-    why: 'Proper time is accumulated by the ship integrator step by step (first-order in dt), so it is an integration error, not rounding. 1e-3 on 20000 geometric steps (measured error ~2e-4); gamma itself is exact in w-space and is held to 1e-9.',
+    why: 'Proper time is accumulated by the ship integrator step by step (first-order in dt), so it is an integration error, not rounding. 1e-3 on 20000 geometric steps (measured error 6e-6..5.5e-4, growing with a*tau/c; >=1.8x margin at the limit a*tau/c=15 and >=2x on the supported grid up to 13); gamma itself is exact in w-space and is held to 1e-9.',
   },
   gravity: {
     value: 1e-12,
@@ -38,7 +38,15 @@ export const TOL = {
 };
 
 const BETA_MAX = 1 - 1e-6;      // beyond this 1-beta^2 < 2e-6 and double rounding eats the margin
-const TAU_OVER_C_MAX = 20;      // a*tau/c <= 20 -> gamma <= ~2.4e8, w stays far from overflow
+// a*tau/c <= 15. NOT an overflow limit: ship.js accumulates proper time as
+// dt*sqrt(1 + 2*Phi/c^2 - v^2/c^2); at gamma >~ 1e7 the difference 1-beta^2
+// loses precision there (measured false FAIL: x=18 -> 9.8e-4, x=19 -> 7.8e-3,
+// x=20 -> 2.5e-2). The integrator error itself is ~6e-4 over most of the range.
+// 15 keeps the grid x in [0.1,15] under 1e-3 (worst 5.5e-4) for 0.01 g / 1 g / 1000 g.
+export const TAU_OVER_C_MAX = 15;
+export const A_MIN_G = 1e-6;    // below this a*tau/c and the throttle fraction underflow toward denormals
+// Gravity / orbit range: keeps mu/r^2 and its square (inside Vector3.length) far from denormals.
+const R_MAX = 1e20, MU_MAX = 1e35;
 const STEPS = 20000;
 
 const isNum = (x) => typeof x === 'number' && Number.isFinite(x);
@@ -69,20 +77,18 @@ function finish(id, rows) {
   return { id, valid: true, rows, pass: rows.every((r) => r.pass) };
 }
 
-// ── 1a. gamma(beta) and time dilation ─────────────────────────────────────────
+// ── 1a. gamma(beta) ─────────────────────────────────────────
 export function checkGammaBeta(input, hooks = {}) {
   const id = 'gamma';
   const beta = input && input.beta;
   if (!isNum(beta) || beta < 0 || beta > BETA_MAX) {
-    return refuse(id, `beta must be a number in [0, ${BETA_MAX}] (beyond it double precision cannot resolve 1-beta^2)`);
+    return refuse(id, `β must satisfy 0 ≤ β ≤ 1−1e-6 (${BETA_MAX}); this check's tolerance is calibrated for that range`);
   }
   const t = TOL.closedForm.value;
   const sim = gammaFromV(beta * C);
   const analytic = 1 / Math.sqrt((1 - beta) * (1 + beta));
   return finish(id, [
     makeRow('gamma', sim, analytic, t, 0, hooks.perturb),
-    // time dilation: proper seconds per coordinate second = 1/gamma = sqrt(1-beta^2)
-    makeRow('dilation', 1 / sim, Math.sqrt((1 - beta) * (1 + beta)), t, 0, hooks.perturb),
   ]);
 }
 
@@ -95,11 +101,11 @@ export function checkConstantAccel(input, hooks = {}) {
   const tauS = input && input.tauS;
   const ship0 = new Ship();
   const aMax = ship0.maxAccelArcade;
-  if (!isNum(aG) || aG <= 0 || aG * G0 > aMax) return refuse(id, 'a must be in (0, 1000] g (the simulator arcade maximum)');
+  if (!isNum(aG) || aG < A_MIN_G || aG * G0 > aMax) return refuse(id, `a must be in [${A_MIN_G}, 1000] g (lower bound: avoids denormal underflow; upper: the simulator arcade maximum)`);
   if (!isNum(tauS) || tauS <= 0) return refuse(id, 'proper time tau must be > 0 seconds');
   const a = aG * G0;
   const x = (a * tauS) / C;
-  if (!(x <= TAU_OVER_C_MAX)) return refuse(id, `a*tau/c must be <= ${TAU_OVER_C_MAX} (gamma beyond ~2e8 is out of numeric range)`);
+  if (!(x <= TAU_OVER_C_MAX)) return refuse(id, `a*tau/c must be <= ${TAU_OVER_C_MAX}: beyond it ship.js loses precision in 1-beta^2 when accumulating proper time (false FAIL), not an overflow`);
 
   const T = (C / a) * Math.sinh(x);           // coordinate time to burn
   const ship = ship0;
@@ -163,24 +169,24 @@ export function checkCircularOrbit(input, hooks = {}) {
   ]);
 }
 
-// ── 3. Doppler + aberration ───────────────────────────────────────────────────
+// ── 3. Aberration ─────────────────────────────────────────────────────────────
 // Analytic side = Lorentz boost of a photon 4-vector (E, px, py) = (1, cos, sin),
-// boost velocity beta along +x: E' = g(E - b px), px' = g(px - b E).
-//  - Doppler (head-on photon, cos = -1): E'/E = sqrt((1+b)/(1-b)), beta>0 = approaching.
-//  - Aberration: cos' = px'/E'.
-export function checkDopplerAberration(input, hooks = {}) {
-  const id = 'doppler';
+// boost velocity beta along +x: E' = g(E - b px), px' = g(px - b E); cos' = px'/E'.
+// NOTE: this is algebraically equivalent to aberratedCos (catches sign/normalisation
+// slips, not an independent derivation). The Doppler factor is NOT checked: the
+// simulator renders Doppler in the shader (relativisticPass.js), not via
+// relativity.js dopplerFactor, which is unused there.
+export function checkAberration(input, hooks = {}) {
+  const id = 'aberration';
   const beta = input && input.beta;
   const cosT = input && input.cosTheta;
   if (!isNum(beta) || Math.abs(beta) > BETA_MAX) return refuse(id, `beta must be a number with |beta| <= ${BETA_MAX}`);
   if (!isNum(cosT) || cosT < -1 || cosT > 1) return refuse(id, 'cos(theta) must be a number in [-1, 1]');
 
   const g = 1 / Math.sqrt((1 - beta) * (1 + beta));
-  const eHeadOn = g * (1 + beta);                 // photon (1,-1,0) boosted
   const eP = g * (1 - beta * cosT);
   const pxP = g * (cosT - beta);
   return finish(id, [
-    makeRow('doppler', dopplerFactor(beta * C), eHeadOn, TOL.closedForm.value, 0, hooks.perturb),
     // cosines are bounded in [-1,1]: floor 1 makes this an absolute error
     makeRow('aberration', aberratedCos(cosT, beta), pxP / eP, TOL.closedForm.value, 1, hooks.perturb),
   ]);
@@ -191,16 +197,21 @@ export function checkGravityAccel(input, hooks = {}) {
   const id = 'gravity';
   const mu = input && input.mu;
   const r = input && input.r;
-  if (!isNum(mu) || mu <= 0) return refuse(id, 'mu (GM) must be a positive number');
-  if (!isNum(r) || r < 1) return refuse(id, 'distance must be a finite number >= 1 m');
+  if (!isNum(mu) || mu <= 0 || mu > MU_MAX) return refuse(id, `mu (GM) must be in (0, ${MU_MAX}] m^3/s^2`);
+  if (!isNum(r) || r < 1 || r > R_MAX) return refuse(id, `distance must be in [1, ${R_MAX}] m`);
   const body = { name: 'X', GM: mu, radius: 0 };
   const shipPos = new THREE.Vector3(r * 0.6, r * 0.8, 0);       // |pos| = r, off-axis on purpose
   const positions = new Map([['X', new THREE.Vector3(0, 0, 0)]]);
   const acc = gravityAccel(shipPos, [body], positions, new THREE.Vector3());
   const toward = shipPos.clone().multiplyScalar(-1 / r);
+  // length() squares components: rescale by the analytic magnitude first so
+  // tiny accelerations never hit denormals in the check itself.
+  const aAn = mu / (r * r);
+  const unit = acc.clone().multiplyScalar(1 / aAn);
+  const mag = unit.length();
   return finish(id, [
-    makeRow('magnitude', acc.length(), mu / (r * r), TOL.gravity.value, 0, hooks.perturb),
-    makeRow('direction', acc.dot(toward) / acc.length(), 1, TOL.gravity.value, 0, hooks.perturb),
+    makeRow('magnitude', mag * aAn, aAn, TOL.gravity.value, 0, hooks.perturb),
+    makeRow('direction', unit.dot(toward) / mag, 1, TOL.gravity.value, 0, hooks.perturb),
   ]);
 }
 
@@ -223,7 +234,7 @@ export const PRESETS = {
     { id: 'earth-geo', input: { r: 4.2164e7, mu: 3.986004418e14 } },
     { id: 'sun-1au', input: { r: 1.495978707e11, mu: 1.32712440018e20 } },
   ],
-  doppler: [
+  aberration: [
     { id: 'beta-0p6-side', input: { beta: 0.6, cosTheta: 0 } },
     { id: 'beta-minus-0p9', input: { beta: -0.9, cosTheta: 0.5 } },
     { id: 'beta-0p99', input: { beta: 0.99, cosTheta: 0.95 } },

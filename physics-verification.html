@@ -83,7 +83,18 @@
   .live-tols { font-size: 11.5px; color: var(--dim); margin: 6px 0 0; padding-left: 16px; }
   .live-tols li { margin: 2px 0; overflow-wrap: anywhere; }
   .live-overall { margin: 6px 0 2px; font-size: 13px; }
-  @media (max-width: 480px) { main { padding: 28px 14px 0; } .live-card { padding: 10px; } }
+  @media (max-width: 480px) {
+    main { padding: 28px 14px 0; } .live-card { padding: 10px; }
+    /* stacked rows: every field + the verdict visible without horizontal scroll */
+    .live-out .tablewrap { overflow-x: visible; }
+    .live-table, .live-table tbody, .live-table tr, .live-table td { display: block; width: 100%; box-sizing: border-box; }
+    .live-table tr:first-child { display: none; }
+    .live-table tr { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; padding: 4px 8px; }
+    .live-table td { border: 0; padding: 3px 0; min-width: 0 !important; display: flex; justify-content: space-between; gap: 10px; text-align: right; overflow-wrap: anywhere; }
+    .live-table td::before { content: attr(data-label); color: var(--dim); text-align: left; flex: 0 0 38%; }
+    .live-table td:first-child { display: block; text-align: left; font-weight: bold; }
+    .live-table td:first-child::before { display: block; margin-bottom: 2px; font-weight: normal; }
+  }
   [data-lang] { display: none; }
   [data-lang].active { display: block; }
 </style>
@@ -281,6 +292,7 @@
     <li>Bodies don't perturb each other's orbits — a stated simplification.</li>
     <li>Transverse thrust is reduced by an extra factor of γ vs longitudinal — the honest relativistic 4-force result, a documented known limitation, not hidden here.</li>
     <li>The landing radar's time-to-impact is checked against a numerical integration only to 10%; its impact-speed overestimate on fast-spinning bodies is documented but not quantified by any test.</li>
+    <li>The interactive “Check it yourself” section does <b>not</b> check the Doppler factor in the shader: the renderer computes Doppler in <code>relativisticPass.js</code> (D = √(1−β²)/(1−β·cosθ′)), and <code>relativity.js dopplerFactor</code> is not called by the simulator, so it is deliberately left out. Its circular-speed row is partly tautological (it mainly checks direction normalisation), and the aberration analytic is algebraically equivalent to the code (it catches sign/normalisation slips, not an independent derivation). Constant-acceleration checks are limited to aτ/c ≤ 15: <code>ship.js:202</code> loses proper-time precision at γ &gt;~ 1e7 (found by this check, not fixed — physics is frozen, owner's decision).</li>
     <li>A green <code>tests/run.sh</code> is a <b>regression gate</b>, not a proof of absolute correctness — it proves the code still agrees with the formulas and tolerances above. Anything not listed here has no automated check.</li>
   </ul>
 
@@ -480,6 +492,7 @@
     <li>Тела не возмущают орбиты друг друга — заявленное упрощение.</li>
     <li>Поперечная тяга уменьшена на дополнительный множитель γ относительно продольной — честный релятивистский результат 4-силы, задокументированное известное ограничение, не скрытое здесь.</li>
     <li>Время до удара посадочного радара сверяется с численным интегрированием лишь до 10%; завышение скорости удара на быстро вращающихся телах задокументировано, но ни одним тестом не измеряется.</li>
+    <li>Раздел «Проверь сам» <b>не</b> проверяет доплер-фактор в шейдере: рендер считает Доплер в <code>relativisticPass.js</code> (D = √(1−β²)/(1−β·cosθ′)), а <code>relativity.js dopplerFactor</code> симулятором не вызывается, поэтому в раздел он намеренно не входит. Строка круговой скорости отчасти тавтологична (по сути проверяет нормировку направления), а аналитика аберрации алгебраически эквивалентна коду (ловит ошибки знака/нормировки, не независимый вывод). Проверки постоянного ускорения ограничены aτ/c ≤ 15: <code>ship.js:202</code> теряет точность собственного времени при γ &gt;~ 1e7 (найдено этой проверкой, не чинили — физика заморожена, решение владельца).</li>
     <li>Зелёный <code>tests/run.sh</code> — это <b>регресс-гейт</b>, не доказательство абсолютной корректности: он доказывает, что код по-прежнему согласуется с формулами и допусками выше. У всего, чего нет в этом списке, нет автоматической проверки.</li>
   </ul>
 
@@ -518,7 +531,7 @@
 let LIVE = null, LIVE_ERR = '';
 try { LIVE = await import('./js/verify/live.js'); } catch (e) { LIVE_ERR = String(e && e.message || e); }
 const { PRESETS, TOL, checkGammaBeta, checkConstantAccel, checkCircularOrbit,
-  checkDopplerAberration, checkGravityAccel } = LIVE || {};
+  checkAberration, checkGravityAccel } = LIVE || {};
 
 const T = {
   en: {
@@ -536,40 +549,40 @@ const T = {
 const TOLWHY_RU = {
   closedForm: 'Обе стороны — замкнутые формулы в double; округление ~1e-16, у края допустимого β из-за вычитания 1-β² вырастает до ~5e-12 (измерено). 1e-9 даёт запас более чем в 100 раз.',
   orbit: 'Измеренная ошибка на круговых орбитах ~1e-16; итерация Ньютона универсальной переменной останавливается около 1e-12, а период восстанавливается из пройденного угла (acos теряет несколько знаков). 1e-9 оставляет запас, не пряча настоящий дефект.',
-  integrated: 'Собственное время накапливается интегратором корабля шаг за шагом (первый порядок по dt) — это ошибка интегрирования, а не округления. 1e-3 на 20000 геометрических шагов (измерено ~2e-4); сам γ точен в w-пространстве и держится 1e-9.',
+  integrated: 'Собственное время накапливается интегратором корабля шаг за шагом (первый порядок по dt) — это ошибка интегрирования, а не округления. 1e-3 на 20000 геометрических шагов (измерено 6e-6…5.5e-4, растёт с aτ/c; на пределе aτ/c=15 запас ≥1.8×, на проверенной сетке до 13 — ≥2×); сам γ точен в w-пространстве и держится 1e-9.',
   gravity: 'Одно деление и корень в double; 1e-12 — примерно на 4 порядка выше округления.',
 };
 
 const ROWS = {
-  gamma: { en: ['γ = γ(β)  vs  1/√(1−β²)', 'time dilation dτ/dt  vs  √(1−β²)'], ru: ['γ(β)  и  1/√(1−β²)', 'замедление времени dτ/dt  и  √(1−β²)'] },
+  gamma: { en: ['γ = γ(β)  vs  1/√(1−β²)'], ru: ['γ(β)  и  1/√(1−β²)'] },
   accel: { en: ['γ after proper time τ  vs  cosh(aτ/c)', 'proper time aboard  vs  τ (the burn is run for the coordinate time T=(c/a)·sinh(aτ/c))'],
            ru: ['γ после собственного времени τ  и  cosh(aτ/c)', 'собственное время на борту  и  τ (разгон идёт координатное время T=(c/a)·sinh(aτ/c))'] },
   orbit: { en: ['circular speed  vs  √(μ/r)', 'semi-major axis (orbitFromState)  vs  r', 'period via propagateUniversal  vs  2π√(r³/μ)'],
            ru: ['круговая скорость  и  √(μ/r)', 'большая полуось (orbitFromState)  и  r', 'период через propagateUniversal  и  2π√(r³/μ)'] },
-  doppler: { en: ['Doppler factor (head-on)  vs  √((1+β)/(1−β))', 'aberration cosθ′  vs  Lorentz boost of a photon 4-vector'],
-             ru: ['доплер-фактор (в лоб)  и  √((1+β)/(1−β))', 'аберрация cosθ′  и  буст 4-вектора фотона'] },
+  aberration: { en: ['aberrated cos (aberratedCos(cosθ′, β))  vs  Lorentz boost of a photon 4-vector'],
+             ru: ['аберрированный cos (aberratedCos(cosθ′, β))  и  буст 4-вектора фотона'] },
   gravity: { en: ['|g| at distance r  vs  μ/r²', 'direction (cos to the centre)  vs  1'], ru: ['|g| на расстоянии r  и  μ/r²', 'направление (cos к центру)  и  1'] },
 };
 
 const CARDS = [
   { id: 'gamma', fn: (x) => checkGammaBeta(x), tols: ['closedForm'],
-    title: { en: '1a · Lorentz factor and time dilation', ru: '1а · Лоренц-фактор и замедление времени' },
+    title: { en: '1a · Lorentz factor', ru: '1а · Лоренц-фактор' },
     desc: { en: 'relativity.js gammaFromV against 1/√(1−β²). Allowed: 0 ≤ β ≤ 0.999999.', ru: 'relativity.js gammaFromV против 1/√(1−β²). Допустимо: 0 ≤ β ≤ 0.999999.' },
     fields: [{ k: 'beta', l: { en: 'β = v/c', ru: 'β = v/c' }, min: 0, max: 0.999, step: 0.001, slider: true }],
     names: { 'beta-0p5': 'β=0.5', 'beta-0p99': 'β=0.99', 'beta-near-1': 'β=1−1e-6' } },
   { id: 'accel', fn: (x) => checkConstantAccel(x), tols: ['closedForm', 'integrated'],
     title: { en: '1b · Constant proper acceleration (live Ship integrator)', ru: '1б · Постоянное собственное ускорение (живой интегратор Ship)' },
-    desc: { en: 'Runs the real Ship.step in arcade mode with thrust along the velocity for the matching coordinate time (20000 steps) and reads γ and proper time. Allowed: 0 < a ≤ 1000 g, aτ/c ≤ 20.', ru: 'Гоняет настоящий Ship.step в arcade-режиме с тягой вдоль скорости нужное координатное время (20000 шагов) и читает γ и собственное время. Допустимо: 0 < a ≤ 1000 g, aτ/c ≤ 20.' },
-    fields: [{ k: 'aG', l: { en: 'a, in g', ru: 'a, в g' }, min: 0.01, max: 1000, step: 'any' }, { k: 'tauS', l: { en: 'proper time τ, s', ru: 'собственное время τ, с' }, min: 1, step: 'any' }],
+    desc: { en: 'Runs the real Ship.step in arcade mode with thrust along the velocity for the matching coordinate time (20000 steps) and reads γ and proper time. Allowed: 1e-6 ≤ a ≤ 1000 g, aτ/c ≤ 15 (beyond that ship.js loses precision in 1−β² when accumulating proper time — a false FAIL, not an overflow).', ru: 'Гоняет настоящий Ship.step в arcade-режиме с тягой вдоль скорости нужное координатное время (20000 шагов) и читает γ и собственное время. Допустимо: 1e-6 ≤ a ≤ 1000 g, aτ/c ≤ 15 (дальше ship.js теряет точность в 1−β² при накоплении собственного времени — ложный FAIL, а не переполнение).' },
+    fields: [{ k: 'aG', l: { en: 'a, in g', ru: 'a, в g' }, min: 0.000001, max: 1000, step: 'any' }, { k: 'tauS', l: { en: 'proper time τ, s', ru: 'собственное время τ, с' }, min: 1, step: 'any' }],
     names: { 'regress-1000g-gamma13': { en: '1000 g → γ≈13 (regression)', ru: '1000 g → γ≈13 (регресс)' }, '1g-one-year': { en: '1 g, 1 year', ru: '1 g, 1 год' }, '10g-one-day': { en: '10 g, 1 day', ru: '10 g, 1 сутки' } } },
   { id: 'orbit', fn: (x) => checkCircularOrbit(x), tols: ['closedForm', 'orbit'],
     title: { en: '2 · Circular orbit', ru: '2 · Круговая орбита' },
     desc: { en: 'orbits.js circularizeVelocity, orbitFromState and propagateUniversal against √(μ/r), a=r and 2π√(r³/μ). The period is measured from the angle swept in a quarter analytic period.', ru: 'orbits.js circularizeVelocity, orbitFromState и propagateUniversal против √(μ/r), a=r и 2π√(r³/μ). Период измеряется по углу, пройденному за четверть аналитического периода.' },
     fields: [{ k: 'r', l: { en: 'radius r, km', ru: 'радиус r, км' }, min: 0.001, step: 'any', scale: 1000 }, { k: 'mu', l: { en: 'μ = GM, m³/s²', ru: 'μ = GM, м³/с²' }, min: 1, step: 'any' }],
     names: { 'earth-leo': { en: 'Earth LEO', ru: 'Земля, НОО' }, 'earth-geo': { en: 'Earth GEO', ru: 'Земля, ГЕО' }, 'sun-1au': { en: 'Sun, 1 AU', ru: 'Солнце, 1 а.е.' } } },
-  { id: 'doppler', fn: (x) => checkDopplerAberration(x), tols: ['closedForm'],
-    title: { en: '3 · Doppler and aberration', ru: '3 · Доплер и аберрация' },
-    desc: { en: 'relativity.js dopplerFactor and aberratedCos against a Lorentz boost of a photon 4-vector. β>0 means approaching. This checks the JS function, not the GLSL shader mirror.', ru: 'relativity.js dopplerFactor и aberratedCos против буста 4-вектора фотона. β>0 — сближение. Проверяется JS-функция, а не GLSL-зеркало в шейдере.' },
+  { id: 'aberration', fn: (x) => checkAberration(x), tols: ['closedForm'],
+    title: { en: '3 · Aberration of light', ru: '3 · Аберрация света' },
+    desc: { en: 'relativity.js aberratedCos(cosθ′, β) against a Lorentz boost of a photon 4-vector (algebraically equivalent, so this catches sign and normalisation slips; it is not an independent derivation). β>0 means approaching. Checks the JS function, not the GLSL shader mirror. Doppler is not checked here.', ru: 'relativity.js aberratedCos(cosθ′, β) против буста 4-вектора фотона (алгебраически эквивалентно: ловит ошибки знака и нормировки, а не независимый вывод). β>0 — сближение. Проверяется JS-функция, а не GLSL-зеркало в шейдере. Доплер здесь не проверяется.' },
     fields: [{ k: 'beta', l: { en: 'β (closing speed / c)', ru: 'β (скорость сближения / c)' }, min: -0.999, max: 0.999, step: 0.001, slider: true }, { k: 'cosTheta', l: { en: 'cos θ′', ru: 'cos θ′' }, min: -1, max: 1, step: 0.01, slider: true }],
     names: { 'beta-0p6-side': 'β=0.6, cosθ′=0', 'beta-minus-0p9': 'β=−0.9, cosθ′=0.5', 'beta-0p99': 'β=0.99, cosθ′=0.95' } },
   { id: 'gravity', fn: (x) => checkGravityAccel(x), tols: ['gravity'],
@@ -641,14 +654,16 @@ function buildCard(lang, card) {
     if (!res.valid) {
       out.appendChild(el('div', 'live-reason', t.refused + ': ' + res.reason));
     } else {
-      const wrap = el('div', 'tablewrap'); const table = el('table');
+      const wrap = el('div', 'tablewrap'); const table = el('table', 'live-table');
       const head = el('tr'); t.cols.forEach((c) => head.appendChild(el('th', null, c))); table.appendChild(head);
       const labels = ROWS[card.id][lang];
       res.rows.forEach((r, i) => {
         const row = el('tr');
-        row.appendChild(el('td', null, labels[i]));
-        [fmt(r.sim), fmt(r.analytic), fmtErr(r.relErr), '≤ ' + fmtErr(r.tol)].forEach((x) => row.appendChild(el('td', 'mono', x)));
-        row.appendChild(el('td', r.pass ? 'pass' : 'fail', r.pass ? t.pass : t.fail));
+        const lab = el('td', null, labels[i]); lab.setAttribute('data-label', t.cols[0]); row.appendChild(lab);
+        [fmt(r.sim), fmt(r.analytic), fmtErr(r.relErr), '≤ ' + fmtErr(r.tol)].forEach((x, k) => {
+          const td = el('td', 'mono', x); td.setAttribute('data-label', t.cols[k + 1]); row.appendChild(td);
+        });
+        const vd = el('td', r.pass ? 'pass' : 'fail', r.pass ? t.pass : t.fail); vd.setAttribute('data-label', t.cols[5]); row.appendChild(vd);
         table.appendChild(row);
       });
       wrap.appendChild(table); out.appendChild(wrap);

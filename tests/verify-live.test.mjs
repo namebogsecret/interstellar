@@ -5,14 +5,15 @@
 //  - mutation: a wrong sim value must FAIL (verdict is not always-true);
 //  - degenerate inputs are REFUSED (valid:false + reason) — never NaN in a row.
 import assert from 'node:assert/strict';
+import { C, G0 } from '../js/physics/constants.js';
 import {
   verdict, checkGammaBeta, checkConstantAccel, checkCircularOrbit,
-  checkDopplerAberration, checkGravityAccel, PRESETS, TOL,
+  checkAberration, checkGravityAccel, PRESETS, TOL, TAU_OVER_C_MAX, A_MIN_G,
 } from '../js/verify/live.js';
 
 const CHECKS = {
   gamma: checkGammaBeta, accel: checkConstantAccel, orbit: checkCircularOrbit,
-  doppler: checkDopplerAberration, gravity: checkGravityAccel,
+  aberration: checkAberration, gravity: checkGravityAccel,
 };
 
 const rowsFinite = (res) => res.rows.every((r) =>
@@ -83,16 +84,54 @@ for (const beta of [NaN, -0.1, 1, 1.5, 1 - 1e-12, Infinity, undefined, '0.5x']) 
 }
 for (const mu of [0, -1, NaN]) refused(checkCircularOrbit, { r: 7e6, mu }, `orbit mu=${mu}`);
 for (const r of [0, -5, NaN, Infinity, 1e-9]) refused(checkCircularOrbit, { r, mu: 3.986004418e14 }, `orbit r=${r}`);
-for (const [aG, tauS] of [[0, 10], [-1, 10], [NaN, 10], [10, 0], [10, -3], [10, NaN], [1000, 1e9], [2000, 10]]) {
+for (const [aG, tauS] of [[0, 10], [-1, 10], [NaN, 10], [10, 0], [10, -3], [10, NaN], [1000, 1e9], [2000, 10], [1e-320, 10], [1e-7, 1e9], [5e-324, 1]]) {
   refused(checkConstantAccel, { aG, tauS }, `accel a=${aG} tau=${tauS}`);
 }
-refused(checkDopplerAberration, { beta: 1, cosTheta: 0 }, 'doppler beta=1');
-refused(checkDopplerAberration, { beta: NaN, cosTheta: 0 }, 'doppler beta NaN');
-refused(checkDopplerAberration, { beta: 0.5, cosTheta: 2 }, 'doppler cos>1');
-refused(checkDopplerAberration, { beta: 0.5, cosTheta: NaN }, 'doppler cos NaN');
+refused(checkAberration, { beta: 1, cosTheta: 0 }, 'aberration beta=1');
+refused(checkAberration, { beta: NaN, cosTheta: 0 }, 'aberration beta NaN');
+refused(checkAberration, { beta: 0.5, cosTheta: 2 }, 'aberration cos>1');
+refused(checkAberration, { beta: 0.5, cosTheta: NaN }, 'aberration cos NaN');
 refused(checkGravityAccel, { mu: 3.986e14, r: 0 }, 'gravity r=0');
 refused(checkGravityAccel, { mu: -1, r: 7e6 }, 'gravity mu<0');
 refused(checkGammaBeta, undefined, 'no input');
+// F6: r / mu so extreme that |a| underflows to denormals -> refused, never a false FAIL
+refused(checkGravityAccel, { r: 1e103, mu: 1e50 }, 'gravity r=1e103');
+refused(checkGravityAccel, { r: 1e30, mu: 1 }, 'gravity r=1e30');
+refused(checkGravityAccel, { r: 7e6, mu: 1e60 }, 'gravity mu=1e60');
+// F7: beta refusal states the real bound, not a misleading 'cannot resolve'
+{
+  const r = checkGammaBeta({ beta: 1 });
+  assert.ok(!/cannot resolve/i.test(r.reason), 'no misleading wording');
+  assert.ok(/1e-6|0\.999999/.test(r.reason), 'states the bound');
+}
+// F3: the dilation row was a tautology (1/gamma) -> gone
+assert.deepEqual(checkGammaBeta({ beta: 0.5 }).rows.map((r) => r.key), ['gamma'], 'gamma card has only the gamma row');
+// F1: dopplerFactor is dead code in the simulator -> not checked here
+assert.deepEqual(checkAberration({ beta: 0.5, cosTheta: 0.2 }).rows.map((r) => r.key), ['aberration']);
+{
+  // aberration must depend on the cos slider
+  const a = checkAberration({ beta: 0.6, cosTheta: 0 }).rows[0].analytic;
+  const b = checkAberration({ beta: 0.6, cosTheta: 0.5 }).rows[0].analytic;
+  assert.notEqual(a, b, 'analytic aberration depends on cosTheta');
+}
+// F2: limit a*tau/c <= 15 (proper-time precision loss in ship.js 1-beta^2 at gamma>~1e7), >=2x margin
+assert.equal(TAU_OVER_C_MAX, 15);
+assert.ok(A_MIN_G >= 1e-6);
+{
+  const tolI = TOL.integrated.value;
+  for (const aG of [0.01, 1, 1000]) {
+    for (const x of [0.1, 1, 5, 10, 14, 15]) {
+      const res = checkConstantAccel({ aG, tauS: x * C / (aG * G0) });
+      assert.equal(res.valid, true, `boundary a=${aG} x=${x} valid`);
+      const pt = res.rows.find((r) => r.key === 'properTime');
+      assert.ok(pt.relErr * 1.5 < tolI, `a=${aG} x=${x}: relErr ${pt.relErr} keeps margin vs ${tolI}`);
+      assert.equal(res.pass, true, `boundary a=${aG} x=${x} passes`);
+    }
+    // just beyond the limit -> refused (where ship.js 1-beta^2 loses precision)
+    refused(checkConstantAccel, { aG, tauS: 15.5 * C / (aG * G0) }, `accel x=15.5 a=${aG}`);
+    refused(checkConstantAccel, { aG, tauS: 19 * C / (aG * G0) }, `accel x=19 a=${aG}`);
+  }
+}
 
 // ── extremes that ARE allowed stay finite and PASS ─────────────────────────────
 for (const beta of [0, 1e-12, 1e-6, 0.5, 0.999, 1 - 1e-6]) {
@@ -104,14 +143,14 @@ for (const beta of [0, 1e-12, 1e-6, 0.5, 0.999, 1 - 1e-6]) {
 {
   const g0 = checkGammaBeta({ beta: 0 }).rows.find((r) => r.key === 'gamma');
   assert.equal(g0.sim, 1, 'beta=0 -> gamma exactly 1');
-  const res = checkDopplerAberration({ beta: 0, cosTheta: 0.3 });
-  assert.equal(res.pass, true, 'beta=0 doppler/aberration identity passes');
+  const res = checkAberration({ beta: 0, cosTheta: 0.3 });
+  assert.equal(res.pass, true, 'beta=0 aberration/aberration identity passes');
   for (const beta of [-0.999999, 0.999999, 0.9]) {
     for (const cosTheta of [-1, -0.5, 0, beta, 0.7, 1]) {
-      const r = checkDopplerAberration({ beta, cosTheta });
-      assert.equal(r.valid, true, `doppler beta=${beta} cos=${cosTheta} valid (${r.reason})`);
-      assert.ok(rowsFinite(r), `doppler beta=${beta} cos=${cosTheta} finite`);
-      assert.equal(r.pass, true, `doppler beta=${beta} cos=${cosTheta}: ${JSON.stringify(r.rows)}`);
+      const r = checkAberration({ beta, cosTheta });
+      assert.equal(r.valid, true, `aberration beta=${beta} cos=${cosTheta} valid (${r.reason})`);
+      assert.ok(rowsFinite(r), `aberration beta=${beta} cos=${cosTheta} finite`);
+      assert.equal(r.pass, true, `aberration beta=${beta} cos=${cosTheta}: ${JSON.stringify(r.rows)}`);
     }
   }
 }

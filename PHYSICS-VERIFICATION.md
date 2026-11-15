@@ -197,7 +197,15 @@ not cited here as ADR numbers to avoid conflating the two.
 - The interactive "Check it yourself" section compares the simulator's
   *implementation* with textbook closed forms. It does not compare those
   formulas with the real world, and it does not exercise the GLSL aberration
-  shader (only its JS mirror `aberratedCos`).
+  shader (only its JS mirror `aberratedCos`). Doppler in the shader
+  (`relativisticPass.js`, D = √(1−β²)/(1−β·cosθ′)) is **not** checked:
+  `relativity.js dopplerFactor` is not called by the simulator, so it was
+  removed from the section. The circular-speed row is partly tautological
+  (mainly checks direction normalisation) and the aberration analytic is
+  algebraically equivalent to the code (catches sign/normalisation slips, not
+  an independent derivation). Constant-acceleration checks are limited to
+  aτ/c ≤ 15: `ship.js:202` loses proper-time precision at γ ≳ 1e7 (found by
+  this check, not fixed — physics is frozen, owner's decision).
 - A green `tests/run.sh` is a **regression gate**, not a proof of absolute
   correctness: it proves the code still agrees with the reference formulas
   and tolerances above. Any formula this document doesn't list has no
