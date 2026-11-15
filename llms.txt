@@ -9,6 +9,7 @@ Time dilation and the twin paradox made tangible, relativistic aberration of sta
 
 - [How the physics is verified](https://space.podlevskikh.com/physics-verification.html) — the test suite, reference formulas and tolerances behind every physics claim above, honestly reported (no invented precision).
 - [How far can we fly in a lifetime?](https://space.podlevskikh.com/where-we-reach.html) — interactive calculator: constant proper acceleration, flip-and-burn; distance, Earth time and peak speed for a chosen ship time, and which nearby stars are reachable.
+- [Engines compared](https://space.podlevskikh.com/engines.html) — chemical, ion, nuclear-thermal, fusion (Daedalus) and solar sail on the same trip to Mars, Jupiter, Pluto, the solar gravitational lens and Alpha Centauri: flight time and delta-v for any payload (order-of-magnitude, no gravity), with cited sources.
 
 ## Related projects
 - [Physics Lab — 70 interactive physics simulations](https://physics.podlevskikh.com/)

@@ -239,6 +239,17 @@ reachable. Pure maths in `js/physics/flight.js`, star data in
 `js/data/stars.js`, tests in `tests/where-we-reach.test.mjs`. Kinematics only —
 no gravity, no fuel.
 
+## Engines compared
+
+[`engines.html`](engines.html) — five propulsion types (chemical RL10B-2, ion
+NEXT-C, nuclear-thermal NERVA, fusion Project Daedalus stage 1, 500×500 m solar
+sail) on the same trip (Mars, Jupiter, Pluto, solar gravitational lens at
+550 AU, Alpha Centauri) for a payload of 100 kg – 1000 t: flight time and Δv
+spent, with the Hohmann Δv as reference for planets. Straight line, no solar
+gravity, classical mechanics — an order-of-magnitude estimate, not a trajectory
+(stated on the page). Maths in `js/physics/engines.js`, cited data in
+`js/data/engines.js`, display helpers in `js/verify/engines-view.js`.
+
 ## Known limitations
 
 - **Transverse thrust** — the sim models the honest relativistic 4-force: a

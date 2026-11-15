@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Rocket engines compared — Interstellar</title>
+<meta name="description" content="Chemical, ion, nuclear-thermal, fusion and solar-sail propulsion compared on the same trip: flight time and delta-v to Mars, Jupiter, Pluto, the solar gravitational lens and Alpha Centauri for any payload mass (order-of-magnitude, no gravity)." />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="120x120" href="/favicon-120.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<style>
+  :root { --fg: #9fe7ff; --dim: #5b7c88; --bg: rgba(6, 14, 20, 0.66); --line: rgba(120, 200, 230, 0.18); --card: rgba(8, 16, 24, 0.92); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #05070c; }
+  body { color: #cfeefc; font: 14px/1.65 "SF Mono", "Cascadia Code", Menlo, Consolas, monospace; padding: 0 0 60px; overflow-x: hidden; }
+  a { color: #7fb3ff; }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 22px 0; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  header.top a.home { color: var(--dim); text-decoration: none; }
+  header.top a.home:hover { color: var(--fg); }
+  #langtoggle { display: flex; gap: 3px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+  #langtoggle span { cursor: pointer; padding: 3px 10px; border-radius: 5px; color: var(--dim); font-size: 12px; }
+  #langtoggle span.active { color: #eaffff; background: rgba(60,116,148,0.5); }
+  h1 { font-size: 22px; letter-spacing: 0.06em; color: #bfeeff; margin: 0 0 6px; overflow-wrap: anywhere; }
+  h2 { font-size: 15px; letter-spacing: 0.05em; color: #d7f6ff; margin: 30px 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  p { color: #b9d8e6; margin: 10px 0; }
+  b, strong { color: #eaffff; }
+  code { background: rgba(120,200,230,0.1); border-radius: 3px; padding: 1px 5px; color: #d7f6ff; overflow-wrap: anywhere; }
+  .note { background: rgba(40,90,120,0.18); border-left: 2px solid #4a8fb0; padding: 10px 14px; border-radius: 5px; color: #bfe6f4; margin: 14px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 14px 0; min-width: 0; }
+  .ctl { margin: 10px 0 14px; }
+  .ctl label { display: flex; justify-content: space-between; gap: 10px; color: var(--dim); font-size: 12px; }
+  .ctl label output { color: #eaffff; font-weight: 700; }
+  .ctl input[type=range] { width: 100%; min-width: 0; margin: 6px 0 2px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+  .presets button { background: rgba(60,116,148,0.25); color: #cfeefc; border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+  .presets button:hover, .presets button.on { background: rgba(60,116,148,0.55); }
+  .big { font-size: 15px; color: #eaffff; margin: 6px 0 10px; overflow-wrap: anywhere; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0; }
+  .stat { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0; }
+  .stat span { display: block; color: var(--dim); font-size: 11.5px; }
+  .stat b { font-size: 14px; overflow-wrap: anywhere; }
+  .warn { color: #ffd28a; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid rgba(120,200,230,0.1); overflow-wrap: anywhere; }
+  th { color: var(--dim); font-weight: 600; font-size: 11.5px; }
+  tr.yes td { background: rgba(95,227,161,0.07); }
+  .yes-mark { color: #5fe3a1; font-weight: 700; }
+  .no-mark { color: var(--dim); }
+  footer.bottom { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
+  @media (max-width: 480px) {
+    main { padding: 28px 14px 0; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    thead { display: none; }
+    tr { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; padding: 4px 8px; }
+    td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 10px; text-align: right; }
+    td:not([data-label])::before { content: none; }
+    td::before { content: attr(data-label); color: var(--dim); text-align: left; flex: 0 0 42%; }
+  }
+  [data-lang] { display: none; }
+  [data-lang].active { display: block; }
+  span[data-lang].active, b[data-lang].active { display: inline; }
+
+  .ctl select { width: 100%; background: rgba(8,16,24,0.92); color: #eaffff; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; margin-top: 6px; }
+  .chart { margin: 8px 0; }
+  .crow { margin: 9px 0; min-width: 0; }
+  .crow .lbl { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: #cfeefc; }
+  .crow .lbl em { font-style: normal; color: #eaffff; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+  .crow svg { display: block; width: 100%; height: 16px; margin-top: 3px; }
+  .axis { display: flex; justify-content: space-between; color: var(--dim); font-size: 10.5px; margin-top: 2px; }
+  .badge { display: inline-block; border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; margin: 1px 3px 1px 0; font-size: 11px; color: #ffd28a; white-space: nowrap; }
+  .badge.bad { color: #ff9c9c; }
+  .legend { color: var(--dim); font-size: 11.5px; margin: 4px 0; }
+  ul.src { padding-left: 18px; margin: 6px 0; } ul.src li { margin: 3px 0; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <a class="home" href="/">&larr; Interstellar</a>
+    <div id="langtoggle"><span data-set="en">EN</span><span data-set="ru">RU</span></div>
+  </header>
+
+<h1><span data-lang="en" class="active">ENGINES COMPARED</span><span data-lang="ru">СРАВНЕНИЕ ДВИГАТЕЛЕЙ</span></h1>
+
+<div data-lang="en" class="active">
+  <p>Same trip, five ways to fly it: chemical, ion, nuclear-thermal, fusion (Project Daedalus) and a solar sail. Choose a destination and payload mass &mdash; see how long each engine takes and how much velocity change (&Delta;v) it spends. An order-of-magnitude estimate, <b>not</b> a trajectory.</p>
+</div>
+<div data-lang="ru">
+  <p>Один и тот же перелёт пятью способами: химический, ионный, ядерно-тепловой, термоядерный (проект «Дедал») и солнечный парус. Выберите цель и массу полезной нагрузки &mdash; увидите, сколько летит каждый двигатель и сколько изменения скорости (&Delta;v) тратит. Это оценка порядков величин, <b>не</b> траектория.</p>
+</div>
+
+<div class="card">
+  <div class="ctl">
+    <label for="route"><span><span data-lang="en" class="active">Destination (from Earth's orbit)</span><span data-lang="ru">Цель (с орбиты Земли)</span></span></label>
+    <select id="route"></select>
+  </div>
+  <div class="ctl">
+    <label for="p"><span><span data-lang="en" class="active">Payload mass</span><span data-lang="ru">Масса полезной нагрузки</span></span><output id="pout"></output></label>
+    <input id="p" type="range" min="0" max="1000" step="1" value="333" />
+    <div class="presets" id="ppre">
+      <button data-kg="100">100 kg</button><button data-kg="1000">1 t</button><button data-kg="10000">10 t</button><button data-kg="100000">100 t</button><button data-kg="1000000">1000 t</button>
+    </div>
+  </div>
+  <div class="ctl">
+    <div class="presets" id="mode">
+      <button data-brake="1" class="on"><span data-lang="en" class="active">Stop at target</span><span data-lang="ru">С торможением</span></button>
+      <button data-brake="0"><span data-lang="en" class="active">Flyby</span><span data-lang="ru">Пролёт</span></button>
+    </div>
+  </div>
+</div>
+
+<h2><span data-lang="en" class="active">Flight time</span><span data-lang="ru">Время полёта</span></h2>
+<div class="card chart" id="chartTime" role="img" aria-label="Flight time by engine, log scale"></div>
+
+<h2><span data-lang="en" class="active">Velocity change spent (&Delta;v)</span><span data-lang="ru">Затраченное изменение скорости (&Delta;v)</span></h2>
+<div class="card chart" id="chartDv" role="img" aria-label="Delta-v by engine, log scale"></div>
+<div class="legend" id="hohLegend"></div>
+
+<h2><span data-lang="en" class="active">The numbers</span><span data-lang="ru">Цифры</span></h2>
+<div id="tableout"></div>
+
+<h2><span data-lang="en" class="active">Model and assumptions</span><span data-lang="ru">Модель и допущения</span></h2>
+<div data-lang="en" class="active">
+  <div class="note">
+    <p><b>Order of magnitude, not a trajectory.</b> A straight line over the distance, <b>no solar gravity</b>, classical mechanics (no relativity &mdash; flagged where speed exceeds 0.1&thinsp;c). Real missions use gravity assists and curved orbits.</p>
+    <p><b>Rocket engines</b> have constant thrust and a fixed &ldquo;typical stage&rdquo; (engine, tank, propellant); your payload is added. The whole &Delta;v budget is spent (Tsiolkovsky: &Delta;v = v<sub>e</sub>&middot;ln(m<sub>0</sub>/m<sub>dry</sub>)): accelerate to half, coast, brake with the other half. If the burns alone would overshoot the distance, the cruise speed is lowered so they fit exactly. &ldquo;Flyby&rdquo; spends it all on acceleration. Tank and propellant masses are illustrative round numbers, not a specific vehicle.</p>
+    <p><b>Solar sail</b> starts at rest at 1&nbsp;AU, thrust falls as 1/r&sup2;, sail efficiency 0.9, always a flyby. Its &ldquo;&Delta;v&rdquo; is the speed it reaches at the target. Nothing is carried, so its budget is zero.</p>
+    <p><b>Hohmann reference</b> (planets only): the minimum heliocentric &Delta;v between circular orbits &mdash; the number real planetary missions are measured against, including gravity.</p>
+    <p>The ion engine's time can beat chemical on long routes and lose on short ones: low thrust needs a long burn. &ldquo;Unreachable&rdquo; means the engine has no &Delta;v budget at all.</p>
+  </div>
+</div>
+<div data-lang="ru">
+  <div class="note">
+    <p><b>Порядок величин, не траектория.</b> Прямая линия на заданное расстояние, <b>без гравитации Солнца</b>, классическая механика (без релятивизма &mdash; помечено там, где скорость выше 0,1&thinsp;c). Настоящие миссии используют гравитационные манёвры и криволинейные орбиты.</p>
+    <p><b>Реактивные двигатели</b> имеют постоянную тягу и фиксированную «типовую ступень» (двигатель, бак, топливо); сверху добавляется ваша нагрузка. Тратится весь бюджет &Delta;v (Циолковский: &Delta;v = v<sub>e</sub>&middot;ln(m<sub>0</sub>/m<sub>сух</sub>)): разгон на половину, полёт по инерции, торможение второй половиной. Если одни только участки тяги перелетели бы дистанцию, крейсерская скорость уменьшается, чтобы они уложились ровно. «Пролёт» тратит всё на разгон. Массы баков и топлива &mdash; условные круглые числа, не конкретная машина.</p>
+    <p><b>Солнечный парус</b> стартует с покоя на 1&nbsp;а.е., тяга падает как 1/r&sup2;, эффективность паруса 0,9, всегда пролёт. Его «&Delta;v» &mdash; скорость, набранная к цели. Рабочего тела нет, поэтому бюджет равен нулю.</p>
+    <p><b>Эталон Хомана</b> (только планеты): минимальное гелиоцентрическое &Delta;v между круговыми орбитами &mdash; мерка настоящих межпланетных миссий, с учётом гравитации.</p>
+    <p>Ионный двигатель выигрывает у химического на длинных маршрутах и проигрывает на коротких: малой тяге нужен долгий разгон. «Недостижимо» &mdash; у двигателя вообще нет бюджета &Delta;v.</p>
+  </div>
+</div>
+
+<h2><span data-lang="en" class="active">Data sources</span><span data-lang="ru">Источники данных</span></h2>
+<div id="srcout"></div>
+
+<p>
+  <a href="where-we-reach.html"><span data-lang="en" class="active">How far in a lifetime (relativistic calculator)</span><span data-lang="ru">Куда долетим за жизнь (релятивистский калькулятор)</span></a> &middot;
+  <a href="/"><span data-lang="en" class="active">Fly it yourself in the simulator</span><span data-lang="ru">Пролететь самому в симуляторе</span></a> &middot;
+  <a href="physics-verification.html"><span data-lang="en" class="active">How the physics is verified</span><span data-lang="ru">Как проверяется физика</span></a>
+</p>
+
+<footer class="bottom">
+  <span data-lang="en" class="active">Formulas: &Delta;v = v<sub>e</sub>&middot;ln(m<sub>0</sub>/m<sub>dry</sub>), v<sub>e</sub> = I<sub>sp</sub>&middot;g<sub>0</sub>; burn time t = v<sub>e</sub>&middot;m<sub>0</sub>(1 &minus; e<sup>&minus;&Delta;v/v<sub>e</sub></sup>)/F; sail a = &eta;&middot;2S/c&middot;A/m &middot;(r<sub>0</sub>/r)&sup2;.</span>
+  <span data-lang="ru">Формулы: &Delta;v = v<sub>e</sub>&middot;ln(m<sub>0</sub>/m<sub>сух</sub>), v<sub>e</sub> = I<sub>уд</sub>&middot;g<sub>0</sub>; время работы t = v<sub>e</sub>&middot;m<sub>0</sub>(1 &minus; e<sup>&minus;&Delta;v/v<sub>e</sub></sup>)/F; парус a = &eta;&middot;2S/c&middot;A/m &middot;(r<sub>0</sub>/r)&sup2;.</span>
+</footer>
+</main>
+
+<script type="module">
+import { compareEngines, hohmann, ENGINES, ROUTES } from './js/physics/engines.js';
+import { fmtTime, fmtDv, fmtMass, barFraction, sliderToPayload, payloadToSlider } from './js/verify/engines-view.js';
+
+const T = {
+  en: { engine: 'Engine', time: 'Flight time', dv: 'Δv spent', budget: 'Δv budget', cruise: 'Cruise speed', unreach: 'unreachable',
+    flyby: 'flyby', relativistic: 'classical estimate inaccurate (>0.1 c)', noBudget: 'no Δv budget', hoh: 'Hohmann reference (planets, with gravity)', hohT: 'Hohmann transfer time',
+    src: 'Engines', srcR: 'Routes', ax: 'log scale', axT: ['1 day', '1 year', '1000 years', '1 Myr'], axD: ['100 m/s', '10 km/s', '1000 km/s', '100 000 km/s'], plus: '(sail: speed at target)' },
+  ru: { engine: 'Двигатель', time: 'Время полёта', dv: 'Затрачено Δv', budget: 'Бюджет Δv', cruise: 'Крейсерская скорость', unreach: 'недостижимо',
+    flyby: 'пролёт', relativistic: 'классика неточна (>0,1 c)', noBudget: 'нет бюджета Δv', hoh: 'Эталон Хомана (планеты, с гравитацией)', hohT: 'Время перелёта по Хоману',
+    src: 'Двигатели', srcR: 'Маршруты', ax: 'лог. шкала', axT: ['1 сутки', '1 год', '1000 лет', '1 млн лет'], axD: ['100 м/с', '10 км/с', '1000 км/с', '100 000 км/с'], plus: '(парус: скорость у цели)' },
+};
+const COLORS = { chemical: '#ff9c6b', ion: '#7fb3ff', ntr: '#5fe3a1', fusion: '#ffd28a', sail: '#d9a6ff' };
+const T_MIN = 1e5, T_MAX = 1e14;   // s (about 1 day .. 3 Myr)
+const V_MIN = 1e2, V_MAX = 1e8;    // m/s
+
+let lang = 'en';
+try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en' ? s : ((navigator.language || 'en').slice(0, 2) === 'ru' ? 'ru' : 'en'); } catch (e) {}
+let brake = true;
+
+const $ = (id) => document.getElementById(id);
+const pIn = $('p'), routeSel = $('route');
+pIn.value = Math.round(payloadToSlider(1000));
+routeSel.innerHTML = ROUTES.map((r) => '<option value="' + r.id + '"></option>').join('');
+const engById = Object.fromEntries(ENGINES.map((e) => [e.id, e]));
+
+function badges(row, t) {
+  const b = [];
+  if (!Number.isFinite(row.time)) b.push('<span class="badge bad">' + t.unreach + '</span>');
+  for (const f of row.flags) if (f !== 'noBudget') b.push('<span class="badge">' + t[f] + '</span>');
+  return b.join('');
+}
+
+function chart(rows, key, min, max, fmtVal, hohLine, t, ticks) {
+  const lines = [0.0, 1 / 3, 2 / 3, 1].map((f) => '<line x1="' + (f * 100) + '%" x2="' + (f * 100) + '%" y1="0" y2="16" stroke="rgba(120,200,230,0.18)" />').join('');
+  const hoh = hohLine == null ? '' : '<line x1="' + (barFraction(hohLine, min, max) * 100) + '%" x2="' + (barFraction(hohLine, min, max) * 100) + '%" y1="0" y2="16" stroke="#ff6b8a" stroke-width="2" />';
+  return rows.map((r) => {
+    const v = r[key], f = barFraction(v, min, max), name = engById[r.id].name[lang];
+    const val = Number.isFinite(v) ? fmtVal(v) : t.unreach;
+    return '<div class="crow"><div class="lbl"><span>' + name + '</span><em>' + val + '</em></div>' +
+      '<svg width="100%" height="16" aria-hidden="true">' +
+      '<rect class="track" x="0" y="0" width="100%" height="16" fill="rgba(120,200,230,0.06)" />' + lines +
+      '<rect class="bar" x="0" y="2" width="' + (f * 100) + '%" height="12" fill="' + COLORS[r.id] + '" opacity="' + (Number.isFinite(v) ? 0.85 : 0.3) + '" />' + hoh + '</svg></div>';
+  }).join('') + '<div class="axis">' + ticks.map((x) => '<span>' + x + '</span>').join('') + '</div>';
+}
+
+function render() {
+  const t = T[lang];
+  const kg = sliderToPayload(+pIn.value), route = ROUTES.find((r) => r.id === routeSel.value) || ROUTES[0];
+  routeSel.querySelectorAll('option').forEach((o, i) => { o.textContent = ROUTES[i].name[lang]; });
+  $('pout').textContent = fmtMass(kg, lang);
+  document.querySelectorAll('#ppre button').forEach((b) => b.classList.toggle('on', Math.abs(+b.dataset.kg - kg) / kg < 0.03));
+  document.querySelectorAll('#mode button').forEach((b) => b.classList.toggle('on', (b.dataset.brake === '1') === brake));
+
+  const rows = compareEngines(route.id, kg, { brake });
+  const hoh = route.hohmann ? hohmann(route.r0, route.rTo) : null;
+  $('chartTime').innerHTML = chart(rows, 'time', T_MIN, T_MAX, (v) => fmtTime(v, lang), null, t, t.axT);
+  $('chartDv').innerHTML = chart(rows, 'dvUsed', V_MIN, V_MAX, (v) => fmtDv(v, lang), hoh && hoh.dv, t, t.axD);
+  $('hohLegend').innerHTML = hoh
+    ? '<span style="color:#ff6b8a">&#9632;</span> ' + t.hoh + ': Δv ' + fmtDv(hoh.dv, lang) + ', ' + t.hohT + ' ' + fmtTime(hoh.t, lang) + ' &middot; ' + t.ax + ' &middot; ' + t.plus
+    : t.ax + ' &middot; ' + t.plus;
+
+  const body = rows.map((r) =>
+    '<tr><td data-label="' + t.engine + '">' + engById[r.id].name[lang] + '</td>' +
+    '<td data-label="' + t.time + '">' + (Number.isFinite(r.time) ? fmtTime(r.time, lang) : t.unreach) + '</td>' +
+    '<td data-label="' + t.dv + '">' + fmtDv(r.dvUsed, lang) + '</td>' +
+    '<td data-label="' + t.budget + '">' + (r.id === 'sail' ? '—' : fmtDv(r.dvBudget, lang)) + '</td>' +
+    '<td data-label="' + t.cruise + '">' + fmtDv(r.vCruise, lang) + '</td>' +
+    '<td>' + badges(r, t) + '</td></tr>').join('');
+  $('tableout').innerHTML = '<table><thead><tr><th>' + t.engine + '</th><th>' + t.time + '</th><th>' + t.dv + '</th><th>' + t.budget + '</th><th>' + t.cruise + '</th><th></th></tr></thead><tbody>' + body + '</tbody></table>';
+
+  const li = (s) => '<li><a href="' + s.url + '" target="_blank" rel="noopener">' + s.title + '</a></li>';
+  const grp = (title, items) => '<p><b>' + title + '</b></p><ul class="src">' + items.map((it) =>
+    '<li>' + it.name[lang] + '<ul class="src">' + it.sources.map(li).join('') + '</ul></li>').join('') + '</ul>';
+  $('srcout').innerHTML = grp(t.src, ENGINES) + grp(t.srcR, ROUTES);
+}
+
+function applyLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  document.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el.getAttribute('data-lang') === l));
+  document.querySelectorAll('#langtoggle span').forEach((el) => el.classList.toggle('active', el.getAttribute('data-set') === l));
+  render();
+}
+pIn.addEventListener('input', render);
+routeSel.addEventListener('change', render);
+$('ppre').addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (b) { pIn.value = Math.round(payloadToSlider(+b.dataset.kg)); render(); } });
+$('mode').addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (b) { brake = b.dataset.brake === '1'; render(); } });
+$('langtoggle').addEventListener('click', (ev) => {
+  const s = ev.target.closest('span'); if (!s) return;
+  const l = s.getAttribute('data-set'); applyLang(l);
+  try { localStorage.setItem('iss_lang', l); } catch (e) {}
+});
+applyLang(lang);
+</script>
+</body>
+</html>
