@@ -314,8 +314,11 @@ for (const id of REACTIVE) for (const rid of ROUTE_IDS) for (const p of [100, 1e
     near(r.time, ph.t + (D - ph.s) / (B / div), 1e-9, 'huge thrust: time = burns + coast');
     near(r.time, D / r.vCruise, 1e-3, 'huge thrust: time ~ D / v_c');
   }
-  // (c) more propellant (bigger budget) never slower, for both modes and a ladder of D
-  for (const brake of [true, false]) for (const D of [1e7, 1e9, 1e11, 1e13]) {
+  // (c) more propellant (bigger budget) never slower — ONLY in the coast-dominated regime.
+  // Contract fix 2026-11-16: at fixed thrust extra propellant is extra mass, so on a short D
+  // (burn phases squeezed into D) a heavier tank lowers acceleration and the trip gets SLOWER.
+  // That is physics, not a bug — pinned explicitly in (c2) below.
+  for (const brake of [true, false]) for (const D of [1e11, 1e13]) {
     let prev = Infinity, prevB = 0;
     for (const pm of [2e3, 5e3, 1e4, 2e4, 4e4, 8e4]) {
       const e = withEngine(base, { propMass: pm });
@@ -325,6 +328,12 @@ for (const id of REACTIVE) for (const rid of ROUTE_IDS) for (const p of [100, 1e
       ok(r.time <= prev * (1 + 1e-9), `more budget => time non-increasing (D=${D}, brake=${brake}, prop=${pm})`);
       prev = r.time; prevB = B;
     }
+  }
+  // (c2) short D: more propellant can be slower (mass penalty at fixed thrust)
+  {
+    const tLight = propulsiveTrip(withEngine(base, { propMass: 4e4 }), 1000, 1e7, { brake: true }).time;
+    const tHeavy = propulsiveTrip(withEngine(base, { propMass: 8e4 }), 1000, 1e7, { brake: true }).time;
+    ok(tHeavy > tLight, 'short D: heavier tank at fixed thrust is slower (squeezed regime)');
   }
   // (d) noBudget
   const dead = withEngine(base, { propMass: 0 });
