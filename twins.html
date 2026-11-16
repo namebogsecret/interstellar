@@ -106,9 +106,11 @@
   <div class="ctl">
     <label for="mode"><span><span data-lang="en" class="active">Flight mode</span><span data-lang="ru">Режим полёта</span></span></label>
     <select id="mode">
-      <option value="cruise" data-en="Cruise: instant boost, constant speed" data-ru="Крейсер: мгновенный разгон, постоянная скорость">Cruise</option>
-      <option value="accel" data-en="Constant acceleration (accelerate, brake, return)" data-ru="Постоянное ускорение (разгон, торможение, возврат)">Accel</option>
+      <option value="cruise" data-en="Cruise" data-ru="Крейсер">Cruise</option>
+      <option value="accel" data-en="Constant thrust" data-ru="Разгон 1g">Accel</option>
     </select>
+    <div class="legend active" data-lang="en">Cruise: instant boost to a constant speed, instant turnaround. Constant thrust: constant proper acceleration (default 1&nbsp;g).</div>
+    <div class="legend" data-lang="ru">Крейсер: мгновенный разгон до постоянной скорости и мгновенный разворот. Разгон: постоянное собственное ускорение (по умолчанию 1&nbsp;g).</div>
   </div>
   <div class="ctl" id="beta-block">
     <label for="beta"><span><span data-lang="en" class="active">Cruise speed &beta; = v/c</span><span data-lang="ru">Крейсерская скорость &beta; = v/c</span></span><output id="beta-val"></output></label>
@@ -153,7 +155,7 @@
   <div class="note">
     <p><b>Moving clocks run slow.</b> Seen from Earth, the ship's clock ticks at 1/&gamma; of the Earth rate, where &gamma; = 1/&radic;(1&minus;&beta;<sup>2</sup>). At &beta; = 0.99, &gamma; &asymp; 7.09: a 10-year Earth round trip is only about 1.4 years on the ship.</p>
     <p><b>Why it is not symmetric.</b> Each twin sees the other's clock slow while both move steadily, so it looks like a paradox. But only the traveller turns around: they change inertial frame, and their &ldquo;now&rdquo; for Earth jumps ahead. The straight world line (Earth) is the longest in proper time; the bent one (ship) is shorter.</p>
-    <p><b>Cruise is an idealisation.</b> Instant boosts would crush a body. The &ldquo;constant acceleration&rdquo; mode is more realistic: constant proper acceleration (1&nbsp;g feels like home) for a quarter of the trip, then braking, turning, and braking again at Earth, with hyperbolic-motion formulas &tau; = (c/a)&middot;asinh(at/c).</p>
+    <p><b>Cruise is an idealisation.</b> Instant boosts would crush a body. The &ldquo;constant thrust&rdquo; mode is more realistic: constant proper acceleration (1&nbsp;g feels like home) in four phases of <b>equal duration by Earth's clock</b>: accelerate, brake to a stop at the farthest point, accelerate back toward Earth, brake at Earth. The &ldquo;turnaround&rdquo; is just the sign of the acceleration flipping, not a separate phase. Hyperbolic-motion formulas &tau; = (c/a)&middot;asinh(at/c).</p>
     <p>Related: <a href="engines.html">engines compared</a>, <a href="where-we-reach.html">how far in a lifetime</a>, <a href="/">the simulator</a>.</p>
   </div>
 </div>
@@ -161,7 +163,7 @@
   <div class="note">
     <p><b>Движущиеся часы идут медленнее.</b> С Земли часы корабля тикают в 1/&gamma; от земной скорости, &gamma; = 1/&radic;(1&minus;&beta;<sup>2</sup>). При &beta; = 0,99 &gamma; &asymp; 7,09: 10 земных лет туда-обратно &mdash; это лишь около 1,4 года на корабле.</p>
     <p><b>Почему это несимметрично.</b> Пока оба движутся равномерно, каждый видит часы другого замедленными &mdash; отсюда «парадокс». Но разворачивается только путешественник: он меняет инерциальную систему отсчёта, и его «сейчас» для Земли перескакивает вперёд. Прямая мировая линия (Земля) даёт максимум собственного времени, ломаная (корабль) &mdash; меньше.</p>
-    <p><b>Крейсер &mdash; идеализация.</b> Мгновенные разгоны уничтожили бы тело. Режим «постоянное ускорение» реалистичнее: собственное ускорение постоянно (1&nbsp;g &mdash; как дома) четверть пути, затем торможение, разворот и торможение у Земли; формулы гиперболического движения &tau; = (c/a)&middot;asinh(at/c).</p>
+    <p><b>Крейсер &mdash; идеализация.</b> Мгновенные разгоны уничтожили бы тело. Режим «разгон» реалистичнее: собственное ускорение постоянно (1&nbsp;g &mdash; как дома), четыре фазы <b>равной длительности по земным часам</b>: разгон, торможение до остановки в дальней точке, разгон к Земле, торможение у Земли. «Разворот» &mdash; это смена знака ускорения, а не отдельная фаза. Формулы гиперболического движения &tau; = (c/a)&middot;asinh(at/c).</p>
     <p>См. также: <a href="engines.html">сравнение двигателей</a>, <a href="where-we-reach.html">куда долетим за жизнь</a>, <a href="/">симулятор</a>.</p>
   </div>
 </div>
@@ -181,8 +183,8 @@
 import { cruiseTrip, accelTrip, clocksAt, sampleTrip } from './js/physics/twins.js';
 
 const T = {
-  en: { yr: 'yr', ly: 'ly', c: 'c', ship: 'ship clock τ', earth: 'Earth clock t', axT: 'Earth time t, years', axTau: 'ship time τ, years', axX: 'distance x, ly', now: 'now', out: 'outbound', back: 'return' },
-  ru: { yr: 'г.', ly: 'св. л.', c: 'c', ship: 'часы корабля τ', earth: 'часы Земли t', axT: 'земное время t, годы', axTau: 'время корабля τ, годы', axX: 'расстояние x, св. годы', now: 'сейчас', out: 'туда', back: 'обратно' },
+  en: { vs: 'vs', aria1: 'Ship proper time against Earth time', aria2: 'Distance from Earth against Earth time', yr: 'yr', ly: 'ly', c: 'c', ship: 'ship clock τ', earth: 'Earth clock t', axT: 'Earth time t, years', axTau: 'ship time τ, years', axX: 'distance x, ly', now: 'now', out: 'outbound', back: 'return' },
+  ru: { vs: 'против', aria1: 'Собственное время корабля против земного времени', aria2: 'Расстояние от Земли против земного времени', yr: 'г.', ly: 'св. л.', c: 'c', ship: 'часы корабля τ', earth: 'часы Земли t', axT: 'земное время t, годы', axTau: 'время корабля τ, годы', axX: 'расстояние x, св. годы', now: 'сейчас', out: 'туда', back: 'обратно' },
 };
 
 let lang = 'en';
@@ -285,9 +287,13 @@ function render() {
   $('out-gamma').textContent = 'γ = ' + sig(trip.gamma);
   $('out-earth').textContent = sig(now.t) + ' ' + t.yr;
   $('out-ship').textContent = sig(now.tau) + ' ' + t.yr;
-  $('out-gap').textContent = sig(trip.ageGapYears) + ' ' + t.yr + ' (' + sig(trip.shipYears) + ' ' + 'vs' + ' ' + sig(trip.earthYears) + ')';
+  $('out-gap').textContent = sig(trip.ageGapYears) + ' ' + t.yr + ' (' + sig(trip.shipYears) + ' ' + t.vs + ' ' + sig(trip.earthYears) + ')';
   $('out-dist').textContent = sig(trip.turnaroundLy) + ' ' + t.ly;
-  $('out-maxv').textContent = num(trip.maxBeta, 4) + ' ' + t.c;
+  const eps = 1 - trip.maxBeta;
+  $('out-maxv').textContent = trip.maxBeta > 0.999 && eps > 1e-12
+    ? num(trip.maxBeta, Math.min(12, Math.ceil(-Math.log10(eps)) + 1)) + ' ' + t.c + ' (1−β = ' + (lang === 'ru' ? eps.toExponential(1).replace('.', ',') : eps.toExponential(1)) + ')'
+    : trip.maxBeta > 0.999 ? 'c − ε' : num(trip.maxBeta, 4) + ' ' + t.c;
+  $('twins-chart').setAttribute('aria-label', t.aria1); $('twins-x').setAttribute('aria-label', t.aria2);
   $('out-x').textContent = sig(now.x) + ' ' + t.ly;
 
   const pts = sampleTrip(trip, 200);
@@ -300,7 +306,7 @@ function render() {
     ],
     mark: { x: now.t, y: now.tau }, xLabel: t.axT, yLabel: t.axTau,
   });
-  const xMax = Math.max(1e-9, trip.turnaroundLy);
+  const xMax = trip.turnaroundLy < 1e-6 ? 1 : trip.turnaroundLy;
   plot($('twins-x'), {
     xMax: T0, yMax: xMax,
     series: [{ color: '#5fe3a1', label: 'x(t)', pts: pts.map((p) => [p.t, p.x]) }],
