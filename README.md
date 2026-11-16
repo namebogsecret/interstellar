@@ -224,7 +224,7 @@ orbital flight is untouched — then blooms dramatically as you burn toward *c*.
 > bodies don't perturb each other — appropriate simplifications for a real-time
 > sim. The *kinematics* of motion near light speed are fully special-relativistic.
 
-**How this is checked:** the claims above are covered by a 48-file regression
+**How this is checked:** the claims above are covered by a 49-file regression
 suite (`bash tests/run.sh`) with explicit reference formulas and tolerances —
 see [`PHYSICS-VERIFICATION.md`](PHYSICS-VERIFICATION.md) for exactly what is,
 and isn't, gated (also published at
@@ -249,6 +249,14 @@ spent, with the Hohmann Δv as reference for planets. Straight line, no solar
 gravity, classical mechanics — an order-of-magnitude estimate, not a trajectory
 (stated on the page). Maths in `js/physics/engines.js`, cited data in
 `js/data/engines.js`, display helpers in `js/verify/engines-view.js`.
+
+## Twin paradox in transit
+
+[`twins.html`](twins.html) — a round trip for the travelling twin: either
+instant boost to a cruise speed β, or four phases of constant proper
+acceleration (hyperbolic motion). Shows both clocks along the way, the age gap
+at the finish, the farthest point and top speed. Maths in
+`js/physics/twins.js`.
 
 ## Known limitations
 
