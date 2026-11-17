@@ -67,10 +67,8 @@ for (const g of gs) for (const d of ds) {
     const m = `${k} g=${g} d=${d}`;
     near(tr.peakGamma ** 2 - (tr.peakBeta * tr.peakGamma) ** 2, 1, 1e-9, 'gamma^2 - beta^2 gamma^2 = 1 ' + m);
     ok(tr.peakBeta > 0 && tr.peakBeta < 1, 'beta in (0,1) ' + m);
-    ok(tr.t >= d / 1, 't_earth >= d (c=1) ' + m);
     ok(tr.t > d, 't_earth strictly > d ' + m);
     ok(tr.tau <= tr.t && tr.tau > 0, 'tau <= t ' + m);
-    ok(tr.t * tr.peakBeta <= tr.t, 'sanity');
   }
   ok(st.flyby.t < st.flip.t && st.flyby.tau < st.flip.tau, `flyby < flip both clocks g=${g} d=${d}`);
 }
@@ -157,7 +155,8 @@ for (const g of [1e-6, 1e-3, 1e3, 1e6]) for (const d of [4.2465, 5.963]) for (co
 }
 { // sample curve
   const tr = flipAndBurn({ accelG: 1, d: 4.2465 }), s = sampleBeta(tr, 100);
-  ok(s.length === 101 && s[0].t === 0 && near(s[100].t, tr.t, 1e-12, 'last t') === undefined, 'sample endpoints');
+  ok(s.length === 101 && s[0].t === 0, 'sample length and start');
+  near(s[100].t, tr.t, 1e-12, 'sample last t');
   ok(s.every((p) => p.beta >= 0 && p.beta < 1 && Number.isFinite(p.t)), 'sample betas valid');
   near(Math.max(...s.map((p) => p.beta)), tr.peakBeta, 1e-9, 'sampled max = peak');
 }

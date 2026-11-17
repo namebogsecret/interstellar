@@ -204,7 +204,7 @@ function ruYears(s) {
   return m100 >= 11 && m100 <= 14 ? 'лет' : m10 === 1 ? 'год' : m10 >= 2 && m10 <= 4 ? 'года' : 'лет';
 }
 function fmtYears(v) { const n = sig(v); return n + ' ' + (lang === 'ru' ? ruYears(n) : T.en.yr); }
-function fmtG(g) { return loc(g >= 1 ? g.toFixed(g >= 10 ? 1 : 2) : g.toPrecision(2)) + ' g'; }
+function fmtG(g) { return loc(g.toPrecision(3)) + ' g'; } // 3 significant digits everywhere
 
 let accelG = 1;
 let target = 'proxima';
@@ -249,6 +249,7 @@ function render() {
   const sel = all.find((r) => r.t.id === target);
   $('accel-val').textContent = fmtG(accelG);
   $('accel').setAttribute('aria-valuetext', fmtG(accelG));
+  document.querySelectorAll('#apre button').forEach((b) => b.classList.toggle('on', Math.abs(accelG / +b.dataset.g - 1) < 1e-3));
   $('sel-name').textContent = sel.t[lang];
   $('sel-dist').textContent = fmtLy(sel.t.ly) + ' ' + t.ly;
   for (const x of TARGETS) {
