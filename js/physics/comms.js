@@ -112,21 +112,31 @@ export function commsState({ d, receding = true, f0, ...b }) {
   };
 }
 
-// Human-readable duration: picks the largest unit in which the value is >= 1.
+// Decimals the page shows for a value of magnitude a (4 significant digits at most).
+export function sigDecimals(a) { return a >= 1000 ? 0 : a >= 100 ? 1 : a >= 10 ? 2 : a >= 1 ? 3 : 4; }
+
+// Human-readable duration: picks the largest unit in which the value is >= 1. A value that
+// would be DISPLAYED as the next unit's size (59.999 s -> "60.00 s") is promoted ("1.00 min").
 export function humanDuration(seconds) {
   if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds < 0) throw new RangeError('seconds must be finite and >= 0');
   const steps = [['yr', YEAR], ['d', DAY], ['h', 3600], ['min', 60], ['s', 1]];
-  for (const [unit, size] of steps) if (seconds >= size) return { value: seconds / size, unit };
-  return { value: seconds, unit: 's' };
+  let i = steps.findIndex(([, size]) => seconds >= size);
+  if (i < 0) return { value: seconds, unit: 's' };
+  while (i > 0) {
+    const v = seconds / steps[i][1], ratio = steps[i - 1][1] / steps[i][1];
+    if (+v.toFixed(sigDecimals(v)) >= ratio) i--; else break;
+  }
+  return { value: seconds / steps[i][1], unit: steps[i][0] };
 }
 
-// Log slider helpers: s in [0, 1000].
-export function distFromSlider(s, lo = AU, hi = 100 * LY) {
+// Log slider helpers: s in [0, 1000]. The distance scale runs from the Moon to 100 light-years.
+export const DIST_MIN = 3.844e8;
+export function distFromSlider(s, lo = DIST_MIN, hi = 100 * LY) {
   if (!Number.isFinite(s)) throw new RangeError('slider must be finite');
   const f = Math.min(1, Math.max(0, s / 1000));
   return lo * Math.pow(hi / lo, f);
 }
-export function sliderFromDist(d, lo = AU, hi = 100 * LY) {
+export function sliderFromDist(d, lo = DIST_MIN, hi = 100 * LY) {
   checkDist(d);
   return Math.min(1000, Math.max(0, 1000 * Math.log(d / lo) / Math.log(hi / lo)));
 }

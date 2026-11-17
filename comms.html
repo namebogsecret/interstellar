@@ -113,7 +113,7 @@
   <div class="ctl">
     <label for="dist"><span><span data-lang="en" class="active">Distance from Earth</span><span data-lang="ru">Расстояние от Земли</span></span><output id="dist-val"></output></label>
     <input id="dist" type="range" min="0" max="1000" step="1" value="700" />
-    <div class="legend"><span data-lang="en" class="active">Log scale: 1 AU to 100 light-years.</span><span data-lang="ru">Логарифмическая шкала: от 1 а.е. до 100 световых лет.</span></div>
+    <div class="legend"><span data-lang="en" class="active">Log scale: from the Moon to 100 light-years.</span><span data-lang="ru">Логарифмическая шкала: от Луны до 100 световых лет.</span></div>
   </div>
   <div class="ctl">
     <label for="beta"><span><span data-lang="en" class="active">Ship speed &beta; = v/c</span><span data-lang="ru">Скорость корабля &beta; = v/c</span></span><output id="beta-val"></output></label>
@@ -190,12 +190,12 @@
 </main>
 
 <script type="module">
-import { CARRIERS, TARGETS, commsState, humanDuration, distFromSlider, sliderFromDist, epsFromSlider, sliderFromEps } from './js/physics/comms.js';
+import { CARRIERS, TARGETS, commsState, humanDuration, sigDecimals, distFromSlider, sliderFromDist, epsFromSlider, sliderFromEps } from './js/physics/comms.js';
 import { AU, LY } from './js/physics/constants.js';
 
 const T = {
-  en: { units: { s: 's', min: 'min', h: 'h', d: 'days', yr: 'years' }, red: 'redshift', blue: 'blueshift', none: 'none', custom: 'Custom distance', ly: 'ly', au: 'AU', km: 'km', planets: 'Solar system', stars: 'Stars' },
-  ru: { units: { s: 'с', min: 'мин', h: 'ч', d: 'сут', yr: 'лет' }, red: 'красное смещение', blue: 'синее смещение', none: 'нет', custom: 'Своё расстояние', ly: 'св. л.', au: 'а.е.', km: 'км', planets: 'Солнечная система', stars: 'Звёзды' },
+  en: { freq: { THz: 'THz', GHz: 'GHz', MHz: 'MHz', kHz: 'kHz', Hz: 'Hz' }, band: (id) => id + '-band', units: { s: 's', min: 'min', h: 'h', d: 'days', yr: 'years' }, red: 'redshift', blue: 'blueshift', none: 'none', custom: 'Custom distance', ly: 'ly', au: 'AU', km: 'km', planets: 'Solar system', stars: 'Stars' },
+  ru: { freq: { THz: 'ТГц', GHz: 'ГГц', MHz: 'МГц', kHz: 'кГц', Hz: 'Гц' }, band: (id) => id + '-диапазон', units: { s: 'с', min: 'мин', h: 'ч', d: 'сут', yr: 'лет' }, red: 'красное смещение', blue: 'синее смещение', none: 'нет', custom: 'Своё расстояние', ly: 'св. л.', au: 'а.е.', km: 'км', planets: 'Солнечная система', stars: 'Звёзды' },
 };
 let lang = 'en';
 try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en' ? s : ((navigator.language || 'en').slice(0, 2) === 'ru' ? 'ru' : 'en'); } catch (e) {}
@@ -206,11 +206,26 @@ function num(v, d) {
   if (!Number.isFinite(v)) return '—';
   return loc(Math.abs(v) >= 1e6 || (v !== 0 && Math.abs(v) < 1e-3) ? v.toExponential(2) : v.toFixed(d));
 }
-function sig(v) { const a = Math.abs(v); return num(v, a >= 1000 ? 0 : a >= 100 ? 1 : a >= 10 ? 2 : a >= 1 ? 3 : 4); }
-function fmtDur(sec) { const h = humanDuration(sec); return sig(h.value) + ' ' + T[lang].units[h.unit]; }
+function sig(v) {
+  let d = sigDecimals(Math.abs(v));
+  const r = Math.abs(+v.toFixed(d)); // 999.96 rounds up to 1000.0: use the decimals of the rounded value
+  if (sigDecimals(r) < d) d = sigDecimals(r);
+  return num(v, d);
+}
+// Russian plural for years: 1 год, 2-4 года, 5+ лет; any fraction (decimal comma shown) -> года.
+function ruYears(s) {
+  if (/[,e]/.test(s)) return /,/.test(s) && !/e/.test(s) ? 'года' : 'лет';
+  const n = parseInt(s, 10), m100 = n % 100, m10 = n % 10;
+  return m100 >= 11 && m100 <= 14 ? 'лет' : m10 === 1 ? 'год' : m10 >= 2 && m10 <= 4 ? 'года' : 'лет';
+}
+function fmtDur(sec) {
+  const h = humanDuration(sec), n = sig(h.value);
+  return n + ' ' + (lang === 'ru' && h.unit === 'yr' ? ruYears(n) : T[lang].units[h.unit]);
+}
 function fmtFreq(hz) {
-  for (const [u, s] of [['THz', 1e12], ['GHz', 1e9], ['MHz', 1e6], ['kHz', 1e3]]) if (hz >= s) return sig(hz / s) + ' ' + u;
-  return sig(hz) + ' Hz';
+  const f = T[lang].freq;
+  for (const [u, s] of [['THz', 1e12], ['GHz', 1e9], ['MHz', 1e6], ['kHz', 1e3]]) if (hz >= s) return sig(hz / s) + ' ' + f[u];
+  return sig(hz) + ' ' + f.Hz;
 }
 function fmtLen(m) {
   if (m >= 1000) return sig(m / 1000) + (lang === 'ru' ? ' км' : ' km');
@@ -230,6 +245,8 @@ function fmtBeta(beta, eps) {
 }
 
 let distM = distFromSlider(700);
+let customDist = true; // explicit mode: 'Custom distance' stays selected until a preset is chosen
+let presetId = null;
 const fillTargets = () => {
   const sel = $('target'), cur = sel.value || 'custom';
   sel.textContent = '';
@@ -244,7 +261,7 @@ const fillTargets = () => {
 const fillCarriers = () => {
   const sel = $('carrier'), cur = sel.value || 'X';
   sel.textContent = '';
-  for (const c of CARRIERS) { const o = document.createElement('option'); o.value = c.id; o.textContent = c.label + ' — ' + loc(String(c.hz / 1e9)) + ' GHz'; sel.appendChild(o); }
+  for (const c of CARRIERS) { const o = document.createElement('option'); o.value = c.id; o.textContent = T[lang].band(c.id) + ' — ' + loc(String(c.hz / 1e9)) + ' ' + T[lang].freq.GHz; sel.appendChild(o); }
   sel.value = cur;
 };
 
@@ -258,6 +275,8 @@ function render() {
   document.querySelectorAll('#dir option').forEach((o) => { o.textContent = o.getAttribute('data-' + lang); });
   $('dist-val').textContent = fmtDist(distM);
   $('beta-val').textContent = fmtBeta(s.beta, s.eps);
+  $('dist').setAttribute('aria-valuetext', fmtDist(distM));
+  $('beta').setAttribute('aria-valuetext', fmtBeta(s.beta, s.eps));
   $('out-oneway').textContent = fmtDur(s.oneWay);
   $('out-round').textContent = fmtDur(s.roundTrip);
   $('out-chase').textContent = fmtDur(s.chase);
@@ -272,8 +291,7 @@ function render() {
   $('out-dil').textContent = '× ' + ex(s.parts.dilation);
   $('out-kin').textContent = '× ' + ex(s.parts.kinematic);
   $('out-rate').textContent = '× ' + ex(s.parts.total);
-  const tid = TARGETS.find((x) => Math.abs(x.m - distM) <= 1e-9 * x.m);
-  $('target').value = tid ? tid.id : 'custom';
+  $('target').value = customDist || !presetId ? 'custom' : presetId;
 }
 
 function applyLang(l) {
@@ -284,13 +302,13 @@ function applyLang(l) {
   fillTargets(); fillCarriers();
   render();
 }
-$('dist').addEventListener('input', () => { distM = distFromSlider(+$('dist').value); render(); });
+$('dist').addEventListener('input', () => { distM = distFromSlider(+$('dist').value); customDist = true; render(); });
 $('beta').addEventListener('input', render);
 $('dir').addEventListener('change', render);
 $('carrier').addEventListener('change', render);
 $('target').addEventListener('change', () => {
   const t = TARGETS.find((x) => x.id === $('target').value);
-  if (t) { distM = t.m; $('dist').value = String(Math.round(sliderFromDist(t.m))); }
+  if (t) { distM = t.m; presetId = t.id; customDist = false; $('dist').value = String(Math.round(sliderFromDist(t.m))); } else customDist = true;
   render();
 });
 $('bpre').addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (b) { $('beta').value = String(sliderFromEps(+b.dataset.eps)); render(); } });

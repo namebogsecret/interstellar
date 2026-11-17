@@ -131,6 +131,24 @@ def run_viewport(browser, base, label, ctx_kwargs):
         v = txt(i).strip()
         check(f"#{i} finite at max beta", bool(v) and "NaN" not in v and "Infinity" not in v, repr(v))
 
+    # --- aria-valuetext on both sliders, updated on input ---
+    av1 = page.get_attribute("#dist", "aria-valuetext")
+    setv("#dist", 900)
+    av2 = page.get_attribute("#dist", "aria-valuetext")
+    check("dist aria-valuetext human-readable and updates", bool(av1) and bool(av2) and av1 != av2 and ("ly" in av2 or "AU" in av2 or "km" in av2), f"{av1!r} -> {av2!r}")
+    setv("#beta", 400)
+    bv = page.get_attribute("#beta", "aria-valuetext")
+    check("beta aria-valuetext human-readable", bool(bv) and "0.99" in bv, repr(bv))
+
+    # --- Custom distance sticks even when the distance equals a preset ---
+    page.select_option("#target", "moon")
+    setv("#dist", 0)  # slider floor == Moon distance exactly
+    check("Custom stays selected when distance equals a preset", page.eval_on_selector("#target", "e => e.value") == "custom")
+    page.select_option("#target", "moon")
+    check("Moon preset selectable", page.eval_on_selector("#target", "e => e.value") == "moon")
+    check("slider floor shows Moon (1.28 s)", "1.2" in txt("out-oneway") and txt("out-oneway").strip().endswith("s"), repr(txt("out-oneway")))
+    setv("#beta", 0)
+
     # --- RU/EN toggle ---
     en_ow = txt("out-oneway")
     page.click('#langtoggle span[data-set="ru"]')
@@ -138,6 +156,14 @@ def run_viewport(browser, base, label, ctx_kwargs):
     check("RU: html lang=ru", page.evaluate("document.documentElement.lang") == "ru")
     check("RU: units localised", ru_ow != en_ow and ("лет" in ru_ow or "сут" in ru_ow or "ч" in ru_ow or "мин" in ru_ow or "с" in ru_ow), f"{en_ow!r} -> {ru_ow!r}")
     check("RU: h1 visible Russian", "СВЯЗЬ" in page.inner_text("h1"), repr(page.inner_text("h1")))
+    check("RU: GHz localised", "ГГц" in txt("out-frx") or "МГц" in txt("out-frx"), repr(txt("out-frx")))
+    check("RU: band localised", "диапазон" in page.inner_text("#carrier"), repr(page.inner_text("#carrier"))[:80])
+    page.select_option("#target", "star-Proxima Centauri")
+    ru_y = txt("out-oneway")
+    check("RU: fractional years -> 'года'", ru_y.endswith("года"), repr(ru_y))
+    page.select_option("#target", "star-Sirius A/B")
+    ru_y2 = txt("out-oneway")
+    check("RU: fractional years (Sirius) -> 'года'", ru_y2.endswith("года") or ru_y2.endswith("лет"), repr(ru_y2))
     page.click('#langtoggle span[data-set="en"]')
     check("EN: h1 visible English", "COMMUNICATING" in page.inner_text("h1"), repr(page.inner_text("h1")))
 

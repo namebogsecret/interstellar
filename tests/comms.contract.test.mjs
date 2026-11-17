@@ -7,7 +7,7 @@ import { STARS } from '../js/data/stars.js';
 import {
   CARRIERS, TARGETS, resolveBeta, gammaOf, oneWayDelay, roundTripDelay, chaseDelay, pingDelay,
   dopplerFactor, dopplerParts, receivedFrequency, wavelength, commsState, humanDuration,
-  distFromSlider, sliderFromDist, epsFromSlider, sliderFromEps, EPS_MIN,
+  distFromSlider, sliderFromDist, epsFromSlider, sliderFromEps, EPS_MIN, DIST_MIN,
 } from '../js/physics/comms.js';
 
 let checks = 0;
@@ -174,6 +174,13 @@ near(dopplerFactor({ eps: 1e-12 }), Math.sqrt(1e-12 / (2 - 1e-12)), 1e-14, 'dopp
   for (const [sec, unit, val] of cases) { const h = humanDuration(sec); ok(h.unit === unit, `unit for ${sec}: ${h.unit}`); if (val === 0) ok(h.value === 0, 'zero'); else near(h.value, val, 1e-12, `humanDuration value ${sec}`); }
   ok(humanDuration(oneWayDelay(AU)).unit === 'min', '1 AU in minutes');
   for (const bad of [-1, NaN, Infinity, '1']) throwsRange(() => humanDuration(bad), `human ${bad}`);
+  // rounding at unit borders: what would DISPLAY as the next unit's size is promoted
+  ok(humanDuration(59.999).unit === 'min', '59.999 s -> min');
+  ok(humanDuration(59.99).unit === 's', '59.99 s stays seconds');
+  ok(humanDuration(3599.99).unit === 'h', '3599.99 s -> h');
+  ok(humanDuration(DAY - 0.5).unit === 'd', '86399.5 s -> d');
+  ok(humanDuration(YEAR - 1).unit === 'd', 'YEAR-1 s shows 365.2 d (1 decimal), stays days');
+  ok(humanDuration(364.99 * DAY).unit === 'd', '364.99 days stays days');
 }
 
 // ---------- targets: from data, real values ----------
@@ -186,14 +193,23 @@ near(dopplerFactor({ eps: 1e-12 }), Math.sqrt(1e-12 / (2 - 1e-12)), 1e-14, 'dopp
   for (const t of TARGETS) ok(Number.isFinite(t.m) && t.m > 0 && t.en && t.ru, `target ${t.id} sane`);
   const g = (id) => TARGETS.find((t) => t.id === id).m;
   ok(g('mars-min') < g('mars-max') && g('jupiter-min') < g('jupiter-max'), 'min < max');
+  // independent literals (NASA Planetary Fact Sheets), not just ordering
+  near(g('jupiter-min'), 588.5e9, 1e-12, 'Jupiter closest 588.5 million km');
+  near(g('jupiter-max'), 968.5e9, 1e-12, 'Jupiter farthest 968.5 million km');
+  near(g('moon'), 3.844e8, 1e-12, 'Moon 384 400 km');
+  near(g('mars-min'), 54.6e9, 1e-12, 'Mars closest 54.6 million km');
+  near(g('mars-max'), 401.3e9, 1e-12, 'Mars farthest 401.3 million km');
   near(oneWayDelay(g('mars-min')) / 60, 3.03, 5e-3, 'Mars closest ~3.03 light-minutes');
   near(oneWayDelay(g('mars-max')) / 60, 22.3, 5e-3, 'Mars farthest ~22.3 light-minutes');
 }
 
 // ---------- slider helpers ----------
-near(distFromSlider(0), AU, 1e-12, 'dist slider 0 = 1 AU');
+near(distFromSlider(0), 3.844e8, 1e-12, 'dist slider 0 = Moon (3.844e8 m)');
+ok(DIST_MIN === 3.844e8 && DIST_MIN === TARGETS.find((t) => t.id === 'moon').m, 'scale floor = Moon');
+for (const t of TARGETS) ok(t.m >= DIST_MIN, `target ${t.id} not below slider floor`);
+for (const t of TARGETS) { const sl = sliderFromDist(t.m); ok(sl >= 0 && sl <= 1000 && Math.abs(distFromSlider(sl) / t.m - 1) < 1e-9, `slider shows target ${t.id} faithfully`); }
 near(distFromSlider(1000), 100 * LY, 1e-12, 'dist slider 1000 = 100 ly');
-near(distFromSlider(500), Math.sqrt(AU * 100 * LY), 1e-12, 'dist slider midpoint geometric');
+near(distFromSlider(500), Math.sqrt(3.844e8 * 100 * LY), 1e-12, 'dist slider midpoint geometric');
 for (const s of [0, 137, 500, 999, 1000]) near(sliderFromDist(distFromSlider(s)) || 1e-300, s || 1e-300, 1e-9, `dist roundtrip ${s}`);
 ok(sliderFromDist(1) === 0 && sliderFromDist(1e30) === 1000, 'dist slider clamps');
 ok(epsFromSlider(0) === 1, 'beta slider 0 -> eps 1 (beta 0)');
