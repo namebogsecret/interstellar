@@ -224,7 +224,7 @@ orbital flight is untouched — then blooms dramatically as you burn toward *c*.
 > bodies don't perturb each other — appropriate simplifications for a real-time
 > sim. The *kinematics* of motion near light speed are fully special-relativistic.
 
-**How this is checked:** the claims above are covered by a 49-file regression
+**How this is checked:** the claims above are covered by a 50-file regression
 suite (`bash tests/run.sh`) with explicit reference formulas and tolerances —
 see [`PHYSICS-VERIFICATION.md`](PHYSICS-VERIFICATION.md) for exactly what is,
 and isn't, gated (also published at
@@ -257,6 +257,16 @@ instant boost to a cruise speed β, or four phases of constant proper
 acceleration (hyperbolic motion). Shows both clocks along the way, the age gap
 at the finish, the farthest point and top speed. Maths in
 `js/physics/twins.js`.
+
+## Communicating with the ship
+
+[`comms.html`](comms.html) — signal light-time (one way, round trip, and the time a
+signal sent now needs to catch a receding or meet an approaching ship) and the
+longitudinal relativistic Doppler shift of an S/X/Ka-band carrier, with the
+split of the received bit-rate factor into clock dilation and path-length parts.
+Targets: Moon, Mars and Jupiter (closest/farthest), and the nearby stars from
+`js/data/stars.js`. Flat special relativity, purely radial motion; no gravity,
+plasma or antenna geometry. Maths in `js/physics/comms.js`.
 
 ## Known limitations
 

@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Ship communications — Interstellar</title>
+<meta name="description" content="Ship communications: one-way and round-trip signal delay and relativistic Doppler shift by distance and speed, for the Moon, Mars, Jupiter and the nearest stars incl. Proxima Centauri. Interactive sliders, S/X/Ka-band carriers." />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="120x120" href="/favicon-120.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<style>
+  :root { --fg: #9fe7ff; --dim: #5b7c88; --bg: rgba(6, 14, 20, 0.66); --line: rgba(120, 200, 230, 0.18); --card: rgba(8, 16, 24, 0.92); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #05070c; }
+  body { color: #cfeefc; font: 14px/1.65 "SF Mono", "Cascadia Code", Menlo, Consolas, monospace; padding: 0 0 60px; overflow-x: hidden; }
+  a { color: #7fb3ff; }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 22px 0; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  header.top a.home { color: var(--dim); text-decoration: none; }
+  header.top a.home:hover { color: var(--fg); }
+  #langtoggle { display: flex; gap: 3px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+  #langtoggle span { cursor: pointer; padding: 3px 10px; border-radius: 5px; color: var(--dim); font-size: 12px; }
+  #langtoggle span.active { color: #eaffff; background: rgba(60,116,148,0.5); }
+  h1 { font-size: 22px; letter-spacing: 0.06em; color: #bfeeff; margin: 0 0 6px; overflow-wrap: anywhere; }
+  h2 { font-size: 15px; letter-spacing: 0.05em; color: #d7f6ff; margin: 30px 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  p { color: #b9d8e6; margin: 10px 0; }
+  b, strong { color: #eaffff; }
+  code { background: rgba(120,200,230,0.1); border-radius: 3px; padding: 1px 5px; color: #d7f6ff; overflow-wrap: anywhere; }
+  .note { background: rgba(40,90,120,0.18); border-left: 2px solid #4a8fb0; padding: 10px 14px; border-radius: 5px; color: #bfe6f4; margin: 14px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 14px 0; min-width: 0; }
+  .ctl { margin: 10px 0 14px; }
+  .ctl label { display: flex; justify-content: space-between; gap: 10px; color: var(--dim); font-size: 12px; }
+  .ctl label output { color: #eaffff; font-weight: 700; }
+  .ctl input[type=range] { width: 100%; min-width: 0; margin: 6px 0 2px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+  .presets button { background: rgba(60,116,148,0.25); color: #cfeefc; border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+  .presets button:hover, .presets button.on { background: rgba(60,116,148,0.55); }
+  .big { font-size: 15px; color: #eaffff; margin: 6px 0 10px; overflow-wrap: anywhere; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0; }
+  .stat { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0; }
+  .stat span { display: block; color: var(--dim); font-size: 11.5px; }
+  .stat b { font-size: 14px; overflow-wrap: anywhere; }
+  .warn { color: #ffd28a; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid rgba(120,200,230,0.1); overflow-wrap: anywhere; }
+  th { color: var(--dim); font-weight: 600; font-size: 11.5px; }
+  tr.yes td { background: rgba(95,227,161,0.07); }
+  .yes-mark { color: #5fe3a1; font-weight: 700; }
+  .no-mark { color: var(--dim); }
+  footer.bottom { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
+  @media (max-width: 480px) {
+    main { padding: 28px 14px 0; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    thead { display: none; }
+    tr { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; padding: 4px 8px; }
+    td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 10px; text-align: right; }
+    td:not([data-label])::before { content: none; }
+    td::before { content: attr(data-label); color: var(--dim); text-align: left; flex: 0 0 42%; }
+  }
+  [data-lang] { display: none; }
+  [data-lang].active { display: block; }
+  span[data-lang].active, b[data-lang].active { display: inline; }
+
+  .ctl select { width: 100%; background: rgba(8,16,24,0.92); color: #eaffff; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; margin-top: 6px; }
+  .chart { margin: 8px 0; }
+  .crow { margin: 9px 0; min-width: 0; }
+  .crow .lbl { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: #cfeefc; }
+  .crow .lbl em { font-style: normal; color: #eaffff; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+  .crow svg { display: block; width: 100%; height: 16px; margin-top: 3px; }
+  .axis { position: relative; height: 16px; color: var(--dim); font-size: 10.5px; margin-top: 2px; }
+  .axis span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+  .axis span.first { transform: none; } .axis span.last { transform: translateX(-100%); }
+  .oos { color: #ffd28a; font-size: 10.5px; margin-left: 5px; font-weight: 400; }
+  .badge { display: inline-block; border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; margin: 1px 3px 1px 0; font-size: 11px; color: #ffd28a; white-space: nowrap; }
+  .badge.bad { color: #ff9c9c; }
+  .legend { color: var(--dim); font-size: 11.5px; margin: 4px 0; }
+  ul.src { padding-left: 18px; margin: 6px 0; } ul.src li { margin: 3px 0; overflow-wrap: anywhere; }
+
+  [hidden] { display: none !important; }
+  .stat span[data-lang]:not(.active) { display: none; }
+  .stat span[data-lang].active { display: block; }
+  canvas.plot { display: block; width: 100%; height: 260px; margin: 6px 0; }
+  canvas.plot.short { height: 200px; }
+  .ctl .presets { margin-top: 6px; }
+  .ctl .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .shift-red { color: #ff9c9c; } .shift-blue { color: #8fc4ff; }
+  .stat.wide { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <a class="home" href="/">&larr; Interstellar</a>
+    <div id="langtoggle"><span data-set="en">EN</span><span data-set="ru">RU</span></div>
+  </header>
+
+<h1><span data-lang="en" class="active">COMMUNICATING WITH THE SHIP</span><span data-lang="ru">СВЯЗЬ С КОРАБЛЁМ</span></h1>
+
+<div data-lang="en" class="active">
+  <p>How long does a radio signal take to reach a ship, and what does a fast-moving ship do to the signal's frequency? Pick a target or set the distance, set the ship's speed and whether it is moving away from Earth or towards it, and choose a carrier.</p>
+</div>
+<div data-lang="ru">
+  <p>Сколько радиосигнал идёт до корабля и что быстрое движение корабля делает с частотой сигнала? Выберите цель или расстояние, задайте скорость корабля и направление (от Земли или к ней), выберите несущую.</p>
+</div>
+
+<div class="card">
+  <div class="ctl">
+    <label for="target"><span><span data-lang="en" class="active">Target</span><span data-lang="ru">Цель</span></span></label>
+    <select id="target"></select>
+  </div>
+  <div class="ctl">
+    <label for="dist"><span><span data-lang="en" class="active">Distance from Earth</span><span data-lang="ru">Расстояние от Земли</span></span><output id="dist-val"></output></label>
+    <input id="dist" type="range" min="0" max="1000" step="1" value="700" />
+    <div class="legend"><span data-lang="en" class="active">Log scale: 1 AU to 100 light-years.</span><span data-lang="ru">Логарифмическая шкала: от 1 а.е. до 100 световых лет.</span></div>
+  </div>
+  <div class="ctl">
+    <label for="beta"><span><span data-lang="en" class="active">Ship speed &beta; = v/c</span><span data-lang="ru">Скорость корабля &beta; = v/c</span></span><output id="beta-val"></output></label>
+    <input id="beta" type="range" min="0" max="1000" step="0.1" value="0" />
+    <div class="legend"><span data-lang="en" class="active">Log scale in 1&minus;&beta;: from 0 to 0.99999 c.</span><span data-lang="ru">Логарифмическая шкала по 1&minus;&beta;: от 0 до 0,99999 c.</span></div>
+    <div class="presets" id="bpre"><button data-eps="1">0</button><button data-eps="0.5">0.5</button><button data-eps="0.1">0.9</button><button data-eps="0.01">0.99</button><button data-eps="0.001">0.999</button><button data-eps="0.00001">0.99999</button></div>
+  </div>
+  <div class="ctl"><div class="row">
+    <div>
+      <label for="dir"><span><span data-lang="en" class="active">Direction</span><span data-lang="ru">Направление</span></span></label>
+      <select id="dir"><option value="away" data-en="Receding from Earth" data-ru="Удаляется от Земли">Receding</option><option value="toward" data-en="Approaching Earth" data-ru="Приближается к Земле">Approaching</option></select>
+    </div>
+    <div>
+      <label for="carrier"><span><span data-lang="en" class="active">Carrier</span><span data-lang="ru">Несущая</span></span></label>
+      <select id="carrier"></select>
+    </div>
+  </div></div>
+</div>
+
+<h2><span data-lang="en" class="active">Signal delay</span><span data-lang="ru">Задержка сигнала</span></h2>
+<div class="stats">
+  <div class="stat"><span data-lang="en" class="active">One way (ship at rest)</span><span data-lang="ru">В одну сторону (корабль неподвижен)</span><b id="out-oneway"></b></div>
+  <div class="stat"><span data-lang="en" class="active">Round trip (ship at rest)</span><span data-lang="ru">Туда-обратно (корабль неподвижен)</span><b id="out-round"></b></div>
+  <div class="stat"><span data-lang="en" class="active">Signal sent now reaches the moving ship in</span><span data-lang="ru">Сигнал, посланный сейчас, дойдёт до движущегося корабля за</span><b id="out-chase"></b></div>
+  <div class="stat"><span data-lang="en" class="active">Ping to the moving ship, echo back</span><span data-lang="ru">Эхо от движущегося корабля вернётся за</span><b id="out-ping"></b></div>
+</div>
+<div class="legend"><span data-lang="en" class="active">The ship is at the chosen distance at the moment of sending. A signal received now from the ship was sent one-way-delay ago, at the distance shown.</span><span data-lang="ru">Корабль находится на выбранном расстоянии в момент отправки. Сигнал, принятый сейчас от корабля, был послан на одну задержку раньше с показанного расстояния.</span></div>
+
+<h2><span data-lang="en" class="active">Doppler shift</span><span data-lang="ru">Допплеровский сдвиг</span></h2>
+<div class="stats">
+  <div class="stat"><span data-lang="en" class="active">Doppler factor f<sub>rx</sub>/f<sub>tx</sub></span><span data-lang="ru">Допплер-фактор f<sub>пр</sub>/f<sub>перед</sub></span><b id="out-doppler"></b></div>
+  <div class="stat"><span data-lang="en" class="active">Shift</span><span data-lang="ru">Сдвиг</span><b id="out-shift"></b></div>
+  <div class="stat"><span data-lang="en" class="active">Transmitted frequency</span><span data-lang="ru">Передаваемая частота</span><b id="out-ftx"></b></div>
+  <div class="stat"><span data-lang="en" class="active">Received frequency</span><span data-lang="ru">Принимаемая частота</span><b id="out-frx"></b></div>
+  <div class="stat"><span data-lang="en" class="active">Wavelength transmitted &rarr; received</span><span data-lang="ru">Длина волны: передана &rarr; принята</span><b id="out-wl"></b></div>
+  <div class="stat"><span data-lang="en" class="active">Lorentz factor &gamma;</span><span data-lang="ru">Фактор Лоренца &gamma;</span><b id="out-gamma"></b></div>
+</div>
+
+<h2><span data-lang="en" class="active">Received data rate</span><span data-lang="ru">Принимаемый темп данных</span></h2>
+<div class="stats">
+  <div class="stat"><span data-lang="en" class="active">Ship clock slowdown 1/&gamma;</span><span data-lang="ru">Замедление часов корабля 1/&gamma;</span><b id="out-dil"></b></div>
+  <div class="stat"><span data-lang="en" class="active">Path-length (Doppler) part 1/(1&plusmn;&beta;)</span><span data-lang="ru">Вклад пути сигнала (Допплер) 1/(1&plusmn;&beta;)</span><b id="out-kin"></b></div>
+  <div class="stat"><span data-lang="en" class="active">Total: received bit rate / sent</span><span data-lang="ru">Итого: принимаемый темп бит / отправленный</span><b id="out-rate"></b></div>
+</div>
+
+<div data-lang="en" class="active">
+  <div class="note">
+    <p><b>Light delay.</b> A radio signal travels at <i>c</i>, so distance <i>d</i> costs <i>d/c</i>: one light-year is exactly one year, Proxima Centauri is 4.2465 years one way and 8.49 years for a question and its answer.</p>
+    <p><b>A moving ship.</b> A signal sent now has to catch a ship that keeps moving away: <i>t = d<sub>0</sub> / (c(1&minus;&beta;))</i>; towards Earth the meeting is sooner, <i>d<sub>0</sub> / (c(1+&beta;))</i>. For &beta; &rarr; 1 the receding delay grows without bound &mdash; the signal almost never catches up.</p>
+    <p><b>Doppler.</b> Longitudinal relativistic Doppler: <i>f<sub>rx</sub>/f<sub>tx</sub> = &radic;((1&minus;&beta;)/(1+&beta;))</i> receding (redshift), the inverse approaching (blueshift); equivalently <i>e<sup>&minus;&eta;</sup></i> with rapidity &eta;. It factors as <i>1/(&gamma;(1&plusmn;&beta;))</i>: clock slowdown 1/&gamma; times the changing light path. Every bit the ship sends takes one ship-clock tick, so the received bit rate scales by the same factor as the frequency.</p>
+    <p><b>Model limits.</b> Special relativity in flat spacetime, purely radial motion, vacuum. No gravity, no plasma or atmosphere, no antenna geometry, no transverse Doppler, no acceleration phases. Solar-system distances are Earth-centred ranges and in reality keep changing. This is physics of the signal, not a mission plan.</p>
+    <p>Related: <a href="twins.html">twin paradox in transit</a>, <a href="where-we-reach.html">how far in a lifetime</a>, <a href="engines.html">engines compared</a>, <a href="/">the simulator</a>.</p>
+  </div>
+</div>
+<div data-lang="ru">
+  <div class="note">
+    <p><b>Световая задержка.</b> Радиосигнал идёт со скоростью <i>c</i>, поэтому расстояние <i>d</i> стоит <i>d/c</i>: один световой год &mdash; ровно один год, до Проксимы Центавра 4,2465 года в одну сторону и 8,49 года на вопрос с ответом.</p>
+    <p><b>Движущийся корабль.</b> Посланный сейчас сигнал должен догнать корабль, который продолжает удаляться: <i>t = d<sub>0</sub> / (c(1&minus;&beta;))</i>; при сближении встреча раньше, <i>d<sub>0</sub> / (c(1+&beta;))</i>. При &beta; &rarr; 1 задержка к удаляющемуся кораблю растёт без предела &mdash; сигнал почти не догоняет.</p>
+    <p><b>Допплер.</b> Продольный релятивистский эффект Допплера: <i>f<sub>пр</sub>/f<sub>перед</sub> = &radic;((1&minus;&beta;)/(1+&beta;))</i> при удалении (красное смещение), обратная величина при сближении; то же самое, что <i>e<sup>&minus;&eta;</sup></i> с быстротой &eta;. Раскладывается как <i>1/(&gamma;(1&plusmn;&beta;))</i>: замедление часов 1/&gamma; на изменение длины пути сигнала. Каждый бит корабль отправляет за такт своих часов, поэтому принимаемый темп бит меняется в то же число раз, что и частота.</p>
+    <p><b>Границы модели.</b> Специальная теория относительности в плоском пространстве-времени, строго радиальное движение, вакуум. Без гравитации, плазмы и атмосферы, геометрии антенн, поперечного эффекта Допплера и фаз разгона. Расстояния в Солнечной системе &mdash; земные дальности, в реальности они всё время меняются. Это физика сигнала, а не план миссии.</p>
+    <p>См. также: <a href="twins.html">парадокс близнецов в пути</a>, <a href="where-we-reach.html">куда долетим за жизнь</a>, <a href="engines.html">сравнение двигателей</a>, <a href="/">симулятор</a>.</p>
+  </div>
+</div>
+
+<p>
+  <a href="/"><span data-lang="en" class="active">Back to the simulator</span><span data-lang="ru">Назад к симулятору</span></a> &middot;
+  <a href="twins.html"><span data-lang="en" class="active">Twin paradox in transit</span><span data-lang="ru">Парадокс близнецов в пути</span></a>
+</p>
+
+<footer class="bottom">
+  <span data-lang="en" class="active">Formulas: t = d/c; chase t = d<sub>0</sub>/(c(1&minus;&beta;)); D = &radic;((1&minus;&beta;)/(1+&beta;)) = 1/(&gamma;(1+&beta;)). Distances: stars from parallax catalogues; Mars and Jupiter closest/farthest from NASA fact sheets.</span>
+  <span data-lang="ru">Формулы: t = d/c; погоня t = d<sub>0</sub>/(c(1&minus;&beta;)); D = &radic;((1&minus;&beta;)/(1+&beta;)) = 1/(&gamma;(1+&beta;)). Расстояния: звёзды &mdash; из параллаксных каталогов; Марс и Юпитер (ближайшее/дальнее) &mdash; справочные листы NASA.</span>
+</footer>
+</main>
+
+<script type="module">
+import { CARRIERS, TARGETS, commsState, humanDuration, distFromSlider, sliderFromDist, epsFromSlider, sliderFromEps } from './js/physics/comms.js';
+import { AU, LY } from './js/physics/constants.js';
+
+const T = {
+  en: { units: { s: 's', min: 'min', h: 'h', d: 'days', yr: 'years' }, red: 'redshift', blue: 'blueshift', none: 'none', custom: 'Custom distance', ly: 'ly', au: 'AU', km: 'km', planets: 'Solar system', stars: 'Stars' },
+  ru: { units: { s: 'с', min: 'мин', h: 'ч', d: 'сут', yr: 'лет' }, red: 'красное смещение', blue: 'синее смещение', none: 'нет', custom: 'Своё расстояние', ly: 'св. л.', au: 'а.е.', km: 'км', planets: 'Солнечная система', stars: 'Звёзды' },
+};
+let lang = 'en';
+try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en' ? s : ((navigator.language || 'en').slice(0, 2) === 'ru' ? 'ru' : 'en'); } catch (e) {}
+
+const $ = (id) => document.getElementById(id);
+function loc(s) { return lang === 'ru' ? s.replace('.', ',') : s; }
+function num(v, d) {
+  if (!Number.isFinite(v)) return '—';
+  return loc(Math.abs(v) >= 1e6 || (v !== 0 && Math.abs(v) < 1e-3) ? v.toExponential(2) : v.toFixed(d));
+}
+function sig(v) { const a = Math.abs(v); return num(v, a >= 1000 ? 0 : a >= 100 ? 1 : a >= 10 ? 2 : a >= 1 ? 3 : 4); }
+function fmtDur(sec) { const h = humanDuration(sec); return sig(h.value) + ' ' + T[lang].units[h.unit]; }
+function fmtFreq(hz) {
+  for (const [u, s] of [['THz', 1e12], ['GHz', 1e9], ['MHz', 1e6], ['kHz', 1e3]]) if (hz >= s) return sig(hz / s) + ' ' + u;
+  return sig(hz) + ' Hz';
+}
+function fmtLen(m) {
+  if (m >= 1000) return sig(m / 1000) + (lang === 'ru' ? ' км' : ' km');
+  if (m >= 1) return sig(m) + (lang === 'ru' ? ' м' : ' m');
+  if (m >= 0.01) return sig(m * 100) + (lang === 'ru' ? ' см' : ' cm');
+  return sig(m * 1000) + (lang === 'ru' ? ' мм' : ' mm');
+}
+function fmtDist(m) {
+  const t = T[lang];
+  if (m < 0.01 * AU) return sig(m / 1000) + ' ' + t.km;
+  if (m < 1000 * AU) return sig(m / AU) + ' ' + t.au;
+  return sig(m / LY) + ' ' + t.ly;
+}
+function fmtBeta(beta, eps) {
+  if (eps < 1e-2) return '1 − ' + loc(eps.toExponential(2)) + ' (≈ ' + loc(beta.toFixed(Math.min(9, Math.ceil(-Math.log10(eps)) + 2))) + ')';
+  return loc(beta.toFixed(4));
+}
+
+let distM = distFromSlider(700);
+const fillTargets = () => {
+  const sel = $('target'), cur = sel.value || 'custom';
+  sel.textContent = '';
+  const add = (parent, v, text) => { const o = document.createElement('option'); o.value = v; o.textContent = text; parent.appendChild(o); };
+  add(sel, 'custom', T[lang].custom);
+  const g1 = document.createElement('optgroup'), g2 = document.createElement('optgroup');
+  g1.label = T[lang].planets; g2.label = T[lang].stars;
+  for (const t of TARGETS) add(t.star ? g2 : g1, t.id, t[lang]);
+  sel.append(g1, g2);
+  sel.value = cur;
+};
+const fillCarriers = () => {
+  const sel = $('carrier'), cur = sel.value || 'X';
+  sel.textContent = '';
+  for (const c of CARRIERS) { const o = document.createElement('option'); o.value = c.id; o.textContent = c.label + ' — ' + loc(String(c.hz / 1e9)) + ' GHz'; sel.appendChild(o); }
+  sel.value = cur;
+};
+
+function render() {
+  const t = T[lang];
+  const eps = epsFromSlider(+$('beta').value);
+  const receding = $('dir').value === 'away';
+  const f0 = CARRIERS.find((c) => c.id === $('carrier').value).hz;
+  const s = commsState({ d: distM, eps, receding, f0 });
+
+  document.querySelectorAll('#dir option').forEach((o) => { o.textContent = o.getAttribute('data-' + lang); });
+  $('dist-val').textContent = fmtDist(distM);
+  $('beta-val').textContent = fmtBeta(s.beta, s.eps);
+  $('out-oneway').textContent = fmtDur(s.oneWay);
+  $('out-round').textContent = fmtDur(s.roundTrip);
+  $('out-chase').textContent = fmtDur(s.chase);
+  $('out-ping').textContent = fmtDur(s.ping);
+  $('out-doppler').textContent = '× ' + loc(s.doppler >= 1e5 || s.doppler < 1e-3 ? s.doppler.toExponential(3) : s.doppler.toPrecision(4));
+  const sh = $('out-shift'); sh.textContent = t[s.shift]; sh.className = s.shift === 'red' ? 'shift-red' : s.shift === 'blue' ? 'shift-blue' : '';
+  $('out-ftx').textContent = fmtFreq(s.fTx);
+  $('out-frx').textContent = fmtFreq(s.fRx);
+  $('out-wl').textContent = fmtLen(s.lambdaTx) + ' → ' + fmtLen(s.lambdaRx);
+  $('out-gamma').textContent = sig(s.gamma);
+  const ex = (v) => loc(v >= 1e5 || v < 1e-3 ? v.toExponential(3) : v.toPrecision(4));
+  $('out-dil').textContent = '× ' + ex(s.parts.dilation);
+  $('out-kin').textContent = '× ' + ex(s.parts.kinematic);
+  $('out-rate').textContent = '× ' + ex(s.parts.total);
+  const tid = TARGETS.find((x) => Math.abs(x.m - distM) <= 1e-9 * x.m);
+  $('target').value = tid ? tid.id : 'custom';
+}
+
+function applyLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  document.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el.getAttribute('data-lang') === l));
+  document.querySelectorAll('#langtoggle span').forEach((el) => el.classList.toggle('active', el.getAttribute('data-set') === l));
+  fillTargets(); fillCarriers();
+  render();
+}
+$('dist').addEventListener('input', () => { distM = distFromSlider(+$('dist').value); render(); });
+$('beta').addEventListener('input', render);
+$('dir').addEventListener('change', render);
+$('carrier').addEventListener('change', render);
+$('target').addEventListener('change', () => {
+  const t = TARGETS.find((x) => x.id === $('target').value);
+  if (t) { distM = t.m; $('dist').value = String(Math.round(sliderFromDist(t.m))); }
+  render();
+});
+$('bpre').addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (b) { $('beta').value = String(sliderFromEps(+b.dataset.eps)); render(); } });
+$('langtoggle').addEventListener('click', (ev) => {
+  const s = ev.target.closest('span'); if (!s) return;
+  const l = s.getAttribute('data-set'); applyLang(l);
+  try { localStorage.setItem('iss_lang', l); } catch (e) {}
+});
+applyLang(lang);
+document.body.dataset.ready = '1';
+</script>
+</body>
+</html>

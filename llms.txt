@@ -11,6 +11,7 @@ Time dilation and the twin paradox made tangible, relativistic aberration of sta
 - [How far can we fly in a lifetime?](https://space.podlevskikh.com/where-we-reach.html) — interactive calculator: constant proper acceleration, flip-and-burn; distance, Earth time and peak speed for a chosen ship time, and which nearby stars are reachable.
 - [Engines compared](https://space.podlevskikh.com/engines.html) — chemical, ion, nuclear-thermal, fusion (Daedalus) and solar sail on the same trip to Mars, Jupiter, Pluto, the solar gravitational lens and Alpha Centauri: flight time and delta-v for any payload (order-of-magnitude, no gravity), with cited sources.
 - [Twin paradox in transit](https://space.podlevskikh.com/twins.html) — interactive round trip: how much less the travelling twin ages at constant cruise speed or under constant 1 g-class acceleration; both clocks and the world line along the way.
+- [Communicating with the ship](https://space.podlevskikh.com/comms.html) — interactive: one-way and round-trip radio delay by distance (Moon, Mars, Jupiter, nearest stars incl. Proxima Centauri) and ship speed, longitudinal relativistic Doppler shift of an S/X/Ka-band carrier and the received data-rate factor; flat special relativity, radial motion only.
 
 ## Related projects
 - [Physics Lab — 70 interactive physics simulations](https://physics.podlevskikh.com/)
