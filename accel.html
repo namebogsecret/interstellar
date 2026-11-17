@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Acceleration and braking to a star — Interstellar</title>
+<meta name="description" content="Flip-and-burn vs flyby at constant proper acceleration to Proxima Centauri and Barnard's Star: Earth-frame time, ship time and peak speed (beta, gamma) for 0.01 g to 10 g. Interactive slider and beta(t) chart." />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="120x120" href="/favicon-120.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<style>
+  :root { --fg: #9fe7ff; --dim: #5b7c88; --bg: rgba(6, 14, 20, 0.66); --line: rgba(120, 200, 230, 0.18); --card: rgba(8, 16, 24, 0.92); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #05070c; }
+  body { color: #cfeefc; font: 14px/1.65 "SF Mono", "Cascadia Code", Menlo, Consolas, monospace; padding: 0 0 60px; overflow-x: hidden; }
+  a { color: #7fb3ff; }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 22px 0; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  header.top a.home { color: var(--dim); text-decoration: none; }
+  header.top a.home:hover { color: var(--fg); }
+  #langtoggle { display: flex; gap: 3px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+  #langtoggle span { cursor: pointer; padding: 3px 10px; border-radius: 5px; color: var(--dim); font-size: 12px; }
+  #langtoggle span.active { color: #eaffff; background: rgba(60,116,148,0.5); }
+  h1 { font-size: 22px; letter-spacing: 0.06em; color: #bfeeff; margin: 0 0 6px; overflow-wrap: anywhere; }
+  h2 { font-size: 15px; letter-spacing: 0.05em; color: #d7f6ff; margin: 30px 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  p { color: #b9d8e6; margin: 10px 0; }
+  b, strong { color: #eaffff; }
+  code { background: rgba(120,200,230,0.1); border-radius: 3px; padding: 1px 5px; color: #d7f6ff; overflow-wrap: anywhere; }
+  .note { background: rgba(40,90,120,0.18); border-left: 2px solid #4a8fb0; padding: 10px 14px; border-radius: 5px; color: #bfe6f4; margin: 14px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 14px 0; min-width: 0; }
+  .ctl { margin: 10px 0 14px; }
+  .ctl label { display: flex; justify-content: space-between; gap: 10px; color: var(--dim); font-size: 12px; }
+  .ctl label output { color: #eaffff; font-weight: 700; }
+  .ctl input[type=range] { width: 100%; min-width: 0; margin: 6px 0 2px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+  .presets button { background: rgba(60,116,148,0.25); color: #cfeefc; border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+  .presets button:hover, .presets button.on { background: rgba(60,116,148,0.55); }
+  .big { font-size: 15px; color: #eaffff; margin: 6px 0 10px; overflow-wrap: anywhere; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0; }
+  .stat { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0; }
+  .stat span { display: block; color: var(--dim); font-size: 11.5px; }
+  .stat b { font-size: 14px; overflow-wrap: anywhere; }
+  .warn { color: #ffd28a; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid rgba(120,200,230,0.1); overflow-wrap: anywhere; }
+  th { color: var(--dim); font-weight: 600; font-size: 11.5px; }
+  tr.yes td { background: rgba(95,227,161,0.07); }
+  .yes-mark { color: #5fe3a1; font-weight: 700; }
+  .no-mark { color: var(--dim); }
+  footer.bottom { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
+  @media (max-width: 480px) {
+    main { padding: 28px 14px 0; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    thead { display: none; }
+    tr { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; padding: 4px 8px; }
+    td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 10px; text-align: right; }
+    td:not([data-label])::before { content: none; }
+    td::before { content: attr(data-label); color: var(--dim); text-align: left; flex: 0 0 42%; }
+  }
+  [data-lang] { display: none; }
+  [data-lang].active { display: block; }
+  span[data-lang].active, b[data-lang].active { display: inline; }
+
+  .ctl select { width: 100%; background: rgba(8,16,24,0.92); color: #eaffff; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; margin-top: 6px; }
+  .chart { margin: 8px 0; }
+  .crow { margin: 9px 0; min-width: 0; }
+  .crow .lbl { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: #cfeefc; }
+  .crow .lbl em { font-style: normal; color: #eaffff; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+  .crow svg { display: block; width: 100%; height: 16px; margin-top: 3px; }
+  .axis { position: relative; height: 16px; color: var(--dim); font-size: 10.5px; margin-top: 2px; }
+  .axis span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+  .axis span.first { transform: none; } .axis span.last { transform: translateX(-100%); }
+  .oos { color: #ffd28a; font-size: 10.5px; margin-left: 5px; font-weight: 400; }
+  .badge { display: inline-block; border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; margin: 1px 3px 1px 0; font-size: 11px; color: #ffd28a; white-space: nowrap; }
+  .badge.bad { color: #ff9c9c; }
+  .legend { color: var(--dim); font-size: 11.5px; margin: 4px 0; }
+  ul.src { padding-left: 18px; margin: 6px 0; } ul.src li { margin: 3px 0; overflow-wrap: anywhere; }
+
+  [hidden] { display: none !important; }
+  .stat span[data-lang]:not(.active) { display: none; }
+  .stat span[data-lang].active { display: block; }
+  canvas.plot { display: block; width: 100%; height: 260px; margin: 6px 0; }
+  canvas.plot.short { height: 200px; }
+  .ctl .presets { margin-top: 6px; }
+  .ctl .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .shift-red { color: #ff9c9c; } .shift-blue { color: #8fc4ff; }
+  .stat.wide { grid-column: 1 / -1; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+  .tabs button { background: rgba(60,116,148,0.25); color: #cfeefc; border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; font: inherit; font-size: 12.5px; cursor: pointer; }
+  .tabs button[aria-pressed="true"] { background: rgba(60,116,148,0.65); color: #eaffff; }
+  .leg-flip { color: #5fe3a1; } .leg-fly { color: #ffb86b; }
+  td.num, th.num { text-align: right; }
+  tr.grp td { background: rgba(120,200,230,0.06); color: #eaffff; font-weight: 700; }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <a class="home" href="/">&larr; Interstellar</a>
+    <div id="langtoggle"><span data-set="en">EN</span><span data-set="ru">RU</span></div>
+  </header>
+
+<h1><span data-lang="en" class="active">ACCELERATING AND BRAKING TO A STAR</span><span data-lang="ru">РАЗГОН И ТОРМОЖЕНИЕ ДО ЗВЕЗДЫ</span></h1>
+
+<div data-lang="en" class="active">
+  <p>A ship with a constant proper acceleration (what the crew feels, in g) flies to the nearest stars. Two profiles: <b class="leg-flip">flip-and-burn</b> &mdash; accelerate over the first half of the way, turn the ship around, brake over the second half and stop at the star; and <b class="leg-fly">flyby</b> &mdash; accelerate the whole way and shoot past at maximum speed. Move the slider to see how Earth's clock, the ship's clock and the peak speed respond.</p>
+</div>
+<div data-lang="ru">
+  <p>Корабль с постоянным собственным ускорением (то, что чувствует экипаж, в g) летит к ближайшим звёздам. Два профиля: <b class="leg-flip">разгон с торможением</b> &mdash; разгон на первой половине пути, разворот, торможение на второй и остановка у звезды; и <b class="leg-fly">пролёт без торможения</b> &mdash; разгон всё время и пролёт мимо на максимальной скорости. Двигайте ползунок: смотрите, как отзываются часы Земли, часы корабля и пиковая скорость.</p>
+</div>
+
+<div class="card">
+  <div class="ctl">
+    <label for="accel"><span><span data-lang="en" class="active">Proper acceleration</span><span data-lang="ru">Собственное ускорение</span></span><output id="accel-val"></output></label>
+    <input id="accel" type="range" min="0" max="1000" step="any" value="666.667" />
+    <div class="legend"><span data-lang="en" class="active">Log scale: 0.01 g to 10 g. 1 g = 9.80665 m/s&sup2; &asymp; 1.0323 ly/yr&sup2;.</span><span data-lang="ru">Логарифмическая шкала: от 0,01 g до 10 g. 1 g = 9,80665 м/с&sup2; &asymp; 1,0323 св. л./год&sup2;.</span></div>
+    <div class="presets" id="apre"><button data-g="0.01">0.01 g</button><button data-g="0.1">0.1 g</button><button data-g="0.5">0.5 g</button><button data-g="1">1 g</button><button data-g="3">3 g</button><button data-g="10">10 g</button></div>
+  </div>
+  <div class="ctl">
+    <label><span><span data-lang="en" class="active">Target (chart and big numbers)</span><span data-lang="ru">Цель (график и крупные числа)</span></span></label>
+    <div class="tabs" id="tabs"><button id="tgt-proxima" data-t="proxima" aria-pressed="true"></button><button id="tgt-barnard" data-t="barnard" aria-pressed="false"></button></div>
+  </div>
+</div>
+
+<h2><span data-lang="en" class="active">Selected target</span><span data-lang="ru">Выбранная цель</span> &mdash; <span id="sel-name"></span> (<span id="sel-dist"></span>)</h2>
+<div class="stats">
+  <div class="stat"><span data-lang="en" class="active"><b class="leg-flip">Flip-and-burn</b>: Earth clock</span><span data-lang="ru"><b class="leg-flip">С торможением</b>: часы Земли</span><b id="out-flip-t"></b></div>
+  <div class="stat"><span data-lang="en" class="active"><b class="leg-flip">Flip-and-burn</b>: ship clock</span><span data-lang="ru"><b class="leg-flip">С торможением</b>: часы корабля</span><b id="out-flip-tau"></b></div>
+  <div class="stat"><span data-lang="en" class="active"><b class="leg-fly">Flyby</b>: Earth clock</span><span data-lang="ru"><b class="leg-fly">Пролёт</b>: часы Земли</span><b id="out-fly-t"></b></div>
+  <div class="stat"><span data-lang="en" class="active"><b class="leg-fly">Flyby</b>: ship clock</span><span data-lang="ru"><b class="leg-fly">Пролёт</b>: часы корабля</span><b id="out-fly-tau"></b></div>
+</div>
+
+<h2><span data-lang="en" class="active">Speed over time, &beta;(t)</span><span data-lang="ru">Скорость во времени, &beta;(t)</span></h2>
+<canvas id="chart" class="plot" role="img" aria-label="beta(t)"></canvas>
+<div class="legend"><span id="chart-legend"></span></div>
+
+<h2><span data-lang="en" class="active">All results</span><span data-lang="ru">Все результаты</span></h2>
+<table id="results">
+  <thead><tr>
+    <th><span data-lang="en" class="active">Profile</span><span data-lang="ru">Профиль</span></th>
+    <th class="num"><span data-lang="en" class="active">Earth clock t</span><span data-lang="ru">Часы Земли t</span></th>
+    <th class="num"><span data-lang="en" class="active">Ship clock &tau;</span><span data-lang="ru">Часы корабля &tau;</span></th>
+    <th class="num"><span data-lang="en" class="active">Peak &beta; = v/c</span><span data-lang="ru">Пик &beta; = v/c</span></th>
+    <th class="num"><span data-lang="en" class="active">Peak &gamma;</span><span data-lang="ru">Пик &gamma;</span></th>
+  </tr></thead>
+  <tbody id="tbody"></tbody>
+</table>
+
+<div data-lang="en" class="active">
+  <div class="note">
+    <p><b>Hyperbolic motion.</b> With proper acceleration <i>a</i> from rest over a distance <i>x</i> (c = 1): &gamma; = 1 + <i>a x</i>, &beta; = &radic;(1 &minus; 1/&gamma;&sup2;); ship time &tau; = acosh(&gamma;)/<i>a</i>; Earth time <i>t</i> = &radic;(&gamma;&sup2; &minus; 1)/<i>a</i>.</p>
+    <p><b>Flip-and-burn:</b> <i>x</i> = <i>d</i>/2, then <i>t</i> = 2<i>t</i><sub>half</sub>, &tau; = 2&tau;<sub>half</sub>; the peak is in the middle and the ship arrives at rest. <b>Flyby:</b> <i>x</i> = <i>d</i>, one leg, the peak is at the finish. Flyby is faster on both clocks but nothing stops at the star.</p>
+    <p><b>Model limits.</b> Special relativity, straight line, target at rest relative to Earth. No gravity, no energy or fuel budget (the energy needed for these accelerations is far beyond any known engine), no cruising phase, no interstellar dust. Humans have not endured more than a few g for long. This is kinematics, not a mission plan.</p>
+    <p>Related: <a href="twins.html">twin paradox in transit</a>, <a href="where-we-reach.html">how far in a lifetime</a>, <a href="engines.html">engines compared</a>, <a href="comms.html">communicating with the ship</a>, <a href="/">the simulator</a>.</p>
+  </div>
+</div>
+<div data-lang="ru">
+  <div class="note">
+    <p><b>Гиперболическое движение.</b> При собственном ускорении <i>a</i> из состояния покоя на расстоянии <i>x</i> (c = 1): &gamma; = 1 + <i>a x</i>, &beta; = &radic;(1 &minus; 1/&gamma;&sup2;); время корабля &tau; = acosh(&gamma;)/<i>a</i>; время Земли <i>t</i> = &radic;(&gamma;&sup2; &minus; 1)/<i>a</i>.</p>
+    <p><b>Разгон с торможением:</b> <i>x</i> = <i>d</i>/2, затем <i>t</i> = 2<i>t</i><sub>пол</sub>, &tau; = 2&tau;<sub>пол</sub>; пик в середине, к звезде корабль приходит с нулевой скоростью. <b>Пролёт:</b> <i>x</i> = <i>d</i>, один отрезок, пик на финише. Пролёт быстрее по обоим часам, но у звезды никто не останавливается.</p>
+    <p><b>Границы модели.</b> Специальная теория относительности, прямая линия, цель неподвижна относительно Земли. Без гравитации, без бюджета энергии и топлива (энергия для таких ускорений далеко за пределами известных двигателей), без участка крейсерского полёта, без межзвёздной пыли. Человек долго не переносит более нескольких g. Это кинематика, а не план миссии.</p>
+    <p>См. также: <a href="twins.html">парадокс близнецов в пути</a>, <a href="where-we-reach.html">куда долетим за жизнь</a>, <a href="engines.html">сравнение двигателей</a>, <a href="comms.html">связь с кораблём</a>, <a href="/">симулятор</a>.</p>
+  </div>
+</div>
+
+<p>
+  <a href="/"><span data-lang="en" class="active">Back to the simulator</span><span data-lang="ru">Назад к симулятору</span></a> &middot;
+  <a href="twins.html"><span data-lang="en" class="active">Twin paradox in transit</span><span data-lang="ru">Парадокс близнецов в пути</span></a> &middot;
+  <a href="comms.html"><span data-lang="en" class="active">Communicating with the ship</span><span data-lang="ru">Связь с кораблём</span></a>
+</p>
+
+<footer class="bottom">
+  <span data-lang="en" class="active">Formulas: &gamma; = 1 + a&middot;x/c&sup2;; &tau; = (c/a)&middot;acosh &gamma;; t = (c/a)&middot;&radic;(&gamma;&sup2;&minus;1). Distances: Proxima Centauri 4.2465 ly, Barnard's Star 5.963 ly (parallax catalogues).</span>
+  <span data-lang="ru">Формулы: &gamma; = 1 + a&middot;x/c&sup2;; &tau; = (c/a)&middot;acosh &gamma;; t = (c/a)&middot;&radic;(&gamma;&sup2;&minus;1). Расстояния: Проксима Центавра 4,2465 св. л., звезда Барнарда 5,963 св. л. (параллаксные каталоги).</span>
+</footer>
+</main>
+
+<script type="module">
+import { TARGETS, flipAndBurn, flyby, sampleBeta, accelFromSlider, sliderFromAccel } from './js/physics/accel.js';
+
+const T = {
+  en: { yr: 'years', ly: 'ly', flip: 'Flip-and-burn', fly: 'Flyby', g: 'g', tAxis: 'Earth time t, years', bAxis: 'β = v/c', legend: 'Green: flip-and-burn (arrives at rest). Orange: flyby (maximum speed at the finish).' },
+  ru: { yr: 'лет', ly: 'св. л.', flip: 'С торможением', fly: 'Пролёт', g: 'g', tAxis: 'Время Земли t, лет', bAxis: 'β = v/c', legend: 'Зелёный: разгон с торможением (приходит с нулевой скоростью). Оранжевый: пролёт (максимум скорости на финише).' },
+};
+let lang = 'en';
+try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en' ? s : ((navigator.language || 'en').slice(0, 2) === 'ru' ? 'ru' : 'en'); } catch (e) {}
+
+const fmtLy = (v) => loc(String(v));
+const $ = (id) => document.getElementById(id);
+const loc = (s) => (lang === 'ru' ? s.replace('.', ',') : s);
+const sigDec = (a) => (a >= 1000 ? 0 : a >= 100 ? 1 : a >= 10 ? 2 : a >= 1 ? 3 : 4);
+function sig(v) {
+  if (!Number.isFinite(v)) return '—';
+  if (Math.abs(v) >= 1e6 || (v !== 0 && Math.abs(v) < 1e-3)) return loc(v.toExponential(2));
+  return loc(v.toFixed(sigDec(Math.abs(v))));
+}
+// Russian plural for years (1 год, 2-4 года, 5+ лет; any fraction -> года).
+function ruYears(s) {
+  if (/e/.test(s)) return 'лет';
+  if (/,/.test(s)) return 'года';
+  const n = parseInt(s, 10), m100 = n % 100, m10 = n % 10;
+  return m100 >= 11 && m100 <= 14 ? 'лет' : m10 === 1 ? 'год' : m10 >= 2 && m10 <= 4 ? 'года' : 'лет';
+}
+function fmtYears(v) { const n = sig(v); return n + ' ' + (lang === 'ru' ? ruYears(n) : T.en.yr); }
+function fmtG(g) { return loc(g >= 1 ? g.toFixed(g >= 10 ? 1 : 2) : g.toPrecision(2)) + ' g'; }
+
+let accelG = 1;
+let target = 'proxima';
+const tgt = (id) => TARGETS.find((x) => x.id === id);
+
+function compute() {
+  return TARGETS.map((t) => ({ t, flip: flipAndBurn({ accelG, d: t.ly }), fly: flyby({ accelG, d: t.ly }) }));
+}
+
+function drawChart(sel) {
+  const cv = $('chart');
+  const dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth || 600, h = cv.clientHeight || 260;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  const g = cv.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  const L = 46, R = 10, Tp = 10, B = 34, pw = w - L - R, ph = h - Tp - B;
+  const tMax = Math.max(sel.flip.t, sel.fly.t);
+  const bMax = 1;
+  const X = (t) => L + pw * t / tMax, Y = (b) => Tp + ph * (1 - b / bMax);
+  g.font = '11px monospace'; g.lineWidth = 1;
+  g.strokeStyle = 'rgba(120,200,230,0.18)'; g.fillStyle = '#5b7c88';
+  g.textAlign = 'right'; g.textBaseline = 'middle';
+  for (let i = 0; i <= 5; i++) { const b = i / 5; g.beginPath(); g.moveTo(L, Y(b)); g.lineTo(L + pw, Y(b)); g.stroke(); g.fillText(loc(b.toFixed(1)), L - 6, Y(b)); }
+  g.textAlign = 'center'; g.textBaseline = 'top';
+  const step = tMax > 40 ? 10 : tMax > 15 ? 5 : tMax > 6 ? 2 : 1;
+  for (let t = 0; t <= tMax + 1e-9; t += step) { g.beginPath(); g.moveTo(X(t), Tp); g.lineTo(X(t), Tp + ph); g.stroke(); g.fillText(String(Math.round(t)), X(t), Tp + ph + 4); }
+  g.fillText(T[lang].tAxis, L + pw / 2, h - 14);
+  g.save(); g.translate(11, Tp + ph / 2); g.rotate(-Math.PI / 2); g.textBaseline = 'middle'; g.fillText(T[lang].bAxis, 0, 0); g.restore();
+  const line = (trip, color) => {
+    g.strokeStyle = color; g.lineWidth = 2; g.beginPath();
+    sampleBeta(trip, 300).forEach((p, i) => (i ? g.lineTo(X(p.t), Y(p.beta)) : g.moveTo(X(p.t), Y(p.beta))));
+    g.stroke();
+  };
+  line(sel.flip, '#5fe3a1'); line(sel.fly, '#ffb86b');
+}
+
+function render() {
+  const t = T[lang];
+  const all = compute();
+  const sel = all.find((r) => r.t.id === target);
+  $('accel-val').textContent = fmtG(accelG);
+  $('accel').setAttribute('aria-valuetext', fmtG(accelG));
+  $('sel-name').textContent = sel.t[lang];
+  $('sel-dist').textContent = fmtLy(sel.t.ly) + ' ' + t.ly;
+  for (const x of TARGETS) {
+    const b = $('tgt-' + x.id);
+    b.textContent = x[lang] + ' — ' + fmtLy(x.ly) + ' ' + t.ly;
+    b.setAttribute('aria-pressed', String(x.id === target));
+  }
+  $('out-flip-t').textContent = fmtYears(sel.flip.t);
+  $('out-flip-tau').textContent = fmtYears(sel.flip.tau);
+  $('out-fly-t').textContent = fmtYears(sel.fly.t);
+  $('out-fly-tau').textContent = fmtYears(sel.fly.tau);
+  $('chart-legend').textContent = t.legend;
+  const tb = $('tbody');
+  tb.textContent = '';
+  for (const r of all) {
+    const grp = document.createElement('tr'); grp.className = 'grp';
+    const gc = document.createElement('td'); gc.colSpan = 5; gc.textContent = r.t[lang] + ' — ' + fmtLy(r.t.ly) + ' ' + t.ly;
+    grp.appendChild(gc); tb.appendChild(grp);
+    for (const [key, trip, name, cls] of [['flip', r.flip, t.flip, 'leg-flip'], ['flyby', r.fly, t.fly, 'leg-fly']]) {
+      const tr = document.createElement('tr');
+      const cells = [[name, 'name', cls], [fmtYears(trip.t), 't'], [fmtYears(trip.tau), 'tau'], [loc(trip.peakBeta.toFixed(5)), 'beta'], [sig(trip.peakGamma), 'gamma']];
+      const labels = lang === 'ru' ? ['Профиль', 'Часы Земли t', 'Часы корабля τ', 'Пик β', 'Пик γ'] : ['Profile', 'Earth clock t', 'Ship clock τ', 'Peak β', 'Peak γ'];
+      cells.forEach(([text, k, c], i) => {
+        const td = document.createElement('td');
+        td.id = 'out-' + r.t.id + '-' + key + '-' + k;
+        td.setAttribute('data-label', labels[i]);
+        td.className = c || 'num';
+        td.textContent = text; tr.appendChild(td);
+      });
+      tb.appendChild(tr);
+    }
+  }
+  drawChart(sel);
+}
+
+function applyLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  document.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el.getAttribute('data-lang') === l));
+  document.querySelectorAll('#langtoggle span').forEach((el) => el.classList.toggle('active', el.getAttribute('data-set') === l));
+  render();
+}
+$('accel').addEventListener('input', () => { accelG = accelFromSlider(+$('accel').value); render(); });
+$('apre').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button'); if (!b) return;
+  accelG = +b.dataset.g; $('accel').value = String(sliderFromAccel(accelG)); render();
+});
+$('tabs').addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (b) { target = b.dataset.t; render(); } });
+$('langtoggle').addEventListener('click', (ev) => {
+  const s = ev.target.closest('span'); if (!s) return;
+  const l = s.getAttribute('data-set'); applyLang(l);
+  try { localStorage.setItem('iss_lang', l); } catch (e) {}
+});
+window.addEventListener('resize', () => render());
+$('accel').value = String(sliderFromAccel(accelG));
+applyLang(lang);
+document.body.dataset.ready = '1';
+</script>
+</body>
+</html>

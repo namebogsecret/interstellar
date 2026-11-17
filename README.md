@@ -224,7 +224,7 @@ orbital flight is untouched — then blooms dramatically as you burn toward *c*.
 > bodies don't perturb each other — appropriate simplifications for a real-time
 > sim. The *kinematics* of motion near light speed are fully special-relativistic.
 
-**How this is checked:** the claims above are covered by a 50-file regression
+**How this is checked:** the claims above are covered by a 51-file regression
 suite (`bash tests/run.sh`) with explicit reference formulas and tolerances —
 see [`PHYSICS-VERIFICATION.md`](PHYSICS-VERIFICATION.md) for exactly what is,
 and isn't, gated (also published at
@@ -267,6 +267,15 @@ split of the received bit-rate factor into clock dilation and path-length parts.
 Targets: Moon, Mars and Jupiter (closest/farthest), and the nearby stars from
 `js/data/stars.js`. Flat special relativity, purely radial motion; no gravity,
 plasma or antenna geometry. Maths in `js/physics/comms.js`.
+
+## Acceleration and braking to a star
+
+[`accel.html`](accel.html) — constant proper acceleration (0.01 g to 10 g) to Proxima
+Centauri and Barnard's Star, two profiles: flip-and-burn (accelerate half the way,
+turn, brake) and flyby (accelerate all the way, maximum speed at the finish). Shows
+Earth-clock time, ship-clock time and peak beta/gamma, with a beta(t) chart.
+Hyperbolic motion in flat special relativity; no fuel/energy budget, no cruise phase.
+Maths in `js/physics/accel.js`.
 
 ## Known limitations
 
