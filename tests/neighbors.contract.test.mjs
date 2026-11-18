@@ -133,3 +133,18 @@ assert.equal(parseAccelParam('?a=Infinity'), 1); assert.equal(parseAccelParam('?
 near(accelFromSlider(0), ACCEL_MIN_G, 1e-12, 'slider 0'); near(accelFromSlider(1000), ACCEL_MAX_G, 1e-12, 'slider 1000');
 for (const g of [0.1, 0.5, 1, 3, 10]) near(accelFromSlider(sliderFromAccel(g)), g, 1e-9, 'slider roundtrip ' + g);
 console.log('neighbors.contract.test: OK');
+
+// ---- page wiring (static checks) ----
+{
+  const fs = await import('node:fs'), path = await import('node:path'), url = await import('node:url');
+  const ROOT = path.resolve(path.dirname(url.fileURLToPath(import.meta.url)), '..');
+  const rd = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
+  const html = rd('neighbors.html');
+  assert.ok(/js\/physics\/neighbors\.js/.test(html) && /js\/data\/neighbors\.js/.test(html), 'page imports logic and data');
+  assert.ok(/aria-sort/.test(html) && /aria-live="polite"/.test(html), 'a11y hooks');
+  assert.ok(/where-we-reach\.html/.test(html) && /accel\.html/.test(html), 'links to sibling pages');
+  assert.ok(rd('sitemap.xml').includes('neighbors.html'), 'sitemap');
+  assert.ok(rd('llms.txt').includes('neighbors.html'), 'llms.txt');
+  assert.ok(rd('where-we-reach.html').includes('neighbors.html'), 'wwr links to neighbors');
+  assert.ok(rd('accel.html').includes('neighbors.html'), 'accel links to neighbors');
+}

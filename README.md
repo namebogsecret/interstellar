@@ -224,7 +224,7 @@ orbital flight is untouched — then blooms dramatically as you burn toward *c*.
 > bodies don't perturb each other — appropriate simplifications for a real-time
 > sim. The *kinematics* of motion near light speed are fully special-relativistic.
 
-**How this is checked:** the claims above are covered by a 51-file regression
+**How this is checked:** the claims above are covered by a 53-file regression
 suite (`bash tests/run.sh`) with explicit reference formulas and tolerances —
 see [`PHYSICS-VERIFICATION.md`](PHYSICS-VERIFICATION.md) for exactly what is,
 and isn't, gated (also published at
@@ -276,6 +276,17 @@ turn, brake) and flyby (accelerate all the way, maximum speed at the finish). Sh
 Earth-clock time, ship-clock time and peak beta/gamma, with a beta(t) chart.
 Hyperbolic motion in flat special relativity; no fuel/energy budget, no cruise phase.
 Maths in `js/physics/accel.js`.
+
+## Neighbours in the galaxy
+
+[`neighbors.html`](neighbors.html) — the 50 nearest stars and brown dwarfs (Sun
+excluded) with flight time by ship clock and Earth clock at a constant proper
+acceleration (0.1-10 g, `?a=` in the URL), flip-and-burn or flyby; sortable table,
+filters by spectral class, distance and name. Flip-and-burn reuses
+`js/physics/flight.js`, flyby `js/physics/accel.js`; table logic in
+`js/physics/neighbors.js`; data (RECONS / Wikipedia, about J2016, source and doubtful
+entries noted in the file) in `js/data/neighbors.js`; tests `tests/neighbors.*.test.mjs`,
+smoke `tests/smoke_neighbors.py`.
 
 ## Known limitations
 

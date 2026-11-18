@@ -52,12 +52,8 @@
   footer.bottom { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
   @media (max-width: 480px) {
     main { padding: 28px 14px 0; }
-    table, tbody, tr, td { display: block; width: 100%; }
-    thead { display: none; }
-    tr { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; padding: 4px 8px; }
-    td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 10px; text-align: right; }
-    td:not([data-label])::before { content: none; }
-    td::before { content: attr(data-label); color: var(--dim); text-align: left; flex: 0 0 42%; }
+    .frow { grid-template-columns: 1fr; }
+    th, td { padding: 6px 7px; }
   }
   [data-lang] { display: none; }
   [data-lang].active { display: block; }
