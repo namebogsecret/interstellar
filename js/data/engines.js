@@ -30,7 +30,7 @@ export const ENGINES = [
   {
     id: 'fusion', kind: 'rocket',
     name: { en: 'Fusion (Daedalus, stage 1)', ru: 'Термоядерный (Дедал, 1-я ступень)' },
-    // ve 10 600 km/s -> isp = ve/g0; dry stage 1 690 t total (source gives no split: 190 t engine / 1500 t structure+tanks is nominal, only the sum matters)
+    // ve 10 600 km/s -> isp = ve/g0; dry stage 1 690 t total (source gives no split: 190 t engine / 1500 t structure+tanks is an ASSUMPTION; at k=1 only the sum matters, at k!=1 the result depends on it -- flagged on the page)
     isp: 10.6e6 / G0, F: 7.54e6, engineMass: 190e3, propMass: 46e6, tankMass: 1.5e6,
     sources: [wiki('Project Daedalus', 'Project_Daedalus')],
   },
@@ -63,8 +63,15 @@ export const ROUTES = [
     sources: [wiki('Solar gravitational lens', 'Solar_gravitational_lens')],
   },
   {
-    id: 'alphacen', name: { en: 'Alpha Centauri (4.37 ly)', ru: 'Альфа Центавра (4,37 св. года)' },
+    id: 'alphacen', name: { en: 'Alpha Centauri A/B (≈4.37 ly; Proxima: 4.24)', ru: 'α Центавра A/B (≈4,37 св. года; Проксима 4,24)' },
     r0: AU, rTo: null, D: 4.37 * LY, hohmann: false,
     sources: [wiki('Alpha Centauri', 'Alpha_Centauri')],
+  },
+  {
+    // Gaia DR3 parallax 768.07 mas -> 1/p = 1.3020 pc = 4.2465 ly (SIMBAD lists the same Gaia value)
+    id: 'proxima', name: { en: 'Proxima Centauri (4.2465 ly)', ru: 'Проксима Центавра (4,2465 св. года)' },
+    r0: AU, rTo: null, D: 4.2465 * LY, hohmann: false,
+    sources: [{ title: 'SIMBAD: Proxima Cen (Gaia DR3 parallax)', url: 'https://simbad.cds.unistra.fr/simbad/sim-id?Ident=Proxima+Cen' },
+      wiki('Proxima Centauri', 'Proxima_Centauri')],
   },
 ];

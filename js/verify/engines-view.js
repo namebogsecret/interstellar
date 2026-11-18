@@ -68,8 +68,13 @@ export function fmtSci(x) {
   if (x === 0) return '0';
   const ax = Math.abs(x);
   if (ax >= 0.01 && ax < 1000) return String(+x.toPrecision(3));
-  const e = Math.floor(Math.log10(ax)), m = x / Math.pow(10, e);
+  let e = Math.floor(Math.log10(ax)), m = x / Math.pow(10, e);
+  if (Math.abs(+m.toFixed(2)) >= 10) { e += 1; m = x / Math.pow(10, e); }   // 9.996 -> "10.00" would be un-normalised
   return m.toFixed(2) + '·10^' + e;
 }
 export const fmtAccel = (a, lang = 'en') => fmtSci(a) + (lang === 'ru' ? ' м/с²' : ' m/s²');
 export const fmtFlow = (f, lang = 'en') => fmtSci(f) + (lang === 'ru' ? ' кг/с' : ' kg/s');
+
+
+// multiplier "0.1×" / "0,1×" — decimal comma in Russian
+export const fmtK = (k, lang = 'en') => { const s = String(+k.toPrecision(2)); return (lang === 'ru' ? s.replace('.', ',') : s) + '×'; };

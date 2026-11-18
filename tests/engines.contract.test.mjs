@@ -10,7 +10,7 @@ import {
   THRUST_SCALE_MIN, THRUST_SCALE_MAX,
 } from '../js/physics/engines.js';
 import { ENGINES, ROUTES } from '../js/data/engines.js';
-import { sliderToPayload, payloadToSlider, barFraction, sliderToThrust, thrustToSlider } from '../js/verify/engines-view.js';
+import { sliderToPayload, payloadToSlider, barFraction, sliderToThrust, thrustToSlider, fmtSci, fmtK } from '../js/verify/engines-view.js';
 
 let checks = 0;
 const rel = (a, b) => Math.abs(a - b) / (Math.abs(b) || 1);
@@ -25,7 +25,7 @@ const routeById = (id) => RTS.find((r) => r.id === id);
 const REACTIVE = ['chemical', 'ion', 'ntr', 'fusion'];
 const ORDER = ['chemical', 'ion', 'ntr', 'fusion', 'sail'];
 const PAYLOADS = [100, 300, 1e3, 3e3, 1e4, 1e5, 1e6];
-const ROUTE_IDS = ['mars', 'jupiter', 'pluto', 'sgl', 'alphacen'];
+const ROUTE_IDS = ['mars', 'jupiter', 'pluto', 'sgl', 'alphacen', 'proxima'];
 
 // Clone an engine overriding thrust under every plausible field name (the contract fixes only
 // isp/engineMass/tankMass/propMass names), plus any key still holding the original thrust value.
@@ -145,7 +145,7 @@ near(SOLAR_CONST, 1361, 1e-15, 'SOLAR_CONST');
 {
   ok(ENG.length === 5, '5 engines');
   ok(JSON.stringify(ENG.map((e) => e.id)) === JSON.stringify(ORDER), 'engine ids in contract order');
-  ok(RTS.length === 5, '5 routes');
+  ok(RTS.length === 6, '6 routes');
   ok(JSON.stringify(RTS.map((r) => r.id).sort()) === JSON.stringify([...ROUTE_IDS].sort()), 'route ids');
   const checkSources = (o, what) => {
     ok(Array.isArray(o.sources) && o.sources.length >= 1, `${what}: >=1 source`);
@@ -164,7 +164,7 @@ near(SOLAR_CONST, 1361, 1e-15, 'SOLAR_CONST');
   };
   for (const e of ENG) { checkSources(e, `engine ${e.id}`); checkNames(e, `engine ${e.id}`); }
   for (const r of RTS) { checkSources(r, `route ${r.id}`); checkNames(r, `route ${r.id}`); }
-  ok(new Set(ENG.map((e) => e.id)).size === 5 && new Set(RTS.map((r) => r.id)).size === 5, 'unique ids');
+  ok(new Set(ENG.map((e) => e.id)).size === 5 && new Set(RTS.map((r) => r.id)).size === 6, 'unique ids');
 
   for (const id of REACTIVE) {
     const e = engById(id);
@@ -632,6 +632,16 @@ for (const rid of ROUTE_IDS) for (const brake of [true, false]) {
   for (const bad of [0, -5]) { checks++; assert.throws(() => accelProfile(engById('ion'), 1e3, bad), RangeError); }
   checks++; assert.throws(() => accelProfile(engById('ion'), -1, 1e9), RangeError);
   checks++; assert.throws(() => compareProfiles('nowhere', 1e3), RangeError);
+}
+
+// fmtSci renormalises a mantissa that rounds to 10.00; fmtK uses decimal comma in Russian
+{
+  checks++; assert.equal(fmtSci(9.996e-5), '1.00·10^-4');
+  checks++; assert.equal(fmtSci(9.994e-5), '9.99·10^-5');
+  checks++; assert.equal(fmtSci(9.9996e5), '1.00·10^6');
+  checks++; assert.equal(fmtK(0.1, 'ru'), '0,1×');
+  checks++; assert.equal(fmtK(0.1, 'en'), '0.1×');
+  checks++; assert.ok(routeById('proxima') && Math.abs(routeById('proxima').D / LY - 4.2465) < 1e-9, 'proxima route 4.2465 ly');
 }
 
 console.log(`engines.contract: ${checks} checks OK`);

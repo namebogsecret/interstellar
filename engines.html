@@ -120,6 +120,7 @@
     <div class="presets" id="kpre">
       <button data-k="0.1">0.1&times;</button><button data-k="0.3">0.3&times;</button><button data-k="1">1&times;</button><button data-k="3">3&times;</button><button data-k="10">10&times;</button>
     </div>
+    <div class="legend" id="kNote"></div>
   </div>
   <div class="ctl">
     <div class="presets" id="mode">
@@ -151,7 +152,7 @@
     <p><b>Solar sail</b> starts at rest at 1&nbsp;AU, thrust falls as 1/r&sup2;, sail efficiency 0.9, always a flyby. Its &ldquo;&Delta;v&rdquo; is the speed it reaches at the target. Nothing is carried, so its budget is zero.</p>
     <p><b>Hohmann reference</b> (planets only): the two-impulse heliocentric &Delta;v between circular orbits &mdash; the usual yardstick for planetary missions, with gravity. For r<sub>2</sub>/r<sub>1</sub> &gt; 11.94 (Pluto) a bi-elliptic transfer is cheaper, so there it is a reference, not a minimum.</p>
     <p>Ion versus chemical depends on payload: with a light payload on a distant route the ion engine's far larger &Delta;v wins, but at around 1000&nbsp;t its 0.24&nbsp;N of thrust makes it the slowest. Low thrust needs a very long burn.</p>
-    <p><b>Thrust scale (assumption).</b> The slider multiplies the thrust by k = 0.1&hellip;10 by fitting k times as many engines of the same kind: <b>thrust and the engine/propulsion-system mass both scale with k</b> (constant thrust-to-mass of the engine); tanks, propellant load and specific impulse stay as they are. A heavier engine lowers the &Delta;v budget, so more thrust can mean a <em>smaller</em> &Delta;v and a slower trip when the burns fill the whole distance. For the sail, k scales the <b>area</b> (and so the sail mass) at the same areal density. Cluster size, power-supply and cooling limits are not modelled; this is an illustration of the trade-off, not an engine design.</p>
+    <p><b>Thrust scale (assumption).</b> The slider multiplies the thrust by k = 0.1&hellip;10 by fitting k times as many engines of the same kind: <b>thrust and the engine/propulsion-system mass both scale with k</b> (constant thrust-to-mass of the engine); tanks, propellant load and specific impulse stay as they are. A heavier engine lowers the &Delta;v budget, so more thrust can mean a <em>smaller</em> &Delta;v and a slower trip when the burns fill the whole distance. For the sail, k scales the <b>area</b> (and so the sail mass) at the same areal density. Cluster size, power-supply and cooling limits are not modelled; this is an illustration of the trade-off, not an engine design. <b>Fusion caveat:</b> for Daedalus the source gives only the total dry mass (1&nbsp;690&nbsp;t); the 190&nbsp;t engine / 1&nbsp;500&nbsp;t structure split is an assumption, and since only the engine mass scales with k, the fusion row at k&nbsp;&ne;&nbsp;1 is illustrative only (marked &ldquo;assumption at k&ne;1&rdquo;).</p>
     <p><b>Acceleration chart.</b> a(t) = F/m(t) with m(t) = m<sub>0</sub> &minus; (F/v<sub>e</sub>)&middot;t: it rises while propellant burns, drops to zero while coasting (a gap in the line) and rises again in the braking burn, which at a log time axis sits at the very end of the flight. The sail's acceleration falls as 1/r&sup2; with distance from the Sun. Both axes are logarithmic and shared by all engines; the dashed line is 1&nbsp;g. Propellant used = m<sub>0</sub> &minus; m<sub>end</sub> = &int;(F/v<sub>e</sub>)&thinsp;dt over the burns.</p>
   </div>
 </div>
@@ -162,7 +163,7 @@
     <p><b>Солнечный парус</b> стартует с покоя на 1&nbsp;а.е., тяга падает как 1/r&sup2;, эффективность паруса 0,9, всегда пролёт. Его «&Delta;v» &mdash; скорость, набранная к цели. Рабочего тела нет, поэтому бюджет равен нулю.</p>
     <p><b>Эталон Хомана</b> (только планеты): двухимпульсное гелиоцентрическое &Delta;v между круговыми орбитами &mdash; обычная мерка межпланетных миссий, с гравитацией. При r<sub>2</sub>/r<sub>1</sub> &gt; 11,94 (Плутон) биэллиптический перелёт дешевле, так что там это ориентир, а не минимум.</p>
     <p>Ион против химии зависит от нагрузки: при лёгкой нагрузке на дальнем маршруте ионный двигатель выигрывает за счёт куда большего &Delta;v, а при ~1000&nbsp;т тяга 0,24&nbsp;Н делает его самым медленным. Малой тяге нужен очень долгий разгон.</p>
-    <p><b>Масштаб тяги (допущение).</b> Ползунок умножает тягу на k = 0,1&hellip;10 установкой в k раз большего числа таких же двигателей: <b>тяга и масса двигателя/силовой установки растут вместе с k</b> (постоянное отношение тяги к массе двигателя); баки, запас топлива и удельный импульс не меняются. Более тяжёлый двигатель снижает бюджет &Delta;v, поэтому рост тяги может дать <em>меньшее</em> &Delta;v и более долгий полёт, когда участки тяги занимают всю дистанцию. Для паруса k масштабирует <b>площадь</b> (а с ней и массу паруса) при той же поверхностной плотности. Размер кластера, мощность питания и охлаждение не моделируются; это иллюстрация компромисса, а не проект двигателя.</p>
+    <p><b>Масштаб тяги (допущение).</b> Ползунок умножает тягу на k = 0,1&hellip;10 установкой в k раз большего числа таких же двигателей: <b>тяга и масса двигателя/силовой установки растут вместе с k</b> (постоянное отношение тяги к массе двигателя); баки, запас топлива и удельный импульс не меняются. Более тяжёлый двигатель снижает бюджет &Delta;v, поэтому рост тяги может дать <em>меньшее</em> &Delta;v и более долгий полёт, когда участки тяги занимают всю дистанцию. Для паруса k масштабирует <b>площадь</b> (а с ней и массу паруса) при той же поверхностной плотности. Размер кластера, мощность питания и охлаждение не моделируются; это иллюстрация компромисса, а не проект двигателя. <b>Оговорка по термояду:</b> для «Дедала» в источнике дана только суммарная сухая масса (1&nbsp;690&nbsp;т); разбивка 190&nbsp;т двигатель / 1&nbsp;500&nbsp;т конструкция — допущение, а так как с k масштабируется только масса двигателя, строка термоядерного при k&nbsp;&ne;&nbsp;1 лишь иллюстративна (помечена «допущение при k≠1»).</p>
     <p><b>График ускорения.</b> a(t) = F/m(t), где m(t) = m<sub>0</sub> &minus; (F/v<sub>e</sub>)&middot;t: растёт, пока выгорает топливо, равно нулю в полёте по инерции (разрыв линии) и снова растёт на тормозном участке, который на логарифмической оси времени лежит в самом конце полёта. Ускорение паруса падает как 1/r&sup2; с удалением от Солнца. Обе оси логарифмические и общие для всех двигателей; пунктир &mdash; 1&nbsp;g. Расход рабочего тела = m<sub>0</sub> &minus; m<sub>кон</sub> = &int;(F/v<sub>e</sub>)&thinsp;dt по участкам тяги.</p>
   </div>
 </div>
@@ -190,20 +191,22 @@
 
 <script type="module">
 import { compareEngines, compareProfiles, hohmann, ENGINES, ROUTES } from './js/physics/engines.js';
-import { fmtTime, fmtDv, fmtMass, barFraction, sliderToPayload, payloadToSlider, sliderToThrust, thrustToSlider, fmtAccel, fmtFlow } from './js/verify/engines-view.js';
+import { fmtTime, fmtDv, fmtMass, barFraction, sliderToPayload, payloadToSlider, sliderToThrust, thrustToSlider, fmtAccel, fmtFlow, fmtK } from './js/verify/engines-view.js';
 
 const T = {
   en: { engine: 'Engine', time: 'Flight time', dv: 'Δv spent', budget: 'Δv budget', cruise: 'Cruise speed', unreach: 'unreachable',
     flyby: 'flyby', relativistic: 'classical estimate inaccurate (>0.1 c)', noBudget: 'no Δv budget', hoh: 'Hohmann reference (two-impulse; for r2/r1 > 11.94 a bi-elliptic transfer is cheaper)', hohT: 'Hohmann transfer time',
     src: 'Engines', srcR: 'Routes', ax: 'log scale', axT: [[86400, '1 day'], [3.15576e7, '1 year'], [3.15576e10, '1000 y'], [3.15576e13, '1 Myr'], [3.15576e16, '1 Gyr']], axD: [[10, '10 m/s'], [1e3, '1 km/s'], [1e5, '100 km/s'], [1e7, '10 000 km/s']], prop: 'Propellant used', flow: 'Flow', a0: 'Initial a', accT: 'time since launch, log scale', accA: 'acceleration, log scale', oneG: '1 g',
     accNote: 'Gaps in a line = coasting (a = 0). The braking burn sits at the end of the flight. Sail: a falls as 1/r².', kLbl: 'thrust ×',
-    axA: [[1e-14, '1e-14'], [1e-10, '1e-10'], [1e-6, '1e-6'], [1e-2, '0.01'], [1e2, '100']], axTa: [[60, '1 min'], [3600, '1 h'], [86400, '1 day'], [3.15576e7, '1 year'], [3.15576e10, '1000 y'], [3.15576e13, '1 Myr'], [3.15576e16, '1 Gyr']],
+    axA: [[1e-18, '1e-18'], [1e-14, '1e-14'], [1e-10, '1e-10'], [1e-6, '1e-6'], [1e-2, '0.01'], [1e2, '100'], [1e4, '1e4']], axTa: [[60, '1 min'], [3600, '1 h'], [86400, '1 day'], [3.15576e7, '1 year'], [3.15576e10, '1000 y'], [3.15576e13, '1 Myr'], [3.15576e16, '1 Gyr']],
+    fusionTag: 'assumption at k≠1', fusionNote: 'Fusion (Daedalus): the source gives only the total dry mass of 1 690 t; the split into 190 t engine and 1 500 t structure is an assumption. At thrust ×1 the split does not matter, at other values the fusion row is illustrative only.',
     plus: 'Sail bar = flyby speed at the target, not spent Δv.', sailLbl: 'flyby speed', oosHi: 'off scale', oosLo: 'off scale' },
   ru: { engine: 'Двигатель', time: 'Время полёта', dv: 'Затрачено Δv', budget: 'Бюджет Δv', cruise: 'Крейсерская скорость', unreach: 'недостижимо',
     flyby: 'пролёт', relativistic: 'классика неточна (>0,1 c)', noBudget: 'нет бюджета Δv', hoh: 'Эталон Хомана (двухимпульсный перелёт; при r2/r1 > 11,94 биэллиптический дешевле)', hohT: 'Время перелёта по Хоману',
     src: 'Двигатели', srcR: 'Маршруты', ax: 'лог. шкала', axT: [[86400, '1 сутки'], [3.15576e7, '1 год'], [3.15576e10, '1000 лет'], [3.15576e13, '1 млн лет'], [3.15576e16, '1 млрд лет']], axD: [[10, '10 м/с'], [1e3, '1 км/с'], [1e5, '100 км/с'], [1e7, '10 000 км/с']], prop: 'Расход топлива', flow: 'Поток', a0: 'Нач. ускорение', accT: 'время от старта, лог. шкала', accA: 'ускорение, лог. шкала', oneG: '1 g',
     accNote: 'Разрыв линии = полёт по инерции (a = 0). Тормозной участок лежит в конце полёта. Парус: a падает как 1/r².', kLbl: 'тяга ×',
-    axA: [[1e-14, '1e-14'], [1e-10, '1e-10'], [1e-6, '1e-6'], [1e-2, '0,01'], [1e2, '100']], axTa: [[60, '1 мин'], [3600, '1 ч'], [86400, '1 сут'], [3.15576e7, '1 год'], [3.15576e10, '1000 лет'], [3.15576e13, '1 млн лет'], [3.15576e16, '1 млрд лет']],
+    axA: [[1e-18, '1e-18'], [1e-14, '1e-14'], [1e-10, '1e-10'], [1e-6, '1e-6'], [1e-2, '0,01'], [1e2, '100'], [1e4, '1e4']], axTa: [[60, '1 мин'], [3600, '1 ч'], [86400, '1 сут'], [3.15576e7, '1 год'], [3.15576e10, '1000 лет'], [3.15576e13, '1 млн лет'], [3.15576e16, '1 млрд лет']],
+    fusionTag: 'допущение при k≠1', fusionNote: 'Термоядерный (Дедал): в источнике только суммарная сухая масса 1 690 т; разбивка на 190 т двигателя и 1 500 т конструкции — допущение. При тяге ×1 разбивка не важна, при других значениях строка термоядерного двигателя лишь иллюстративна.',
     plus: 'Столбик паруса — скорость пролёта у цели, а не затраченное Δv.', sailLbl: 'скорость пролёта', oosHi: 'за шкалой', oosLo: 'за шкалой' },
 };
 const COLORS = { chemical: '#ff9c6b', ion: '#7fb3ff', ntr: '#5fe3a1', fusion: '#ffd28a', sail: '#d9a6ff' };
@@ -213,7 +216,7 @@ const V_MIN = 10, V_MAX = 1e8;     // m/s, log axis
 let lang = 'en';
 try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en' ? s : ((navigator.language || 'en').slice(0, 2) === 'ru' ? 'ru' : 'en'); } catch (e) {}
 let brake = true;
-const A_MIN = 1e-14, A_MAX = 1e2, TA_MIN = 10, TA_MAX = 1e17;   // m/s2 and s, both log axes of the acceleration chart
+const A_MIN = 1e-18, A_MAX = 1e4, TA_MIN = 10, TA_MAX = 1e17;   // m/s2 and s, both log axes of the acceleration chart
 
 const $ = (id) => document.getElementById(id);
 const pIn = $('p'), kIn = $('k'), routeSel = $('route');
@@ -221,8 +224,9 @@ pIn.value = Math.round(payloadToSlider(1000));
 routeSel.innerHTML = ROUTES.map((r) => '<option value="' + r.id + '"></option>').join('');
 const engById = Object.fromEntries(ENGINES.map((e) => [e.id, e]));
 
-function badges(row, t) {
+function badges(row, t, k) {
   const b = [];
+  if (row.id === 'fusion' && Math.abs(k - 1) > 1e-9) b.push('<span class="badge">' + t.fusionTag + '</span>');
   if (!Number.isFinite(row.time)) b.push('<span class="badge bad">' + t.unreach + '</span>');
   for (const f of row.flags) if (f !== 'noBudget') b.push('<span class="badge">' + t[f] + '</span>');
   return b.join('');
@@ -267,7 +271,12 @@ function accelChart(profiles, t) {
   const yl = t.axA.map(([v, lbl]) => '<span class="yl" data-v="' + v + '" style="top:' + (py(v) * 100).toFixed(3) + '%">' + lbl + '</span>').join('') +
     '<span class="yl" style="top:' + (py(9.80665) * 100).toFixed(3) + '%;color:#ff6b8a">' + t.oneG + '</span>';
   const xl = t.axTa.map(([v, lbl], i) => '<span class="xl' + (i === t.axTa.length - 1 ? ' last' : '') + '" data-v="' + v + '" style="left:' + (px(v) * 100).toFixed(3) + '%">' + lbl + '</span>').join('');
-  const keys = '<div class="keys">' + profiles.map((p) => '<span><span style="color:' + COLORS[p.id] + '">&#9632;</span> ' + engById[p.id].name[lang] + '</span>').join('') + '</div>';
+  const keys = '<div class="keys">' + profiles.map((p) => {
+    const pos = p.points.filter((q) => q.a > 0 && q.phase !== 'coast');
+    const hi = pos.some((q) => q.a > A_MAX), lo = pos.some((q) => q.a < A_MIN);
+    const mark = (hi || lo) ? ' <span class="oos">' + (hi ? '› ' : '‹ ') + t.oosHi + '</span>' : '';
+    return '<span><span style="color:' + COLORS[p.id] + '">&#9632;</span> ' + engById[p.id].name[lang] + mark + '</span>';
+  }).join('') + '</div>';
   return '<div class="legend">' + t.accA + ' (m/s²) &uarr; &middot; ' + t.accT + ' &rarr;</div><div class="achart"><svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">' + grid + g + lines + '</svg>' + yl + xl + '</div>' + keys;
 }
 
@@ -276,14 +285,16 @@ function render() {
   const kg = sliderToPayload(+pIn.value), kScale = sliderToThrust(+kIn.value), route = ROUTES.find((r) => r.id === routeSel.value) || ROUTES[0];
   routeSel.querySelectorAll('option').forEach((o, i) => { o.textContent = ROUTES[i].name[lang]; });
   $('pout').textContent = fmtMass(kg, lang);
-  $('kout').textContent = (+kScale.toPrecision(2)) + '×';
+  $('kout').textContent = fmtK(kScale, lang);
+  document.querySelectorAll('#kpre button').forEach((b) => { b.textContent = fmtK(+b.dataset.k, lang); });
+  $('kNote').textContent = Math.abs(kScale - 1) > 1e-9 ? t.fusionNote : '';
   document.querySelectorAll('#kpre button').forEach((b) => b.classList.toggle('on', Math.abs(+b.dataset.k - kScale) / kScale < 0.03));
   document.querySelectorAll('#ppre button').forEach((b) => b.classList.toggle('on', Math.abs(+b.dataset.kg - kg) / kg < 0.03));
   document.querySelectorAll('#mode button').forEach((b) => b.classList.toggle('on', (b.dataset.brake === '1') === brake));
 
   const rows = compareEngines(route.id, kg, { brake, thrustScale: kScale });
   $('chartAccel').innerHTML = accelChart(compareProfiles(route.id, kg, { brake, thrustScale: kScale }), t);
-  $('accLegend').textContent = t.accNote + ' ' + t.kLbl + ' ' + (+kScale.toPrecision(2)) + '.';
+  $('accLegend').textContent = t.accNote + ' ' + t.kLbl + ' ' + fmtK(kScale, lang).replace('×', '') + '.';
   const hoh = route.hohmann ? hohmann(route.r0, route.rTo) : null;
   $('chartTime').innerHTML = chart(rows, 'time', T_MIN, T_MAX, (v) => fmtTime(v, lang), null, t, t.axT);
   $('chartDv').innerHTML = chart(rows, 'dvUsed', V_MIN, V_MAX, (v) => fmtDv(v, lang), hoh && hoh.dv, t, t.axD);
@@ -300,7 +311,7 @@ function render() {
     '<td data-label="' + t.prop + '">' + (r.id === 'sail' ? '—' : fmtMass(r.propUsed, lang)) + '</td>' +
     '<td data-label="' + t.flow + '">' + (r.id === 'sail' ? '—' : fmtFlow(r.mdot, lang)) + '</td>' +
     '<td data-label="' + t.a0 + '">' + fmtAccel(r.aStart, lang) + '</td>' +
-    '<td>' + badges(r, t) + '</td></tr>').join('');
+    '<td>' + badges(r, t, kScale) + '</td></tr>').join('');
   $('tableout').innerHTML = '<table><thead><tr><th>' + t.engine + '</th><th>' + t.time + '</th><th>' + t.dv + '</th><th>' + t.budget + '</th><th>' + t.cruise + '</th><th>' + t.prop + '</th><th>' + t.flow + '</th><th>' + t.a0 + '</th><th></th></tr></thead><tbody>' + body + '</tbody></table>';
 
   const li = (s) => '<li><a href="' + s.url + '" target="_blank" rel="noopener">' + s.title + '</a></li>';
