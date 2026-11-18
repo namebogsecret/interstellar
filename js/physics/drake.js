@@ -13,7 +13,8 @@ export const FRACTION_KEYS = ['fp', 'fl', 'fi', 'fc']; // must be <= 1 (probabil
 
 // Galaxy model for the Fermi-paradox part: a uniform cylinder (round numbers, not a fit).
 export const GALAXY = { radiusLy: 50000, thicknessLy: 1000 };
-// Order-of-magnitude radius of the region our own radio leakage has reached (broadcasting for ~a century).
+// Search radius for the "silence" comparison: an order-of-magnitude assumption of how far nearby SETI surveys reach
+// (not a measured detection limit, and not a "leakage bubble").
 export const RADIO_BUBBLE_LY = 100;
 
 export function mulberry32(seed) {

@@ -112,10 +112,10 @@
 <h1><span data-lang="en" class="active">WHERE TO LOOK FOR LIFE: THE DRAKE EQUATION AND THE FERMI PARADOX</span><span data-lang="ru">ГДЕ ИСКАТЬ ЖИЗНЬ: УРАВНЕНИЕ ДРЕЙКА И ПАРАДОКС ФЕРМИ</span></h1>
 
 <div data-lang="en" class="active">
-  <p>The Drake equation estimates how many civilisations in the Galaxy could be sending detectable signals: <code>N = R* &middot; fp &middot; ne &middot; fl &middot; fi &middot; fc &middot; L</code>. Some factors are already measured, others are pure guesses. So instead of one number this page takes a <b>range</b> for each factor, draws 20&nbsp;000 random combinations (Monte-Carlo) and shows the whole spread of N, the chance that N is below one (we are alone), and how far the nearest neighbour would be.</p>
+  <p>The Drake equation estimates how many civilisations in the Galaxy could be sending detectable signals: <code>N = R* &middot; fp &middot; ne &middot; fl &middot; fi &middot; fc &middot; L</code>. Some factors are already measured, others are pure guesses. So instead of one number this page takes a <b>range</b> for each factor, draws 20&nbsp;000 random combinations (Monte-Carlo) and shows the whole spread of N, the chance that N is below one (on average not even one detectable civilisation exists right now), and how far the nearest neighbour would be.</p>
 </div>
 <div data-lang="ru">
-  <p>Уравнение Дрейка оценивает, сколько цивилизаций в Галактике могут слать заметные сигналы: <code>N = R* &middot; fp &middot; ne &middot; fl &middot; fi &middot; fc &middot; L</code>. Часть множителей уже измерена, остальные &mdash; чистые догадки. Поэтому вместо одного числа здесь для каждого множителя берётся <b>диапазон</b>, случайно разыгрывается 20&nbsp;000 сочетаний (Монте-Карло), и показывается весь разброс N, шанс того, что N меньше единицы (мы одни), и как далеко находился бы ближайший сосед.</p>
+  <p>Уравнение Дрейка оценивает, сколько цивилизаций в Галактике могут слать заметные сигналы: <code>N = R* &middot; fp &middot; ne &middot; fl &middot; fi &middot; fc &middot; L</code>. Часть множителей уже измерена, остальные &mdash; чистые догадки. Поэтому вместо одного числа здесь для каждого множителя берётся <b>диапазон</b>, случайно разыгрывается 20&nbsp;000 сочетаний (Монте-Карло), и показывается весь разброс N, шанс того, что N меньше единицы (в среднем нет ни одной сейчас обнаруживаемой цивилизации), и как далеко находился бы ближайший сосед.</p>
 </div>
 <div class="note">
   <p data-lang="en" class="active"><b>Honest caveat.</b> Only R*, fp and partly ne are measured. fl, fi, fc and L have a single data point (Earth), so their ranges are subjective assumptions, not estimates with error bars. The result says what follows from the assumptions you choose, not how many civilisations exist.</p>
@@ -138,7 +138,7 @@
   <div class="stat"><span data-lang="en" class="active">Median N</span><span data-lang="ru">Медиана N</span><b id="out-median"></b></div>
   <div class="stat"><span data-lang="en" class="active">16&ndash;84 % interval</span><span data-lang="ru">Интервал 16&ndash;84 %</span><b id="out-p68"></b></div>
   <div class="stat"><span data-lang="en" class="active">2.5&ndash;97.5 % interval</span><span data-lang="ru">Интервал 2,5&ndash;97,5 %</span><b id="out-p95"></b></div>
-  <div class="stat"><span data-lang="en" class="active">P(N &lt; 1): we are alone</span><span data-lang="ru">P(N &lt; 1): мы одни</span><b id="out-plt1"></b></div>
+  <div class="stat"><span data-lang="en" class="active">P(N &lt; 1): expected zero detectable civilisations now</span><span data-lang="ru">P(N &lt; 1): ожидаемо ни одной обнаруживаемой сейчас цивилизации</span><b id="out-plt1"></b></div>
 </div>
 <div class="card"><canvas id="drake-hist" class="plot hist" role="img" aria-label="Histogram of log10 N"></canvas>
   <div class="legend" id="hist-legend"></div></div>
@@ -147,18 +147,18 @@
 <div class="stats">
   <div class="stat"><span data-lang="en" class="active">Typical distance to the nearest (median N)</span><span data-lang="ru">Типичное расстояние до ближайшей (медиана N)</span><b id="out-dist"></b></div>
   <div class="stat"><span data-lang="en" class="active">Range for N at 84 % / 16 %</span><span data-lang="ru">Диапазон для N на уровнях 84 % / 16 %</span><b id="out-dist-range"></b></div>
-  <div class="stat"><span data-lang="en" class="active">P(nobody within our radio bubble, ~100 ly)</span><span data-lang="ru">P(никого в нашем радиопузыре, ~100 св. лет)</span><b id="out-silence"></b></div>
+  <div class="stat"><span data-lang="en" class="active">P(nobody within a ~100 ly search radius)</span><span data-lang="ru">P(никого в радиусе поиска ~100 св. лет)</span><b id="out-silence"></b></div>
 </div>
 <div data-lang="en" class="active">
   <div class="note">
     <p><b>Model.</b> N civilisations are scattered at random through a flat cylinder: radius 50&nbsp;000 ly, thickness 1&nbsp;000 ly (round numbers, not a fit). Then the chance that none lies within distance r of us is exp(&minus;N&middot;V(r)/V<sub>gal</sub>), where V(r) is a ball of radius r clipped to the disc thickness. The &ldquo;typical distance&rdquo; is the r at which this chance is 50 %. It is meaningful for N well above one; edge effects (the Sun is not at the centre) and the clumping of real stars are ignored. &ldquo;Infinity&rdquo; means: more likely than not there is no neighbour anywhere in the Galaxy.</p>
-    <p><b>Comparison with silence.</b> Our own radio leakage has had about a century to spread, so a bubble of roughly 100 ly has been &ldquo;lit&rdquo; by us (order of magnitude). The last number above is the average chance that no signalling neighbour sits inside such a radius. If it is high, silence nearby is exactly what the assumptions predict &mdash; no paradox.</p>
+    <p><b>Comparison with silence.</b> The last number is the average chance that no signalling neighbour sits inside a search radius of about 100 ly. That radius is an assumption: roughly how far nearby SETI surveys can reach, not a measured limit. If the chance is high, silence nearby is exactly what the assumptions predict &mdash; no paradox.</p>
   </div>
 </div>
 <div data-lang="ru">
   <div class="note">
     <p><b>Модель.</b> N цивилизаций случайно разбросаны по плоскому цилиндру: радиус 50&nbsp;000 св. лет, толщина 1&nbsp;000 св. лет (круглые числа, не подгонка). Тогда вероятность того, что в радиусе r от нас никого нет, равна exp(&minus;N&middot;V(r)/V<sub>гал</sub>), где V(r) &mdash; шар радиуса r, обрезанный толщиной диска. &laquo;Типичное расстояние&raquo; &mdash; такое r, при котором эта вероятность равна 50 %. Оценка осмысленна при N заметно больше единицы; краевые эффекты (Солнце не в центре) и скученность реальных звёзд не учтены. &laquo;Бесконечность&raquo; значит: скорее всего соседа нет нигде в Галактике.</p>
-    <p><b>Сравнение с тишиной.</b> Наша радиоутечка распространяется около века, так что мы &laquo;засветили&raquo; пузырь порядка 100 св. лет. Последнее число выше &mdash; средняя вероятность того, что внутри такого радиуса нет сигналящего соседа. Если она велика, тишина рядом &mdash; ровно то, что предсказывают допущения, и парадокса нет.</p>
+    <p><b>Сравнение с тишиной.</b> Последнее число &mdash; средняя вероятность того, что в радиусе поиска около 100 св. лет нет сигналящего соседа. Этот радиус &mdash; допущение: примерно то, докуда достают близкие обзоры SETI, а не измеренный предел. Если вероятность велика, тишина рядом &mdash; ровно то, что предсказывают допущения, и парадокса нет.</p>
   </div>
 </div>
 
@@ -224,7 +224,13 @@ function fmt(v) {
   if (m >= 10) { m /= 10; e += 1; }
   return dec(String(m)) + '×10' + sup(e);
 }
-function pct(p) { return dec((p * 100 < 10 ? (p * 100).toFixed(1) : Math.round(p * 100).toString())) + ' %'; }
+function pct(p) {
+  if (p >= 1) return '100 %';
+  if (p <= 0) return '0 %';
+  if (p > 0.999) return dec('>99.9') + ' %';
+  if (p < 0.001) return dec('<0.1') + ' %';
+  return dec(p * 100 < 10 ? (p * 100).toFixed(1) : Math.round(p * 100).toString()) + ' %';
+}
 function ly(v) {
   if (!Number.isFinite(v)) return T[lang].inf;
   return (v >= 100 ? Math.round(v).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US') : dec(v.toFixed(1))) + ' ' + T[lang].ly;
@@ -333,7 +339,8 @@ function renderSources() {
       const s = SOURCES[id];
       return s.url ? '<a href="' + s.url + '" rel="noopener">' + s.cite + '</a>' : s.cite;
     }).join('<br>');
-    html += '<tr><td data-label="' + t.par + '">' + k + ' <span class="tag ' + pr.basis + '">' + pr.basis + '</span></td><td data-label="' + t.rng + '">' + range + '</td><td data-label="' + t.src + '" style="text-align:left">' + srcs + '</td></tr>';
+    const cav = pr.caveat ? '<br><i class="warn">' + pr.caveat[lang] + '</i>' : '';
+    html += '<tr><td data-label="' + t.par + '">' + k + ' <span class="tag ' + pr.basis + '">' + pr.basis + '</span></td><td data-label="' + t.rng + '">' + range + '</td><td data-label="' + t.src + '" style="text-align:left">' + srcs + cav + '</td></tr>';
   }
   box.innerHTML = html + '</tbody></table>';
 }

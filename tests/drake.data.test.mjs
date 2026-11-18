@@ -33,6 +33,26 @@ for (const k of ['fl', 'fi', 'fc', 'L']) assert.ok(/NOT measured/.test(PARAM_MET
 for (const [id, s] of Object.entries(SOURCES)) {
   if (s.url) assert.ok(/^https:\/\/arxiv\.org\/abs\/\d{4}\.\d{4,5}$/.test(s.url), id + ' url');
 }
+// honesty rules: measured/model entries carry a non-empty caveat (bilingual); an 'assumption' is never
+// presented as confirmed by an arXiv paper, except in the preset that is a reconstruction of that very paper.
+for (const p of PRESETS) for (const k of KEYS) {
+  const pr = p.params[k];
+  if (pr.basis === 'measured' || pr.basis === 'model') {
+    assert.ok(pr.caveat && pr.caveat.en.length > 20 && pr.caveat.ru.length > 20, `${p.id}.${k} (${pr.basis}) needs a caveat`);
+  }
+  if (pr.basis === 'assumption' && p.id !== 'sdo2018') {
+    assert.ok(pr.src.every((s) => !SOURCES[s].url), `${p.id}.${k} assumption must not cite an arXiv link as confirmation`);
+  }
+  if (pr.caveat) assert.ok(pr.caveat.en && pr.caveat.ru, `${p.id}.${k} caveat bilingual`);
+}
+// specific corrections: R* is a conversion, not a measurement; Westby is not attached to the optimist L; Cassan not to a low fp
+const pess = PRESETS.find((p) => p.id === 'pessimist').params, opt = PRESETS.find((p) => p.id === 'optimist').params;
+assert.notEqual(pess.R.basis, 'measured'); assert.notEqual(opt.R.basis, 'measured');
+assert.ok(!opt.L.src.includes('westby2020'), 'optimist L must not cite Westby');
+assert.ok(pess.L.src.includes('westby2020'));
+assert.ok(!pess.fp.src.includes('cassan2012'), 'pessimist fp must not cite Cassan');
+assert.ok(/OBSERVABLE UNIVERSE/.test(PRESETS.find((p) => p.id === 'pessimist').note.en), 'Frank & Sullivan threshold is scoped to the observable Universe');
+for (const k of ['ne']) for (const p of [pess, opt]) assert.ok(/Sun-like/.test(p[k].caveat.en), 'ne caveat mentions per Sun-like star');
 // every defined source is used by some preset (no dead entries)
 const used = new Set(PRESETS.flatMap((p) => KEYS.flatMap((k) => p.params[k].src)));
 for (const id of Object.keys(SOURCES)) assert.ok(used.has(id), 'source used: ' + id);
