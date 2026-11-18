@@ -76,6 +76,13 @@
   .badge { display: inline-block; border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; margin: 1px 3px 1px 0; font-size: 11px; color: #ffd28a; white-space: nowrap; }
   .badge.bad { color: #ff9c9c; }
   .legend { color: var(--dim); font-size: 11.5px; margin: 4px 0; }
+  .achart { position: relative; margin: 10px 4px 26px 62px; height: 240px; }
+  .achart svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: rgba(120,200,230,0.04); }
+  .achart .yl { position: absolute; left: -60px; width: 56px; text-align: right; transform: translateY(-50%); font-size: 10.5px; color: var(--dim); white-space: nowrap; }
+  .achart .xl { position: absolute; top: 100%; margin-top: 4px; transform: translateX(-50%); font-size: 10.5px; color: var(--dim); white-space: nowrap; }
+  .achart .xl.last { transform: translateX(-100%); }
+  .keys { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: #cfeefc; margin: 4px 0; }
+  .tscroll { overflow-x: auto; }
   ul.src { padding-left: 18px; margin: 6px 0; } ul.src li { margin: 3px 0; overflow-wrap: anywhere; }
 </style>
 </head>
@@ -108,6 +115,13 @@
     </div>
   </div>
   <div class="ctl">
+    <label for="k"><span><span data-lang="en" class="active">Thrust scale (number of engines; sail area)</span><span data-lang="ru">Масштаб тяги (число двигателей; площадь паруса)</span></span><output id="kout"></output></label>
+    <input id="k" type="range" min="-100" max="100" step="1" value="0" />
+    <div class="presets" id="kpre">
+      <button data-k="0.1">0.1&times;</button><button data-k="0.3">0.3&times;</button><button data-k="1">1&times;</button><button data-k="3">3&times;</button><button data-k="10">10&times;</button>
+    </div>
+  </div>
+  <div class="ctl">
     <div class="presets" id="mode">
       <button data-brake="1" class="on"><span data-lang="en" class="active">Stop at target</span><span data-lang="ru">С торможением</span></button>
       <button data-brake="0"><span data-lang="en" class="active">Flyby</span><span data-lang="ru">Пролёт</span></button>
@@ -122,8 +136,12 @@
 <div class="card chart" id="chartDv" role="img" aria-label="Delta-v by engine, log scale"></div>
 <div class="legend" id="hohLegend"></div>
 
+<h2><span data-lang="en" class="active">Acceleration along the flight</span><span data-lang="ru">Ускорение вдоль полёта</span></h2>
+<div class="card chart" id="chartAccel" role="img" aria-label="Acceleration versus time since launch, log-log"></div>
+<div class="legend" id="accLegend"></div>
+
 <h2><span data-lang="en" class="active">The numbers</span><span data-lang="ru">Цифры</span></h2>
-<div id="tableout"></div>
+<div class="tscroll" id="tableout"></div>
 
 <h2><span data-lang="en" class="active">Model and assumptions</span><span data-lang="ru">Модель и допущения</span></h2>
 <div data-lang="en" class="active">
@@ -133,6 +151,8 @@
     <p><b>Solar sail</b> starts at rest at 1&nbsp;AU, thrust falls as 1/r&sup2;, sail efficiency 0.9, always a flyby. Its &ldquo;&Delta;v&rdquo; is the speed it reaches at the target. Nothing is carried, so its budget is zero.</p>
     <p><b>Hohmann reference</b> (planets only): the two-impulse heliocentric &Delta;v between circular orbits &mdash; the usual yardstick for planetary missions, with gravity. For r<sub>2</sub>/r<sub>1</sub> &gt; 11.94 (Pluto) a bi-elliptic transfer is cheaper, so there it is a reference, not a minimum.</p>
     <p>Ion versus chemical depends on payload: with a light payload on a distant route the ion engine's far larger &Delta;v wins, but at around 1000&nbsp;t its 0.24&nbsp;N of thrust makes it the slowest. Low thrust needs a very long burn.</p>
+    <p><b>Thrust scale (assumption).</b> The slider multiplies the thrust by k = 0.1&hellip;10 by fitting k times as many engines of the same kind: <b>thrust and the engine/propulsion-system mass both scale with k</b> (constant thrust-to-mass of the engine); tanks, propellant load and specific impulse stay as they are. A heavier engine lowers the &Delta;v budget, so more thrust can mean a <em>smaller</em> &Delta;v and a slower trip when the burns fill the whole distance. For the sail, k scales the <b>area</b> (and so the sail mass) at the same areal density. Cluster size, power-supply and cooling limits are not modelled; this is an illustration of the trade-off, not an engine design.</p>
+    <p><b>Acceleration chart.</b> a(t) = F/m(t) with m(t) = m<sub>0</sub> &minus; (F/v<sub>e</sub>)&middot;t: it rises while propellant burns, drops to zero while coasting (a gap in the line) and rises again in the braking burn, which at a log time axis sits at the very end of the flight. The sail's acceleration falls as 1/r&sup2; with distance from the Sun. Both axes are logarithmic and shared by all engines; the dashed line is 1&nbsp;g. Propellant used = m<sub>0</sub> &minus; m<sub>end</sub> = &int;(F/v<sub>e</sub>)&thinsp;dt over the burns.</p>
   </div>
 </div>
 <div data-lang="ru">
@@ -142,11 +162,15 @@
     <p><b>Солнечный парус</b> стартует с покоя на 1&nbsp;а.е., тяга падает как 1/r&sup2;, эффективность паруса 0,9, всегда пролёт. Его «&Delta;v» &mdash; скорость, набранная к цели. Рабочего тела нет, поэтому бюджет равен нулю.</p>
     <p><b>Эталон Хомана</b> (только планеты): двухимпульсное гелиоцентрическое &Delta;v между круговыми орбитами &mdash; обычная мерка межпланетных миссий, с гравитацией. При r<sub>2</sub>/r<sub>1</sub> &gt; 11,94 (Плутон) биэллиптический перелёт дешевле, так что там это ориентир, а не минимум.</p>
     <p>Ион против химии зависит от нагрузки: при лёгкой нагрузке на дальнем маршруте ионный двигатель выигрывает за счёт куда большего &Delta;v, а при ~1000&nbsp;т тяга 0,24&nbsp;Н делает его самым медленным. Малой тяге нужен очень долгий разгон.</p>
+    <p><b>Масштаб тяги (допущение).</b> Ползунок умножает тягу на k = 0,1&hellip;10 установкой в k раз большего числа таких же двигателей: <b>тяга и масса двигателя/силовой установки растут вместе с k</b> (постоянное отношение тяги к массе двигателя); баки, запас топлива и удельный импульс не меняются. Более тяжёлый двигатель снижает бюджет &Delta;v, поэтому рост тяги может дать <em>меньшее</em> &Delta;v и более долгий полёт, когда участки тяги занимают всю дистанцию. Для паруса k масштабирует <b>площадь</b> (а с ней и массу паруса) при той же поверхностной плотности. Размер кластера, мощность питания и охлаждение не моделируются; это иллюстрация компромисса, а не проект двигателя.</p>
+    <p><b>График ускорения.</b> a(t) = F/m(t), где m(t) = m<sub>0</sub> &minus; (F/v<sub>e</sub>)&middot;t: растёт, пока выгорает топливо, равно нулю в полёте по инерции (разрыв линии) и снова растёт на тормозном участке, который на логарифмической оси времени лежит в самом конце полёта. Ускорение паруса падает как 1/r&sup2; с удалением от Солнца. Обе оси логарифмические и общие для всех двигателей; пунктир &mdash; 1&nbsp;g. Расход рабочего тела = m<sub>0</sub> &minus; m<sub>кон</sub> = &int;(F/v<sub>e</sub>)&thinsp;dt по участкам тяги.</p>
   </div>
 </div>
 
 <h2><span data-lang="en" class="active">Data sources</span><span data-lang="ru">Источники данных</span></h2>
 <div id="srcout"></div>
+<div data-lang="en" class="active"><p><b>Assumption (no external source):</b> the thrust-scaling model above (engine mass &prop; thrust, tank and propellant fixed; sail mass &prop; area) &mdash; the author's simplification for illustration; the 1&nbsp;g reference is standard gravity g<sub>0</sub> = 9.80665&nbsp;m/s&sup2;.</p></div>
+<div data-lang="ru"><p><b>Допущение (внешнего источника нет):</b> описанная выше модель масштабирования тяги (масса двигателя &prop; тяге, баки и топливо фиксированы; масса паруса &prop; площади) &mdash; упрощение автора для иллюстрации; 1&nbsp;g &mdash; стандартное ускорение свободного падения g<sub>0</sub> = 9,80665&nbsp;м/с&sup2;.</p></div>
 
 <p>
   <a href="where-we-reach.html"><span data-lang="en" class="active">How far in a lifetime (relativistic calculator)</span><span data-lang="ru">Куда долетим за жизнь (релятивистский калькулятор)</span></a> &middot;
@@ -159,22 +183,28 @@
 </p>
 
 <footer class="bottom">
-  <span data-lang="en" class="active">Formulas: &Delta;v = v<sub>e</sub>&middot;ln(m<sub>0</sub>/m<sub>dry</sub>), v<sub>e</sub> = I<sub>sp</sub>&middot;g<sub>0</sub>; burn time t = v<sub>e</sub>&middot;m<sub>0</sub>(1 &minus; e<sup>&minus;&Delta;v/v<sub>e</sub></sup>)/F; sail a = &eta;&middot;2S/c&middot;A/m &middot;(r<sub>0</sub>/r)&sup2;.</span>
-  <span data-lang="ru">Формулы: &Delta;v = v<sub>e</sub>&middot;ln(m<sub>0</sub>/m<sub>сух</sub>), v<sub>e</sub> = I<sub>уд</sub>&middot;g<sub>0</sub>; время работы t = v<sub>e</sub>&middot;m<sub>0</sub>(1 &minus; e<sup>&minus;&Delta;v/v<sub>e</sub></sup>)/F; парус a = &eta;&middot;2S/c&middot;A/m &middot;(r<sub>0</sub>/r)&sup2;.</span>
+  <span data-lang="en" class="active">Formulas: &Delta;v = v<sub>e</sub>&middot;ln(m<sub>0</sub>/m<sub>dry</sub>), v<sub>e</sub> = I<sub>sp</sub>&middot;g<sub>0</sub>; burn time t = v<sub>e</sub>&middot;m<sub>0</sub>(1 &minus; e<sup>&minus;&Delta;v/v<sub>e</sub></sup>)/F; sail a = &eta;&middot;2S/c&middot;A/m &middot;(r<sub>0</sub>/r)&sup2;; rocket a = F/m(t), m(t) = m<sub>0</sub> &minus; (F/v<sub>e</sub>)&middot;t.</span>
+  <span data-lang="ru">Формулы: &Delta;v = v<sub>e</sub>&middot;ln(m<sub>0</sub>/m<sub>сух</sub>), v<sub>e</sub> = I<sub>уд</sub>&middot;g<sub>0</sub>; время работы t = v<sub>e</sub>&middot;m<sub>0</sub>(1 &minus; e<sup>&minus;&Delta;v/v<sub>e</sub></sup>)/F; парус a = &eta;&middot;2S/c&middot;A/m &middot;(r<sub>0</sub>/r)&sup2;; ракета a = F/m(t), m(t) = m<sub>0</sub> &minus; (F/v<sub>e</sub>)&middot;t.</span>
 </footer>
 </main>
 
 <script type="module">
-import { compareEngines, hohmann, ENGINES, ROUTES } from './js/physics/engines.js';
-import { fmtTime, fmtDv, fmtMass, barFraction, sliderToPayload, payloadToSlider } from './js/verify/engines-view.js';
+import { compareEngines, compareProfiles, hohmann, ENGINES, ROUTES } from './js/physics/engines.js';
+import { fmtTime, fmtDv, fmtMass, barFraction, sliderToPayload, payloadToSlider, sliderToThrust, thrustToSlider, fmtAccel, fmtFlow } from './js/verify/engines-view.js';
 
 const T = {
   en: { engine: 'Engine', time: 'Flight time', dv: 'Δv spent', budget: 'Δv budget', cruise: 'Cruise speed', unreach: 'unreachable',
     flyby: 'flyby', relativistic: 'classical estimate inaccurate (>0.1 c)', noBudget: 'no Δv budget', hoh: 'Hohmann reference (two-impulse; for r2/r1 > 11.94 a bi-elliptic transfer is cheaper)', hohT: 'Hohmann transfer time',
-    src: 'Engines', srcR: 'Routes', ax: 'log scale', axT: [[86400, '1 day'], [3.15576e7, '1 year'], [3.15576e10, '1000 y'], [3.15576e13, '1 Myr'], [3.15576e16, '1 Gyr']], axD: [[10, '10 m/s'], [1e3, '1 km/s'], [1e5, '100 km/s'], [1e7, '10 000 km/s']], plus: 'Sail bar = flyby speed at the target, not spent Δv.', sailLbl: 'flyby speed', oosHi: 'off scale', oosLo: 'off scale' },
+    src: 'Engines', srcR: 'Routes', ax: 'log scale', axT: [[86400, '1 day'], [3.15576e7, '1 year'], [3.15576e10, '1000 y'], [3.15576e13, '1 Myr'], [3.15576e16, '1 Gyr']], axD: [[10, '10 m/s'], [1e3, '1 km/s'], [1e5, '100 km/s'], [1e7, '10 000 km/s']], prop: 'Propellant used', flow: 'Flow', a0: 'Initial a', accT: 'time since launch, log scale', accA: 'acceleration, log scale', oneG: '1 g',
+    accNote: 'Gaps in a line = coasting (a = 0). The braking burn sits at the end of the flight. Sail: a falls as 1/r².', kLbl: 'thrust ×',
+    axA: [[1e-14, '1e-14'], [1e-10, '1e-10'], [1e-6, '1e-6'], [1e-2, '0.01'], [1e2, '100']], axTa: [[60, '1 min'], [3600, '1 h'], [86400, '1 day'], [3.15576e7, '1 year'], [3.15576e10, '1000 y'], [3.15576e13, '1 Myr'], [3.15576e16, '1 Gyr']],
+    plus: 'Sail bar = flyby speed at the target, not spent Δv.', sailLbl: 'flyby speed', oosHi: 'off scale', oosLo: 'off scale' },
   ru: { engine: 'Двигатель', time: 'Время полёта', dv: 'Затрачено Δv', budget: 'Бюджет Δv', cruise: 'Крейсерская скорость', unreach: 'недостижимо',
     flyby: 'пролёт', relativistic: 'классика неточна (>0,1 c)', noBudget: 'нет бюджета Δv', hoh: 'Эталон Хомана (двухимпульсный перелёт; при r2/r1 > 11,94 биэллиптический дешевле)', hohT: 'Время перелёта по Хоману',
-    src: 'Двигатели', srcR: 'Маршруты', ax: 'лог. шкала', axT: [[86400, '1 сутки'], [3.15576e7, '1 год'], [3.15576e10, '1000 лет'], [3.15576e13, '1 млн лет'], [3.15576e16, '1 млрд лет']], axD: [[10, '10 м/с'], [1e3, '1 км/с'], [1e5, '100 км/с'], [1e7, '10 000 км/с']], plus: 'Столбик паруса — скорость пролёта у цели, а не затраченное Δv.', sailLbl: 'скорость пролёта', oosHi: 'за шкалой', oosLo: 'за шкалой' },
+    src: 'Двигатели', srcR: 'Маршруты', ax: 'лог. шкала', axT: [[86400, '1 сутки'], [3.15576e7, '1 год'], [3.15576e10, '1000 лет'], [3.15576e13, '1 млн лет'], [3.15576e16, '1 млрд лет']], axD: [[10, '10 м/с'], [1e3, '1 км/с'], [1e5, '100 км/с'], [1e7, '10 000 км/с']], prop: 'Расход топлива', flow: 'Поток', a0: 'Нач. ускорение', accT: 'время от старта, лог. шкала', accA: 'ускорение, лог. шкала', oneG: '1 g',
+    accNote: 'Разрыв линии = полёт по инерции (a = 0). Тормозной участок лежит в конце полёта. Парус: a падает как 1/r².', kLbl: 'тяга ×',
+    axA: [[1e-14, '1e-14'], [1e-10, '1e-10'], [1e-6, '1e-6'], [1e-2, '0,01'], [1e2, '100']], axTa: [[60, '1 мин'], [3600, '1 ч'], [86400, '1 сут'], [3.15576e7, '1 год'], [3.15576e10, '1000 лет'], [3.15576e13, '1 млн лет'], [3.15576e16, '1 млрд лет']],
+    plus: 'Столбик паруса — скорость пролёта у цели, а не затраченное Δv.', sailLbl: 'скорость пролёта', oosHi: 'за шкалой', oosLo: 'за шкалой' },
 };
 const COLORS = { chemical: '#ff9c6b', ion: '#7fb3ff', ntr: '#5fe3a1', fusion: '#ffd28a', sail: '#d9a6ff' };
 const T_MIN = 1e5, T_MAX = 1e17;   // s (about 1 day .. 3 Gyr), log axis
@@ -183,9 +213,10 @@ const V_MIN = 10, V_MAX = 1e8;     // m/s, log axis
 let lang = 'en';
 try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en' ? s : ((navigator.language || 'en').slice(0, 2) === 'ru' ? 'ru' : 'en'); } catch (e) {}
 let brake = true;
+const A_MIN = 1e-14, A_MAX = 1e2, TA_MIN = 10, TA_MAX = 1e17;   // m/s2 and s, both log axes of the acceleration chart
 
 const $ = (id) => document.getElementById(id);
-const pIn = $('p'), routeSel = $('route');
+const pIn = $('p'), kIn = $('k'), routeSel = $('route');
 pIn.value = Math.round(payloadToSlider(1000));
 routeSel.innerHTML = ROUTES.map((r) => '<option value="' + r.id + '"></option>').join('');
 const engById = Object.fromEntries(ENGINES.map((e) => [e.id, e]));
@@ -215,15 +246,44 @@ function chart(rows, key, min, max, fmtVal, hohLine, t, ticks) {
   }).join('') + '<div class="axis">' + axis + '</div>';
 }
 
+// a(t) chart: both axes log; every label/gridline/point positioned by the same barFraction as the data.
+function accelChart(profiles, t) {
+  const W = 1000, H = 100;
+  const px = (v) => barFraction(v, TA_MIN, TA_MAX), py = (v) => 1 - barFraction(v, A_MIN, A_MAX);
+  const grid = t.axA.map(([v]) => '<line x1="0" x2="' + W + '" y1="' + (py(v) * H).toFixed(2) + '" y2="' + (py(v) * H).toFixed(2) + '" stroke="rgba(120,200,230,0.18)" vector-effect="non-scaling-stroke" />').join('') +
+    t.axTa.map(([v]) => '<line y1="0" y2="' + H + '" x1="' + (px(v) * W).toFixed(2) + '" x2="' + (px(v) * W).toFixed(2) + '" stroke="rgba(120,200,230,0.12)" vector-effect="non-scaling-stroke" />').join('');
+  const g = '<line x1="0" x2="' + W + '" y1="' + (py(9.80665) * H).toFixed(2) + '" y2="' + (py(9.80665) * H).toFixed(2) + '" stroke="#ff6b8a" stroke-dasharray="5 4" vector-effect="non-scaling-stroke" />';
+  const lines = profiles.map((p) => {
+    const segs = []; let cur = [];
+    for (const q of p.points) {
+      if (q.a > 0 && q.t >= TA_MIN * 0.999 && q.phase !== 'coast') cur.push((px(q.t) * W).toFixed(2) + ',' + (py(q.a) * H).toFixed(2));
+      else if (q.phase === 'coast' && cur.length) { segs.push(cur); cur = []; }
+    }
+    if (cur.length) segs.push(cur);
+    return segs.map((c) => c.length > 1
+      ? '<polyline class="acc acc-' + p.id + '" points="' + c.join(' ') + '" fill="none" stroke="' + COLORS[p.id] + '" stroke-width="2.2" vector-effect="non-scaling-stroke" />'
+      : '<circle cx="' + c[0].split(',')[0] + '" cy="' + c[0].split(',')[1] + '" r="2" fill="' + COLORS[p.id] + '" />').join('');
+  }).join('');
+  const yl = t.axA.map(([v, lbl]) => '<span class="yl" data-v="' + v + '" style="top:' + (py(v) * 100).toFixed(3) + '%">' + lbl + '</span>').join('') +
+    '<span class="yl" style="top:' + (py(9.80665) * 100).toFixed(3) + '%;color:#ff6b8a">' + t.oneG + '</span>';
+  const xl = t.axTa.map(([v, lbl], i) => '<span class="xl' + (i === t.axTa.length - 1 ? ' last' : '') + '" data-v="' + v + '" style="left:' + (px(v) * 100).toFixed(3) + '%">' + lbl + '</span>').join('');
+  const keys = '<div class="keys">' + profiles.map((p) => '<span><span style="color:' + COLORS[p.id] + '">&#9632;</span> ' + engById[p.id].name[lang] + '</span>').join('') + '</div>';
+  return '<div class="legend">' + t.accA + ' (m/s²) &uarr; &middot; ' + t.accT + ' &rarr;</div><div class="achart"><svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">' + grid + g + lines + '</svg>' + yl + xl + '</div>' + keys;
+}
+
 function render() {
   const t = T[lang];
-  const kg = sliderToPayload(+pIn.value), route = ROUTES.find((r) => r.id === routeSel.value) || ROUTES[0];
+  const kg = sliderToPayload(+pIn.value), kScale = sliderToThrust(+kIn.value), route = ROUTES.find((r) => r.id === routeSel.value) || ROUTES[0];
   routeSel.querySelectorAll('option').forEach((o, i) => { o.textContent = ROUTES[i].name[lang]; });
   $('pout').textContent = fmtMass(kg, lang);
+  $('kout').textContent = (+kScale.toPrecision(2)) + '×';
+  document.querySelectorAll('#kpre button').forEach((b) => b.classList.toggle('on', Math.abs(+b.dataset.k - kScale) / kScale < 0.03));
   document.querySelectorAll('#ppre button').forEach((b) => b.classList.toggle('on', Math.abs(+b.dataset.kg - kg) / kg < 0.03));
   document.querySelectorAll('#mode button').forEach((b) => b.classList.toggle('on', (b.dataset.brake === '1') === brake));
 
-  const rows = compareEngines(route.id, kg, { brake });
+  const rows = compareEngines(route.id, kg, { brake, thrustScale: kScale });
+  $('chartAccel').innerHTML = accelChart(compareProfiles(route.id, kg, { brake, thrustScale: kScale }), t);
+  $('accLegend').textContent = t.accNote + ' ' + t.kLbl + ' ' + (+kScale.toPrecision(2)) + '.';
   const hoh = route.hohmann ? hohmann(route.r0, route.rTo) : null;
   $('chartTime').innerHTML = chart(rows, 'time', T_MIN, T_MAX, (v) => fmtTime(v, lang), null, t, t.axT);
   $('chartDv').innerHTML = chart(rows, 'dvUsed', V_MIN, V_MAX, (v) => fmtDv(v, lang), hoh && hoh.dv, t, t.axD);
@@ -237,8 +297,11 @@ function render() {
     '<td data-label="' + t.dv + '">' + fmtDv(r.dvUsed, lang) + '</td>' +
     '<td data-label="' + t.budget + '">' + (r.id === 'sail' ? '—' : fmtDv(r.dvBudget, lang)) + '</td>' +
     '<td data-label="' + t.cruise + '">' + fmtDv(r.vCruise, lang) + '</td>' +
+    '<td data-label="' + t.prop + '">' + (r.id === 'sail' ? '—' : fmtMass(r.propUsed, lang)) + '</td>' +
+    '<td data-label="' + t.flow + '">' + (r.id === 'sail' ? '—' : fmtFlow(r.mdot, lang)) + '</td>' +
+    '<td data-label="' + t.a0 + '">' + fmtAccel(r.aStart, lang) + '</td>' +
     '<td>' + badges(r, t) + '</td></tr>').join('');
-  $('tableout').innerHTML = '<table><thead><tr><th>' + t.engine + '</th><th>' + t.time + '</th><th>' + t.dv + '</th><th>' + t.budget + '</th><th>' + t.cruise + '</th><th></th></tr></thead><tbody>' + body + '</tbody></table>';
+  $('tableout').innerHTML = '<table><thead><tr><th>' + t.engine + '</th><th>' + t.time + '</th><th>' + t.dv + '</th><th>' + t.budget + '</th><th>' + t.cruise + '</th><th>' + t.prop + '</th><th>' + t.flow + '</th><th>' + t.a0 + '</th><th></th></tr></thead><tbody>' + body + '</tbody></table>';
 
   const li = (s) => '<li><a href="' + s.url + '" target="_blank" rel="noopener">' + s.title + '</a></li>';
   const grp = (title, items) => '<p><b>' + title + '</b></p><ul class="src">' + items.map((it) =>
@@ -254,6 +317,8 @@ function applyLang(l) {
   render();
 }
 pIn.addEventListener('input', render);
+kIn.addEventListener('input', render);
+$('kpre').addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (b) { kIn.value = Math.round(thrustToSlider(+b.dataset.k)); render(); } });
 routeSel.addEventListener('change', render);
 $('ppre').addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (b) { pIn.value = Math.round(payloadToSlider(+b.dataset.kg)); render(); } });
 $('mode').addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (b) { brake = b.dataset.brake === '1'; render(); } });

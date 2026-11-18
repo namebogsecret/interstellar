@@ -21,6 +21,16 @@ export function hohmann(r1, r2, mu = MU_SUN) {
   return { dv1, dv2, dv: Math.abs(dv1) + Math.abs(dv2), t: Math.PI * Math.sqrt(a * a * a / mu) };
 }
 
+// Thrust scaling (assumption, stated on the page): k times the thrust needs k times the
+// engines, so the propulsion hardware mass scales with k (constant thrust-to-mass of the engine;
+// tanks and propellant load unchanged). A sail's thrust scales with its area, sail mass with it.
+export const THRUST_SCALE_MIN = 0.1, THRUST_SCALE_MAX = 10;
+export function scaleThrust(engine, k) {
+  if (!okPos(k)) throw new RangeError('thrust scale must be a finite number > 0');
+  if (isSail(engine)) return { ...engine, area: engine.area * k, thrustScale: k };
+  return { ...engine, F: engine.F * k, engineMass: engine.engineMass * k, thrustScale: k };
+}
+
 export function stageMasses(engine, payload) {
   needPayload(payload);
   const mDry = payload + engine.engineMass + engine.tankMass;
@@ -93,30 +103,100 @@ export function propulsiveTrip(engine, payload, D, { brake = true } = {}) {
   return { time, dvUsed: k * vc, vCruise: vc, tBurn: ph.tAcc + ph.tDec, flags };
 }
 
+// Sail: characteristic acceleration at r0 and the elapsed time to reach radius r (a = kk/r^2, from rest at r0).
+function sailAccelAtR0(engine, payload, r0) {
+  const sailMass = engine.arealDensity * engine.area;
+  return SAIL_EFF * 2 * SOLAR_CONST / C * engine.area / (payload + sailMass);
+}
+function sailTimeTo(kk, r0, r) {
+  return Math.sqrt(r0 / (2 * kk)) * (Math.sqrt(r * (r - r0)) + r0 * Math.log((Math.sqrt(r) + Math.sqrt(r - r0)) / Math.sqrt(r0)));
+}
+
 // Solar sail from rest at r0, radiation pressure ~ 1/r^2, flyby only.
 export function sailTrip(engine, payload, r0, D) {
   needPayload(payload);
   if (!okPos(r0) || !okPos(D)) throw new RangeError('r0 and D must be finite > 0');
-  const sailMass = engine.arealDensity * engine.area;
-  const aC = SAIL_EFF * 2 * SOLAR_CONST / C * engine.area / (payload + sailMass);
+  const aC = sailAccelAtR0(engine, payload, r0);
   const kk = aC * r0 * r0;
   const r = r0 + D;
   const v = Math.sqrt(2 * kk * (1 / r0 - 1 / r));
-  const time = Math.sqrt(r0 / (2 * kk)) * (Math.sqrt(r * (r - r0)) + r0 * Math.log((Math.sqrt(r) + Math.sqrt(r - r0)) / Math.sqrt(r0)));
+  const time = sailTimeTo(kk, r0, r);
   return { time, dvUsed: v, vCruise: v, aChar: aC, flags: ['flyby'] };
 }
 
-// One row per engine, fixed order chemical, ion, ntr, fusion, sail.
-export function compareEngines(routeId, payload, { brake = true } = {}) {
+// Acceleration along the flight, a(t) = F/m(t), for one engine. Points {t, a, m, phase}, t in s from launch,
+// phase 'accel' | 'coast' | 'brake' | 'sail'. Rockets: constant thrust, mass falls by mdot = F/ve, so a rises
+// during each burn; coast has a = 0. Burn samples are geometric in t (log time axis), brake samples linear.
+// Sail: points parametrised by radius, a = a(r0)(r0/r)^2, m constant. Same flight as propulsiveTrip/sailTrip.
+export function accelProfile(engine, payload, D, { brake = true, r0 = AU, n = 48 } = {}) {
+  needPayload(payload);
+  if (!okPos(D) || !okPos(r0)) throw new RangeError('D and r0 must be finite > 0');
+  if (isSail(engine)) {
+    const aC = sailAccelAtR0(engine, payload, r0), kk = aC * r0 * r0;
+    const m = payload + engine.arealDensity * engine.area;
+    const r1 = r0 + D, points = [{ t: 0, a: aC, m, phase: 'sail', r: r0 }];   // exact start at rest
+    for (let i = 0; i <= n; i++) {
+      const r = r0 + D * Math.pow(10, -9 * (1 - i / n));   // geometric in r - r0, ends exactly at r0 + D
+      points.push({ t: sailTimeTo(kk, r0, r), a: kk / (r * r), m, phase: 'sail', r });
+    }
+    return { time: sailTimeTo(kk, r0, r1), points, flags: ['flyby'] };
+  }
+  const trip = propulsiveTrip(engine, payload, D, { brake });
+  if (!Number.isFinite(trip.time)) return { time: Infinity, points: [], flags: trip.flags };
+  const { m0 } = stageMasses(engine, payload);
+  const ve = engine.isp * G0, F = engine.F, mdot = F / ve, vc = trip.vCruise;
+  const points = [];
+  const burn = (tStart, mStart, phase, geometric) => {
+    const dur = ve * mStart * (-Math.expm1(-vc / ve)) / F;
+    if (geometric) points.push({ t: tStart, a: F / mStart, m: mStart, phase });   // exact t = 0 start
+    for (let i = 0; i <= n; i++) {
+      const u = geometric ? Math.pow(10, -6 * (1 - i / n)) : i / n;
+      const m = i === n ? mStart * Math.exp(-vc / ve) : mStart - mdot * dur * u;
+      points.push({ t: tStart + dur * u, a: F / m, m, phase });
+    }
+    return { dur, mEnd: mStart * Math.exp(-vc / ve) };
+  };
+  const a = burn(0, m0, 'accel', true);
+  if (brake) {
+    points.push({ t: a.dur, a: 0, m: a.mEnd, phase: 'coast' });
+    const dDec = ve * a.mEnd * (-Math.expm1(-vc / ve)) / F;
+    const tB = Math.max(a.dur, trip.time - dDec);   // no coast when the burns fill the whole trip
+    points.push({ t: tB, a: 0, m: a.mEnd, phase: 'coast' });
+    burn(tB, a.mEnd, 'brake', false);
+  } else if (trip.time > a.dur) {
+    points.push({ t: a.dur, a: 0, m: a.mEnd, phase: 'coast' }, { t: trip.time, a: 0, m: a.mEnd, phase: 'coast' });
+  }
+  return { time: trip.time, points, flags: trip.flags };
+}
+
+// One row per engine, fixed order chemical, ion, ntr, fusion, sail. thrustScale multiplies every engine's
+// thrust (see scaleThrust). Extra fields: mdot (kg/s), propUsed (kg), mEnd (kg), aStart (m/s^2).
+export function compareEngines(routeId, payload, { brake = true, thrustScale = 1 } = {}) {
   const route = ROUTES.find((r) => r.id === routeId);
   if (!route) throw new RangeError('unknown route: ' + routeId);
   needPayload(payload);
-  return ENGINES.map((e) => {
+  return ENGINES.map((e0) => {
+    const e = thrustScale === 1 ? e0 : scaleThrust(e0, thrustScale);
     if (isSail(e)) {
       const s = sailTrip(e, payload, route.r0, route.D);
-      return { id: e.id, time: s.time, dvUsed: s.dvUsed, dvBudget: 0, vCruise: s.vCruise, flags: s.flags };
+      return { id: e.id, time: s.time, dvUsed: s.dvUsed, dvBudget: 0, vCruise: s.vCruise, flags: s.flags,
+        mdot: 0, propUsed: 0, mEnd: payload + e.arealDensity * e.area, aStart: s.aChar };
     }
     const t = propulsiveTrip(e, payload, route.D, { brake });
-    return { id: e.id, time: t.time, dvUsed: t.dvUsed, dvBudget: dvBudget(e, payload), vCruise: t.vCruise, flags: t.flags };
+    const { m0 } = stageMasses(e, payload);
+    const mEnd = m0 * Math.exp(-t.dvUsed / (e.isp * G0));
+    return { id: e.id, time: t.time, dvUsed: t.dvUsed, dvBudget: dvBudget(e, payload), vCruise: t.vCruise, flags: t.flags,
+      mdot: e.F / (e.isp * G0), propUsed: m0 - mEnd, mEnd, aStart: e.F / m0 };
+  });
+}
+
+// a(t) profiles for all engines on a route (for the acceleration chart).
+export function compareProfiles(routeId, payload, { brake = true, thrustScale = 1 } = {}) {
+  const route = ROUTES.find((r) => r.id === routeId);
+  if (!route) throw new RangeError('unknown route: ' + routeId);
+  needPayload(payload);
+  return ENGINES.map((e0) => {
+    const e = thrustScale === 1 ? e0 : scaleThrust(e0, thrustScale);
+    return { id: e.id, ...accelProfile(e, payload, route.D, { brake, r0: route.r0 }) };
   });
 }

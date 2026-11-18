@@ -56,3 +56,20 @@ export function fmtDv(ms, lang = 'en') {
 
 // kg -> "250 kg" / "1.00·10^6 kg" style via fmt
 export const fmtMass = (kg, lang = 'en') => fmt(kg) + (lang === 'ru' ? ' кг' : ' kg');
+
+// log slider (-100..100) <-> thrust multiplier 0.1x..10x
+export const THRUST_SLIDER_MAX = 100;
+export const sliderToThrust = (v) => Math.pow(10, v / THRUST_SLIDER_MAX);
+export const thrustToSlider = (k) => THRUST_SLIDER_MAX * Math.log10(k);
+
+// small/large positive numbers: "4.62 m/s2" style mantissa, else "5.84·10^-4"; 0 -> "0"
+export function fmtSci(x) {
+  if (!Number.isFinite(x)) return '—';
+  if (x === 0) return '0';
+  const ax = Math.abs(x);
+  if (ax >= 0.01 && ax < 1000) return String(+x.toPrecision(3));
+  const e = Math.floor(Math.log10(ax)), m = x / Math.pow(10, e);
+  return m.toFixed(2) + '·10^' + e;
+}
+export const fmtAccel = (a, lang = 'en') => fmtSci(a) + (lang === 'ru' ? ' м/с²' : ' m/s²');
+export const fmtFlow = (f, lang = 'en') => fmtSci(f) + (lang === 'ru' ? ' кг/с' : ' kg/s');

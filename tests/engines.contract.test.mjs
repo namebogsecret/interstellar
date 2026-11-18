@@ -6,10 +6,11 @@ import assert from 'node:assert/strict';
 import { C, G0, AU, YEAR, DAY, LY } from '../js/physics/constants.js';
 import {
   MU_SUN, SOLAR_CONST, hohmann, stageMasses, dvBudget, burnTimeAndDistance,
-  propulsiveTrip, sailTrip, compareEngines,
+  propulsiveTrip, sailTrip, compareEngines, scaleThrust, accelProfile, compareProfiles,
+  THRUST_SCALE_MIN, THRUST_SCALE_MAX,
 } from '../js/physics/engines.js';
 import { ENGINES, ROUTES } from '../js/data/engines.js';
-import { sliderToPayload, payloadToSlider, barFraction } from '../js/verify/engines-view.js';
+import { sliderToPayload, payloadToSlider, barFraction, sliderToThrust, thrustToSlider } from '../js/verify/engines-view.js';
 
 let checks = 0;
 const rel = (a, b) => Math.abs(a - b) / (Math.abs(b) || 1);
@@ -486,6 +487,151 @@ for (const rid of ROUTE_IDS) for (const brake of [true, false]) {
   near(barFraction(max, min, max), 1, 1e-9, 'max -> 1');
   ok(Math.abs(barFraction(min, min, max)) < 1e-9, 'min -> 0');
   ok(barFraction(Infinity, min, max) === 1, 'Infinity -> 1');
+}
+
+
+// ---------- thrust scale + a(t) profile ----------
+{
+  // scaleThrust: independent expectations from the stated model (hardware mass ~ thrust)
+  for (const id of REACTIVE) {
+    const e = engById(id);
+    for (const k of [0.1, 0.5, 2, 10]) {
+      const s = scaleThrust(e, k);
+      near(s.F, e.F * k, 1e-12, `${id} k=${k}: F scales`);
+      near(s.engineMass, e.engineMass * k, 1e-12, `${id} k=${k}: engine mass scales`);
+      ok(s.propMass === e.propMass && s.tankMass === e.tankMass && s.isp === e.isp, `${id}: tank/propellant/isp unchanged`);
+      near(s.F / s.engineMass, e.F / e.engineMass, 1e-12, `${id}: thrust-to-engine-mass constant`);
+    }
+    ok(scaleThrust(e, 1).F === e.F, 'k=1 identity');
+  }
+  { const sl = engById('sail'), s = scaleThrust(sl, 4);
+    near(s.area, 4 * sl.area, 1e-12, 'sail area scales'); ok(s.arealDensity === sl.arealDensity, 'areal density unchanged'); }
+  for (const bad of [0, -1, NaN, Infinity, '2', null]) {
+    checks++; assert.throws(() => scaleThrust(engById('ion'), bad), RangeError, `scaleThrust rejects ${bad}`);
+  }
+  ok(THRUST_SCALE_MIN === 0.1 && THRUST_SCALE_MAX === 10, 'thrust scale limits 0.1..10');
+  near(sliderToThrust(-100), 0.1, 1e-12, 'slider -100 -> 0.1x'); near(sliderToThrust(100), 10, 1e-12, 'slider 100 -> 10x');
+  near(sliderToThrust(0), 1, 1e-12, 'slider 0 -> 1x');
+  for (const k of [0.1, 0.3, 1, 3.3, 10]) near(sliderToThrust(thrustToSlider(k)), k, 1e-12, 'thrust slider roundtrip');
+
+  // a(t) = F/m(t) at every thrust point; rises while propellant burns; zero in coast; mass bookkeeping
+  for (const id of REACTIVE) for (const rid of ROUTE_IDS) for (const p of [100, 1e3, 1e5]) for (const brake of [true, false]) {
+    const e = engById(id), route = routeById(rid), tag = `${id}/${rid}/${p}/${brake ? 'brake' : 'flyby'}`;
+    const prof = accelProfile(e, p, route.D, { brake, r0: route.r0 });
+    const trip = propulsiveTrip(e, p, route.D, { brake });
+    if (!Number.isFinite(trip.time)) { ok(prof.points.length === 0 && prof.time === Infinity, tag + ': unreachable -> empty profile'); continue; }
+    near(prof.time, trip.time, 1e-12, tag + ': profile time = trip time');
+    const { m0 } = stageMasses(e, p);
+    const ve = e.isp * G0, mdot = e.F / ve;
+    let prevT = -1, prevA = {};
+    for (const pt of prof.points) {
+      ok(pt.t >= prevT, tag + ': t non-decreasing'); prevT = pt.t;
+      if (pt.phase === 'coast') ok(pt.a === 0, tag + ': coast a = 0');
+      else {
+        near(pt.a * pt.m, e.F, 1e-12, tag + ': a = F/m_current');
+        if (prevA[pt.phase] !== undefined) ok(pt.a >= prevA[pt.phase] * (1 - 1e-12), tag + ': a rises as propellant burns (' + pt.phase + ')');
+        prevA[pt.phase] = pt.a;
+        ok(pt.m <= m0 * (1 + 1e-12) && pt.m >= stageMasses(e, p).mDry * (1 - 1e-12), tag + ': mass between wet and dry');
+      }
+    }
+    near(prof.points[0].a, e.F / m0, 1e-12, tag + ': initial a = F/m0 (Newton)');
+    near(prof.points[0].m, m0, 1e-12, tag + ': initial mass = m0');
+    const last = prof.points[prof.points.length - 1];
+    near(last.t, trip.time, 1e-9, tag + ': last point at arrival');
+    // mass conservation: m0 = m_end + propellant used; propellant used = mdot * burn time
+    const row = compareEngines(rid, p, { brake }).find((r) => r.id === id);
+    near(m0, row.mEnd + row.propUsed, 1e-12, tag + ': m0 = m_end + propUsed');
+    near(row.propUsed, mdot * trip.tBurn, 1e-9, tag + ': propUsed = mdot * t_burn');
+    near(row.mdot, mdot, 1e-12, tag + ': mdot = F/ve');
+    ok(row.propUsed <= e.propMass * (1 + 1e-9), tag + ': never burns more than the tank');
+    const lastBurn = [...prof.points].reverse().find((q) => q.phase !== 'coast');
+    near(lastBurn.m, row.mEnd, 1e-9, tag + ': end-of-burn mass = m_end');
+    // a ratio over one burn = e^(vc/ve) (Tsiolkovsky), independent of F
+    const acc = prof.points.filter((q) => q.phase === 'accel');
+    near(acc[acc.length - 1].a / acc[0].a, Math.exp(trip.vCruise / ve), 1e-9, tag + ': a_end/a_start = e^(vc/ve)');
+  }
+
+  // the integral of a dt over the thrust phase is the cruise speed (rocket equation, RK4 reference)
+  for (const id of ['chemical', 'ion', 'ntr']) {
+    const e = engById(id), route = routeById('jupiter'), p = 1e3;
+    const trip = propulsiveTrip(e, p, route.D, { brake: false });
+    const prof = accelProfile(e, p, route.D, { brake: false, n: 400 });
+    const acc = prof.points.filter((q) => q.phase === 'accel');
+    const tEnd = acc[acc.length - 1].t;
+    const ref = rk4Burn(stageMasses(e, p).m0, e.F, e.isp * G0, tEnd);
+    near(ref.v, trip.vCruise, 1e-6, id + ': RK4 of a(t) reaches vCruise');
+  }
+
+  // Newtonian limit: no propellant burn worth speaking of -> a = F/m constant (second law)
+  { const e0 = engById('fusion'); const e = { ...e0, propMass: 1e-3 * e0.F / (e0.isp * G0) * 1e3 };
+    const prof = accelProfile({ ...engById('ntr'), propMass: 1 }, 1e4, 1e9, { brake: false });
+    const acc = prof.points.filter((q) => q.phase === 'accel');
+    near(acc[acc.length - 1].a, acc[0].a, 1e-4, 'tiny propellant: a constant');
+    near(acc[0].a * stageMasses({ ...engById('ntr'), propMass: 1 }, 1e4).m0, engById('ntr').F, 1e-12, 'Newton: F = m a'); void e; }
+
+  // more thrust never lengthens a coasting trip (fixed masses, Δv): clone with larger F only
+  for (const id of REACTIVE) for (const rid of ['sgl', 'alphacen']) {
+    const base = engById(id); let prev = Infinity;
+    for (const f of [0.25, 0.5, 1, 2, 4, 8]) {
+      const e = { ...base, F: base.F * f };
+      const tr = propulsiveTrip(e, 1e3, routeById(rid).D, { brake: true });
+      if (!Number.isFinite(tr.time)) continue;
+      ok(tr.time <= prev * (1 + 1e-12), `${id}/${rid}: F x${f} does not lengthen a coasting trip`); prev = tr.time;
+      near(tr.dvUsed, 2 * tr.vCruise, 1e-12, 'fixed budget: Δv used = 2 vc'); 
+    }
+  }
+
+  // thrust scale in compareEngines: consistent with scaleThrust, k=1 unchanged
+  for (const k of [0.1, 0.4, 1, 2.5, 10]) for (const rid of ['mars', 'pluto']) {
+    const rows = compareEngines(rid, 1e3, { thrustScale: k });
+    for (const id of REACTIVE) {
+      const e = scaleThrust(engById(id), k), row = rows.find((r) => r.id === id), tr = propulsiveTrip(e, 1e3, routeById(rid).D);
+      near(row.time, tr.time, 1e-12, `${id} k=${k}: time from scaled engine`);
+      near(row.dvBudget, dvBudget(e, 1e3), 1e-12, `${id} k=${k}: Δv budget from scaled engine`);
+      near(row.aStart, e.F / stageMasses(e, 1e3).m0, 1e-12, `${id} k=${k}: aStart = F/m0`);
+    }
+    const sl = scaleThrust(engById('sail'), k), srow = rows.find((r) => r.id === 'sail'), st = sailTrip(sl, 1e3, routeById(rid).r0, routeById(rid).D);
+    near(srow.time, st.time, 1e-12, `sail k=${k}: time`); near(srow.aStart, st.aChar, 1e-12, `sail k=${k}: aStart`);
+    ok(srow.mdot === 0 && srow.propUsed === 0, 'sail spends no propellant');
+  }
+  { const a = compareEngines('mars', 1e3), b = compareEngines('mars', 1e3, { thrustScale: 1 });
+    for (let i = 0; i < a.length; i++) { ok(a[i].time === b[i].time && a[i].dvUsed === b[i].dvUsed, 'default thrustScale = 1'); } }
+  // ion with 10x thrust carries 10x the hardware: lower Δv budget, but a = 10 F / (m0 + 9 m_engine) higher
+  { const e = engById('ion'), s = scaleThrust(e, 10);
+    ok(dvBudget(s, 1e3) < dvBudget(e, 1e3), 'heavier hardware lowers Δv budget');
+    ok(s.F / stageMasses(s, 1e3).m0 > e.F / stageMasses(e, 1e3).m0, 'but initial acceleration is higher'); }
+
+  // sail profile: a = a(r0) (r0/r)^2, falls monotonically, ends at sailTrip time; independent of thrust scale shape
+  for (const rid of ROUTE_IDS) for (const p of [100, 1e4]) {
+    const e = engById('sail'), route = routeById(rid), tag = `sail/${rid}/${p}`;
+    const prof = accelProfile(e, p, route.D, { r0: route.r0 }), st = sailTrip(e, p, route.r0, route.D);
+    near(prof.time, st.time, 1e-12, tag + ': time');
+    const last = prof.points[prof.points.length - 1], first = prof.points[0];
+    near(last.t, st.time, 1e-9, tag + ': last t = arrival'); near(last.r, route.r0 + route.D, 1e-12, tag + ': last r = r0 + D');
+    near(first.a, st.aChar, 1e-6, tag + ': a(r0) = aChar');
+    let prev = Infinity, prevT = -1;
+    for (const pt of prof.points) {
+      near(pt.a * pt.r * pt.r, st.aChar * route.r0 * route.r0, 1e-12, tag + ': a r^2 const (1/r^2 law)');
+      ok(pt.a < prev && pt.t > prevT, tag + ': a falls, t grows'); prev = pt.a; prevT = pt.t;
+      ok(pt.phase === 'sail', 'sail phase');
+    }
+    // energy: v^2/2 = kk (1/r0 - 1/r) at arrival vs Simpson of a dr over r (independent of the time formula)
+    const kk = st.aChar * route.r0 * route.r0;
+    near(simpson((u) => kk / ((route.r0 + u * u) ** 2) * 2 * u, 0, Math.sqrt(route.D), 20000), kk * (1 / route.r0 - 1 / (route.r0 + route.D)), 1e-6, tag + ': ∫a dr = v^2/2');
+    near(st.vCruise ** 2 / 2, kk * (1 / route.r0 - 1 / (route.r0 + route.D)), 1e-9, tag + ': v^2/2 = ∫a dr');
+  }
+  // bigger sail (area x k) -> proportionally larger a(r0) when payload dominates sail mass
+  { const e = engById('sail'), p = 1e6;
+    const a1 = sailTrip(e, p, AU, 1e11).aChar, a4 = sailTrip(scaleThrust(e, 4), p, AU, 1e11).aChar;
+    near(a4 / a1, 4, 0.01, 'sail 4x area ~ 4x a (heavy payload)'); }
+  // compareProfiles: fixed order, thrust scale applied
+  { const ps = compareProfiles('mars', 1e3, { thrustScale: 3 });
+    ok(ps.map((x) => x.id).join() === ORDER.join(), 'compareProfiles order');
+    const e = scaleThrust(engById('chemical'), 3);
+    near(ps[0].points[0].a, e.F / stageMasses(e, 1e3).m0, 1e-12, 'compareProfiles uses scaled engine'); }
+  for (const bad of [0, -5]) { checks++; assert.throws(() => accelProfile(engById('ion'), 1e3, bad), RangeError); }
+  checks++; assert.throws(() => accelProfile(engById('ion'), -1, 1e9), RangeError);
+  checks++; assert.throws(() => compareProfiles('nowhere', 1e3), RangeError);
 }
 
 console.log(`engines.contract: ${checks} checks OK`);
