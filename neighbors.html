@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Neighbours in the galaxy — Interstellar</title>
+<meta name="description" content="The 50 nearest stars and brown dwarfs: how long a flight takes by ship clock and by Earth clock at a constant proper acceleration (0.1 g to 10 g), flip-and-burn or flyby. Sortable and filterable by spectral class and distance." />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="120x120" href="/favicon-120.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<style>
+  :root { --fg: #9fe7ff; --dim: #5b7c88; --bg: rgba(6, 14, 20, 0.66); --line: rgba(120, 200, 230, 0.18); --card: rgba(8, 16, 24, 0.92); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #05070c; }
+  body { color: #cfeefc; font: 14px/1.65 "SF Mono", "Cascadia Code", Menlo, Consolas, monospace; padding: 0 0 60px; overflow-x: hidden; }
+  a { color: #7fb3ff; }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 22px 0; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  header.top a.home { color: var(--dim); text-decoration: none; }
+  header.top a.home:hover { color: var(--fg); }
+  #langtoggle { display: flex; gap: 3px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+  #langtoggle span { cursor: pointer; padding: 3px 10px; border-radius: 5px; color: var(--dim); font-size: 12px; }
+  #langtoggle span.active { color: #eaffff; background: rgba(60,116,148,0.5); }
+  h1 { font-size: 22px; letter-spacing: 0.06em; color: #bfeeff; margin: 0 0 6px; overflow-wrap: anywhere; }
+  h2 { font-size: 15px; letter-spacing: 0.05em; color: #d7f6ff; margin: 30px 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  p { color: #b9d8e6; margin: 10px 0; }
+  b, strong { color: #eaffff; }
+  code { background: rgba(120,200,230,0.1); border-radius: 3px; padding: 1px 5px; color: #d7f6ff; overflow-wrap: anywhere; }
+  .note { background: rgba(40,90,120,0.18); border-left: 2px solid #4a8fb0; padding: 10px 14px; border-radius: 5px; color: #bfe6f4; margin: 14px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 14px 0; min-width: 0; }
+  .ctl { margin: 10px 0 14px; }
+  .ctl label { display: flex; justify-content: space-between; gap: 10px; color: var(--dim); font-size: 12px; }
+  .ctl label output { color: #eaffff; font-weight: 700; }
+  .ctl input[type=range] { width: 100%; min-width: 0; margin: 6px 0 2px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+  .presets button { background: rgba(60,116,148,0.25); color: #cfeefc; border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+  .presets button:hover, .presets button.on { background: rgba(60,116,148,0.55); }
+  .big { font-size: 15px; color: #eaffff; margin: 6px 0 10px; overflow-wrap: anywhere; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0; }
+  .stat { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0; }
+  .stat span { display: block; color: var(--dim); font-size: 11.5px; }
+  .stat b { font-size: 14px; overflow-wrap: anywhere; }
+  .warn { color: #ffd28a; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid rgba(120,200,230,0.1); overflow-wrap: anywhere; }
+  th { color: var(--dim); font-weight: 600; font-size: 11.5px; }
+  tr.yes td { background: rgba(95,227,161,0.07); }
+  .yes-mark { color: #5fe3a1; font-weight: 700; }
+  .no-mark { color: var(--dim); }
+  footer.bottom { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
+  @media (max-width: 480px) {
+    main { padding: 28px 14px 0; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    thead { display: none; }
+    tr { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; padding: 4px 8px; }
+    td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 10px; text-align: right; }
+    td:not([data-label])::before { content: none; }
+    td::before { content: attr(data-label); color: var(--dim); text-align: left; flex: 0 0 42%; }
+  }
+  [data-lang] { display: none; }
+  [data-lang].active { display: block; }
+  span[data-lang].active, b[data-lang].active { display: inline; }
+
+  .ctl select { width: 100%; background: rgba(8,16,24,0.92); color: #eaffff; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; margin-top: 6px; }
+  .chart { margin: 8px 0; }
+  .crow { margin: 9px 0; min-width: 0; }
+  .crow .lbl { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: #cfeefc; }
+  .crow .lbl em { font-style: normal; color: #eaffff; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+  .crow svg { display: block; width: 100%; height: 16px; margin-top: 3px; }
+  .axis { position: relative; height: 16px; color: var(--dim); font-size: 10.5px; margin-top: 2px; }
+  .axis span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+  .axis span.first { transform: none; } .axis span.last { transform: translateX(-100%); }
+  .oos { color: #ffd28a; font-size: 10.5px; margin-left: 5px; font-weight: 400; }
+  .badge { display: inline-block; border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; margin: 1px 3px 1px 0; font-size: 11px; color: #ffd28a; white-space: nowrap; }
+  .badge.bad { color: #ff9c9c; }
+  .legend { color: var(--dim); font-size: 11.5px; margin: 4px 0; }
+  ul.src { padding-left: 18px; margin: 6px 0; } ul.src li { margin: 3px 0; overflow-wrap: anywhere; }
+
+  [hidden] { display: none !important; }
+  .stat span[data-lang]:not(.active) { display: none; }
+  .stat span[data-lang].active { display: block; }
+  canvas.plot { display: block; width: 100%; height: 260px; margin: 6px 0; }
+  canvas.plot.short { height: 200px; }
+  .ctl .presets { margin-top: 6px; }
+  .ctl .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .shift-red { color: #ff9c9c; } .shift-blue { color: #8fc4ff; }
+  .stat.wide { grid-column: 1 / -1; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+  .tabs button { background: rgba(60,116,148,0.25); color: #cfeefc; border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; font: inherit; font-size: 12.5px; cursor: pointer; }
+  .tabs button[aria-pressed="true"] { background: rgba(60,116,148,0.65); color: #eaffff; }
+  .leg-flip { color: #5fe3a1; } .leg-fly { color: #ffb86b; }
+  td.num, th.num { text-align: right; }
+  tr.grp td { background: rgba(120,200,230,0.06); color: #eaffff; font-weight: 700; }
+
+  /* neighbors page */
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; border: 1px solid var(--line); border-radius: 14px; padding: 3px 10px 3px 8px; font-size: 12px; cursor: pointer; background: rgba(60,116,148,0.18); }
+  .chip input { margin: 0; accent-color: #4a8fb0; }
+  .chip.off { opacity: 0.45; }
+  .chip.zero { opacity: 0.3; cursor: default; }
+  .chip small { color: var(--dim); }
+  .frow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .frow input[type=search], .frow select { width: 100%; background: rgba(8,16,24,0.92); color: #eaffff; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; margin-top: 6px; }
+  .count { color: #eaffff; margin: 10px 0 4px; font-weight: 700; }
+  .tablewrap { overflow-x: auto; max-width: 100%; border: 1px solid var(--line); border-radius: 8px; }
+  .tablewrap table { margin: 0; min-width: 640px; }
+  th button { all: unset; cursor: pointer; color: var(--dim); font-weight: 600; font-size: 11.5px; display: inline-flex; gap: 4px; align-items: center; }
+  th button:hover, th button:focus-visible { color: #eaffff; }
+  th button:focus-visible { outline: 1px solid #7fb3ff; outline-offset: 2px; }
+  th[aria-sort="ascending"] button::after { content: "\25B2"; font-size: 9px; color: #eaffff; }
+  th[aria-sort="descending"] button::after { content: "\25BC"; font-size: 9px; color: #eaffff; }
+  th[aria-sort="ascending"], th[aria-sort="descending"] { color: #eaffff; }
+  .sp { display: inline-block; border-radius: 10px; padding: 0 8px; font-size: 11.5px; font-weight: 700; color: #06121a; white-space: nowrap; }
+  .sp-O { background: #9db4ff; } .sp-B { background: #aabfff; } .sp-A { background: #d5e0ff; } .sp-F { background: #f8f7ff; }
+  .sp-G { background: #ffe97a; } .sp-K { background: #ffb866; } .sp-M { background: #ff8f6b; }
+  .sp-L { background: #c4574a; color: #fff; } .sp-T { background: #b05fb8; color: #fff; } .sp-D { background: #cfd6dc; }
+  td.empty { text-align: center; color: #ffd28a; padding: 18px 9px; }
+  td.nm { min-width: 150px; }
+  td.nm small { color: var(--dim); }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <a class="home" href="/">&larr; Interstellar</a>
+    <div id="langtoggle"><span data-set="en">EN</span><span data-set="ru">RU</span></div>
+  </header>
+
+<h1><span data-lang="en" class="active">NEIGHBOURS IN THE GALAXY</span><span data-lang="ru">СОСЕДИ ПО ГАЛАКТИКЕ</span></h1>
+
+<div data-lang="en" class="active">
+  <p>The 50 nearest known stars and brown dwarfs (the Sun excluded) and how long a ship with a constant proper acceleration needs to reach each of them: the time on the <b>ship clock</b> &tau; (what the crew lives through) and on the <b>Earth clock</b> T (what passes at home). Choose the acceleration, the profile, filter by spectral class or distance, and sort by any column.</p>
+</div>
+<div data-lang="ru">
+  <p>50 ближайших известных звёзд и коричневых карликов (Солнце не включено) и сколько нужно кораблю с постоянным собственным ускорением, чтобы долететь до каждой: время по <b>часам корабля</b> &tau; (то, что проживёт экипаж) и по <b>часам Земли</b> T (то, что пройдёт дома). Выберите ускорение и профиль полёта, отфильтруйте по спектральному классу или расстоянию, отсортируйте по любой колонке.</p>
+</div>
+
+<div class="card">
+  <div class="ctl">
+    <label for="accel"><span><span data-lang="en" class="active">Proper acceleration</span><span data-lang="ru">Собственное ускорение</span></span><output id="accel-val" for="accel"></output></label>
+    <input id="accel" type="range" min="0" max="1000" step="any" value="500" />
+    <div class="legend"><span data-lang="en" class="active">Log scale: 0.1 g to 10 g. 1 g = 9.80665 m/s&sup2;.</span><span data-lang="ru">Логарифмическая шкала: от 0,1 g до 10 g. 1 g = 9,80665 м/с&sup2;.</span></div>
+    <div class="presets" id="apre"><button data-g="0.1">0.1 g</button><button data-g="0.5">0.5 g</button><button data-g="1">1 g</button><button data-g="3">3 g</button><button data-g="10">10 g</button></div>
+  </div>
+  <div class="ctl">
+    <label><span><span data-lang="en" class="active">Profile</span><span data-lang="ru">Профиль</span></span></label>
+    <div class="tabs" id="modes">
+      <button id="mode-flip" data-m="flip" aria-pressed="true"><span data-lang="en" class="active">Flip-and-burn (arrive at rest)</span><span data-lang="ru">С торможением (приход с нулевой скоростью)</span></button>
+      <button id="mode-flyby" data-m="flyby" aria-pressed="false"><span data-lang="en" class="active">Flyby (no braking)</span><span data-lang="ru">Пролёт (без торможения)</span></button>
+    </div>
+  </div>
+</div>
+
+<h2><span data-lang="en" class="active">Filters</span><span data-lang="ru">Фильтры</span></h2>
+<div class="card">
+  <fieldset style="border:0;margin:0;padding:0;min-width:0">
+    <legend style="color:var(--dim);font-size:12px;padding:0"><span data-lang="en" class="active">Spectral class</span><span data-lang="ru">Спектральный класс</span></legend>
+    <div class="chips" id="chips"></div>
+  </fieldset>
+  <div class="frow">
+    <div class="ctl"><label for="maxly"><span><span data-lang="en" class="active">Maximum distance</span><span data-lang="ru">Максимальное расстояние</span></span></label><select id="maxly"></select></div>
+    <div class="ctl"><label for="q"><span><span data-lang="en" class="active">Search by name</span><span data-lang="ru">Поиск по названию</span></span></label><input id="q" type="search" autocomplete="off" /></div>
+  </div>
+</div>
+
+<div class="count" id="count" role="status" aria-live="polite"></div>
+<div class="tablewrap">
+<table id="results">
+  <thead><tr>
+    <th scope="col" data-k="no" aria-sort="none"><button type="button" data-k="no">&#8470;</button></th>
+    <th scope="col" data-k="name" aria-sort="none"><button type="button" data-k="name"><span data-lang="en" class="active">Name</span><span data-lang="ru">Название</span></button></th>
+    <th scope="col" data-k="spectral" aria-sort="none"><button type="button" data-k="spectral"><span data-lang="en" class="active">Spectral class</span><span data-lang="ru">Спектр. класс</span></button></th>
+    <th scope="col" class="num" data-k="ly" aria-sort="ascending"><button type="button" data-k="ly"><span data-lang="en" class="active">Distance, ly</span><span data-lang="ru">Расстояние, св. л.</span></button></th>
+    <th scope="col" class="num" data-k="tau" aria-sort="none"><button type="button" data-k="tau"><span data-lang="en" class="active">Ship clock &tau;</span><span data-lang="ru">Часы корабля &tau;</span></button></th>
+    <th scope="col" class="num" data-k="t" aria-sort="none"><button type="button" data-k="t"><span data-lang="en" class="active">Earth clock T</span><span data-lang="ru">Часы Земли T</span></button></th>
+    <th scope="col" class="num"><span data-lang="en" class="active">Peak &gamma;</span><span data-lang="ru">Пик &gamma;</span></th>
+  </tr></thead>
+  <tbody id="tbody"></tbody>
+</table>
+</div>
+
+<h2><span data-lang="en" class="active">Continue</span><span data-lang="ru">Дальше</span></h2>
+<p>
+  <a id="link-wwr" href="where-we-reach.html"><span data-lang="en" class="active">How far in a lifetime (calculator)</span><span data-lang="ru">Куда долетим за жизнь (калькулятор)</span></a> &middot;
+  <a id="link-accel" href="accel.html"><span data-lang="en" class="active">Acceleration and braking to Proxima and Barnard's Star</span><span data-lang="ru">Разгон и торможение до Проксимы и звезды Барнарда</span></a>
+</p>
+
+<div data-lang="en" class="active">
+  <div class="note">
+    <p><b>Model.</b> Flip-and-burn: constant proper acceleration <i>a</i> for the first half of the way, turnover, the same braking; with rapidity <i>x</i> = 2 asinh(&radic;(<i>aD</i>/4c&sup2;)): &tau; = 2c<i>x</i>/<i>a</i>, T = (2c/<i>a</i>) sinh <i>x</i>, peak &gamma; = cosh <i>x</i> in the middle. Flyby: accelerate the whole way, one leg, the peak &gamma; is at the finish and the ship does not stop. Special relativity, a straight line, the target at rest relative to Earth; no gravity, no fuel or energy budget, no dust.</p>
+    <p><b>Data.</b> Distances and spectral types: the RECONS 10-parsec census and the Wikipedia list of nearest stars and brown dwarfs (parallaxes: Gaia DR3 / Hipparcos / ground-based, epoch about J2016), accuracy about 0.1&ndash;1%. Components of one system share the system distance. The list is a careful selection, not a guaranteed complete census: faint objects near the 15 ly cutoff may be missing, and the Y dwarf WISE 0855-0714 (7.4 ly) is not included. Proxima is listed with its own parallax distance and is about 2% nearer than Alpha Centauri A/B. D = white dwarf, L and T = brown dwarfs.</p>
+  </div>
+</div>
+<div data-lang="ru">
+  <div class="note">
+    <p><b>Модель.</b> Разгон с торможением: постоянное собственное ускорение <i>a</i> первую половину пути, разворот, такое же торможение; при быстроте <i>x</i> = 2 asinh(&radic;(<i>aD</i>/4c&sup2;)): &tau; = 2c<i>x</i>/<i>a</i>, T = (2c/<i>a</i>) sinh <i>x</i>, пик &gamma; = cosh <i>x</i> в середине пути. Пролёт: разгон всю дорогу, один участок, пик &gamma; в конце, корабль не останавливается. Специальная теория относительности, прямая линия, цель неподвижна относительно Земли; без гравитации, бюджета топлива и энергии, пыли.</p>
+    <p><b>Данные.</b> Расстояния и спектральные классы: перепись RECONS в 10 парсеках и список ближайших звёзд и коричневых карликов в Википедии (параллаксы Gaia DR3 / Hipparcos / наземные, эпоха около J2016), точность примерно 0,1&ndash;1%. Компоненты одной системы имеют расстояние системы. Список &mdash; аккуратная выборка, а не гарантированно полная перепись: слабые объекты около границы 15 св. лет могут отсутствовать, Y-карлик WISE 0855-0714 (7,4 св. года) не включён. Проксима указана со своим параллаксным расстоянием, она примерно на 2% ближе, чем Альфа Центавра A/B. D &mdash; белый карлик, L и T &mdash; коричневые карлики.</p>
+  </div>
+</div>
+
+<p>
+  <a href="/"><span data-lang="en" class="active">Back to the simulator</span><span data-lang="ru">Назад к симулятору</span></a> &middot;
+  <a href="twins.html"><span data-lang="en" class="active">Twin paradox in transit</span><span data-lang="ru">Парадокс близнецов в пути</span></a> &middot;
+  <a href="engines.html"><span data-lang="en" class="active">Engines compared</span><span data-lang="ru">Сравнение двигателей</span></a>
+</p>
+
+<footer class="bottom">
+  <span data-lang="en" class="active">Source: RECONS / Wikipedia list of nearest stars (parallax, about J2016). Formulas: flip-and-burn D = (4c&sup2;/a)&middot;sinh&sup2;(x/2), T = (2c/a)&middot;sinh x; flyby &gamma; = 1 + aD/c&sup2;.</span>
+  <span data-lang="ru">Источник: RECONS / список ближайших звёзд в Википедии (параллакс, около J2016). Формулы: с торможением D = (4c&sup2;/a)&middot;sinh&sup2;(x/2), T = (2c/a)&middot;sinh x; пролёт &gamma; = 1 + aD/c&sup2;.</span>
+</footer>
+</main>
+
+<script type="module">
+import { NEIGHBORS } from './js/data/neighbors.js';
+import {
+  GROUPS, buildRows, sortRows, filterRows, parseAccelParam, accelFromSlider, sliderFromAccel, spectralGroup,
+} from './js/physics/neighbors.js';
+
+const $ = (id) => document.getElementById(id);
+let lang = 'en';
+try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en' ? s : ((navigator.language || 'en').slice(0, 2) === 'ru' ? 'ru' : 'en'); } catch (e) {}
+const loc = (s) => (lang === 'ru' ? s.replace('.', ',') : s);
+const sigDec = (a) => (a >= 1000 ? 0 : a >= 100 ? 1 : 2);
+function sig(v) {
+  if (!Number.isFinite(v)) return '—';
+  if (Math.abs(v) >= 1e6 || (v !== 0 && Math.abs(v) < 1e-3)) return loc(v.toExponential(2));
+  return loc(v.toFixed(sigDec(Math.abs(v))));
+}
+function ruYears(s) {
+  if (/e/.test(s)) return 'лет';
+  if (/,/.test(s)) return 'года';
+  const n = parseInt(s, 10), m100 = n % 100, m10 = n % 10;
+  return m100 >= 11 && m100 <= 14 ? 'лет' : m10 === 1 ? 'год' : m10 >= 2 && m10 <= 4 ? 'года' : 'лет';
+}
+function fmtYears(v) { const n = sig(v); return n + ' ' + (lang === 'ru' ? ruYears(n) : 'years'); }
+const fmtG = (g) => loc(g.toPrecision(3)) + ' g';
+const T = {
+  en: { shown: (n, m) => 'Showing ' + n + ' of ' + m, none: 'No stars match these filters. Loosen the spectral class, distance or search.', any: 'Any (all 50)', upTo: (d) => 'up to ' + d + ' ly', ly: 'ly', searchPh: 'e.g. Sirius, Wolf, Tau' },
+  ru: { shown: (n, m) => 'Показано ' + n + ' из ' + m, none: 'Ни одна звезда не подходит. Ослабьте фильтр по классу, расстоянию или поиску.', any: 'Любое (все 50)', upTo: (d) => 'до ' + d + ' св. л.', ly: 'св. л.', searchPh: 'например, Сириус, Вольф, Тау' },
+};
+const MAXLY_OPTS = [5, 7, 9, 11, 13];
+
+const state = {
+  accelG: parseAccelParam(location.search),
+  mode: 'flip',
+  sortKey: 'ly', sortDir: 'asc',
+  groups: new Set(GROUPS),
+  maxLy: null,
+  query: '',
+};
+const groupCount = {};
+for (const g of GROUPS) groupCount[g] = NEIGHBORS.filter((s) => spectralGroup(s.spectral) === g).length;
+
+function buildChips() {
+  const box = $('chips'); box.textContent = '';
+  for (const g of GROUPS) {
+    const lab = document.createElement('label');
+    lab.className = 'chip'; lab.id = 'chip-' + g;
+    const cb = document.createElement('input'); cb.type = 'checkbox'; cb.value = g; cb.checked = true;
+    cb.disabled = groupCount[g] === 0;
+    cb.setAttribute('aria-label', (lang === 'ru' ? 'Класс ' : 'Class ') + g + ' (' + groupCount[g] + ')');
+    lab.appendChild(cb);
+    lab.appendChild(document.createTextNode(g === 'D' ? 'D' : g));
+    const sm = document.createElement('small'); sm.textContent = String(groupCount[g]); lab.appendChild(sm);
+    if (groupCount[g] === 0) lab.classList.add('zero');
+    box.appendChild(lab);
+  }
+}
+function buildMaxLy() {
+  const sel = $('maxly'); const cur = sel.value; sel.textContent = '';
+  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = T[lang].any; sel.appendChild(o0);
+  for (const d of MAXLY_OPTS) { const o = document.createElement('option'); o.value = String(d); o.textContent = T[lang].upTo(d); sel.appendChild(o); }
+  sel.value = cur;
+}
+
+function badge(r) {
+  const s = document.createElement('span'); s.className = 'sp sp-' + r.group; s.textContent = r.spectral; return s;
+}
+function td(text, cls, label, id) {
+  const c = document.createElement('td');
+  if (cls) c.className = cls;
+  if (label) c.setAttribute('data-label', label);
+  if (id) c.id = id;
+  if (typeof text === 'string') c.textContent = text; else c.appendChild(text);
+  return c;
+}
+
+function render() {
+  const t = T[lang];
+  const rows = buildRows(NEIGHBORS, state.accelG, state.mode);
+  const shown = sortRows(filterRows(rows, { groups: state.groups, maxLy: state.maxLy, query: state.query }), state.sortKey, state.sortDir, lang);
+  $('accel-val').textContent = fmtG(state.accelG);
+  $('accel').setAttribute('aria-valuetext', fmtG(state.accelG));
+  document.querySelectorAll('#apre button').forEach((b) => b.classList.toggle('on', Math.abs(state.accelG / +b.dataset.g - 1) < 1e-3));
+  document.querySelectorAll('#modes button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.m === state.mode)));
+  document.querySelectorAll('#chips .chip').forEach((l) => l.classList.toggle('off', !l.querySelector('input').checked));
+  document.querySelectorAll('#results thead th[data-k]').forEach((th) => {
+    th.setAttribute('aria-sort', th.dataset.k === state.sortKey ? (state.sortDir === 'asc' ? 'ascending' : 'descending') : 'none');
+  });
+  $('q').placeholder = t.searchPh;
+  $('count').textContent = t.shown(shown.length, rows.length);
+  const q = '?a=' + encodeURIComponent(String(+state.accelG.toPrecision(3)));
+  $('link-wwr').setAttribute('href', 'where-we-reach.html' + q);
+  $('link-accel').setAttribute('href', 'accel.html' + q);
+  try { history.replaceState(null, '', location.pathname + q); } catch (e) {}
+
+  const labels = lang === 'ru' ? ['№', 'Название', 'Класс', 'Расстояние', 'Часы корабля τ', 'Часы Земли T', 'Пик γ'] : ['No.', 'Name', 'Class', 'Distance', 'Ship clock τ', 'Earth clock T', 'Peak γ'];
+  const tb = $('tbody'); tb.textContent = '';
+  if (shown.length === 0) {
+    const tr = document.createElement('tr'); const c = document.createElement('td');
+    c.colSpan = 7; c.className = 'empty'; c.id = 'empty'; c.textContent = t.none; tr.appendChild(c); tb.appendChild(tr);
+    return;
+  }
+  for (const r of shown) {
+    const tr = document.createElement('tr'); tr.dataset.id = r.id;
+    const nm = td(lang === 'ru' && r.ru ? r.ru : r.name, 'nm', labels[1], 'out-' + r.id + '-name');
+    if (lang === 'ru' && r.ru && r.name !== r.ru) nm.title = r.name;
+    tr.appendChild(td(String(r.no), 'num', labels[0]));
+    tr.appendChild(nm);
+    tr.appendChild(td(badge(r), '', labels[2], 'out-' + r.id + '-sp'));
+    tr.appendChild(td(loc(r.ly.toFixed(r.ly < 5 ? 4 : 2)), 'num', labels[3], 'out-' + r.id + '-ly'));
+    tr.appendChild(td(fmtYears(r.tau), 'num', labels[4], 'out-' + r.id + '-tau'));
+    tr.appendChild(td(fmtYears(r.t), 'num', labels[5], 'out-' + r.id + '-t'));
+    tr.appendChild(td(sig(r.peakGamma), 'num', labels[6], 'out-' + r.id + '-gamma'));
+    tb.appendChild(tr);
+  }
+}
+
+function applyLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  document.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el.getAttribute('data-lang') === l));
+  document.querySelectorAll('#langtoggle span').forEach((el) => el.classList.toggle('active', el.getAttribute('data-set') === l));
+  buildChips(); syncChips(); buildMaxLy();
+  render();
+}
+function syncChips() {
+  document.querySelectorAll('#chips input').forEach((cb) => { cb.checked = state.groups.has(cb.value); });
+  $('maxly').value = state.maxLy === null ? '' : String(state.maxLy);
+}
+
+$('accel').addEventListener('input', () => { state.accelG = accelFromSlider(+$('accel').value); render(); });
+$('apre').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button'); if (!b) return;
+  state.accelG = +b.dataset.g; $('accel').value = String(sliderFromAccel(state.accelG)); render();
+});
+$('modes').addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (b) { state.mode = b.dataset.m; render(); } });
+$('chips').addEventListener('change', (ev) => {
+  const cb = ev.target; if (!cb.value) return;
+  if (cb.checked) state.groups.add(cb.value); else state.groups.delete(cb.value);
+  render();
+});
+$('maxly').addEventListener('change', () => { state.maxLy = $('maxly').value === '' ? null : +$('maxly').value; render(); });
+$('q').addEventListener('input', () => { state.query = $('q').value; render(); });
+$('results').querySelector('thead').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button[data-k]'); if (!b) return;
+  const k = b.dataset.k;
+  if (state.sortKey === k) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+  else { state.sortKey = k; state.sortDir = 'asc'; }
+  render();
+});
+$('langtoggle').addEventListener('click', (ev) => {
+  const s = ev.target.closest('span'); if (!s) return;
+  const l = s.getAttribute('data-set'); applyLang(l);
+  try { localStorage.setItem('iss_lang', l); } catch (e) {}
+});
+$('accel').value = String(sliderFromAccel(state.accelG));
+applyLang(lang);
+document.body.dataset.ready = '1';
+</script>
+</body>
+</html>
