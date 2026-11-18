@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Where to look for life: the Drake equation and the Fermi paradox — Interstellar</title>
+<meta name="description" content="Drake equation with honest ranges instead of single numbers: Monte-Carlo distribution of the number of detectable civilisations in the Galaxy, the chance we are alone, and how far the nearest one would be - the Fermi paradox in numbers. Presets with cited sources." />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="120x120" href="/favicon-120.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<style>
+  :root { --fg: #9fe7ff; --dim: #5b7c88; --bg: rgba(6, 14, 20, 0.66); --line: rgba(120, 200, 230, 0.18); --card: rgba(8, 16, 24, 0.92); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #05070c; }
+  body { color: #cfeefc; font: 14px/1.65 "SF Mono", "Cascadia Code", Menlo, Consolas, monospace; padding: 0 0 60px; overflow-x: hidden; }
+  a { color: #7fb3ff; }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 22px 0; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  header.top a.home { color: var(--dim); text-decoration: none; }
+  header.top a.home:hover { color: var(--fg); }
+  #langtoggle { display: flex; gap: 3px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+  #langtoggle span { cursor: pointer; padding: 3px 10px; border-radius: 5px; color: var(--dim); font-size: 12px; }
+  #langtoggle span.active { color: #eaffff; background: rgba(60,116,148,0.5); }
+  h1 { font-size: 22px; letter-spacing: 0.06em; color: #bfeeff; margin: 0 0 6px; overflow-wrap: anywhere; }
+  h2 { font-size: 15px; letter-spacing: 0.05em; color: #d7f6ff; margin: 30px 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  p { color: #b9d8e6; margin: 10px 0; }
+  b, strong { color: #eaffff; }
+  code { background: rgba(120,200,230,0.1); border-radius: 3px; padding: 1px 5px; color: #d7f6ff; overflow-wrap: anywhere; }
+  .note { background: rgba(40,90,120,0.18); border-left: 2px solid #4a8fb0; padding: 10px 14px; border-radius: 5px; color: #bfe6f4; margin: 14px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 14px 0; min-width: 0; }
+  .ctl { margin: 10px 0 14px; }
+  .ctl label { display: flex; justify-content: space-between; gap: 10px; color: var(--dim); font-size: 12px; }
+  .ctl label output { color: #eaffff; font-weight: 700; }
+  .ctl input[type=range] { width: 100%; min-width: 0; margin: 6px 0 2px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+  .presets button { background: rgba(60,116,148,0.25); color: #cfeefc; border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+  .presets button:hover, .presets button.on { background: rgba(60,116,148,0.55); }
+  .big { font-size: 15px; color: #eaffff; margin: 6px 0 10px; overflow-wrap: anywhere; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0; }
+  .stat { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0; }
+  .stat span { display: block; color: var(--dim); font-size: 11.5px; }
+  .stat b { font-size: 14px; overflow-wrap: anywhere; }
+  .warn { color: #ffd28a; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid rgba(120,200,230,0.1); overflow-wrap: anywhere; }
+  th { color: var(--dim); font-weight: 600; font-size: 11.5px; }
+  tr.yes td { background: rgba(95,227,161,0.07); }
+  .yes-mark { color: #5fe3a1; font-weight: 700; }
+  .no-mark { color: var(--dim); }
+  footer.bottom { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
+  @media (max-width: 480px) {
+    main { padding: 28px 14px 0; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    thead { display: none; }
+    tr { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; padding: 4px 8px; }
+    td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 10px; text-align: right; }
+    td:not([data-label])::before { content: none; }
+    td::before { content: attr(data-label); color: var(--dim); text-align: left; flex: 0 0 42%; }
+  }
+  [data-lang] { display: none; }
+  [data-lang].active { display: block; }
+  span[data-lang].active, b[data-lang].active { display: inline; }
+
+  .ctl select { width: 100%; background: rgba(8,16,24,0.92); color: #eaffff; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; margin-top: 6px; }
+  .chart { margin: 8px 0; }
+  .crow { margin: 9px 0; min-width: 0; }
+  .crow .lbl { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: #cfeefc; }
+  .crow .lbl em { font-style: normal; color: #eaffff; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+  .crow svg { display: block; width: 100%; height: 16px; margin-top: 3px; }
+  .axis { position: relative; height: 16px; color: var(--dim); font-size: 10.5px; margin-top: 2px; }
+  .axis span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+  .axis span.first { transform: none; } .axis span.last { transform: translateX(-100%); }
+  .oos { color: #ffd28a; font-size: 10.5px; margin-left: 5px; font-weight: 400; }
+  .badge { display: inline-block; border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; margin: 1px 3px 1px 0; font-size: 11px; color: #ffd28a; white-space: nowrap; }
+  .badge.bad { color: #ff9c9c; }
+  .legend { color: var(--dim); font-size: 11.5px; margin: 4px 0; }
+  ul.src { padding-left: 18px; margin: 6px 0; } ul.src li { margin: 3px 0; overflow-wrap: anywhere; }
+
+  [hidden] { display: none !important; }
+  .stat span[data-lang]:not(.active) { display: none; }
+  .stat span[data-lang].active { display: block; }
+  canvas.plot { display: block; width: 100%; height: 260px; margin: 6px 0; }
+  canvas.plot.short { height: 200px; }
+  .ctl .presets { margin-top: 6px; }
+
+  .prm { border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 10px 0; background: var(--card); min-width: 0; }
+  .prm .nm { color: #eaffff; font-weight: 700; }
+  .prm .hint { color: var(--dim); font-size: 11.5px; margin: 2px 0 4px; }
+  .prm .rng { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .prm .rng label { display: flex; justify-content: space-between; gap: 6px; color: var(--dim); font-size: 12px; }
+  .prm .rng output { color: #eaffff; font-weight: 700; }
+  .prm input[type=range] { width: 100%; min-width: 0; margin: 4px 0; }
+  .prm .src { color: var(--dim); font-size: 11px; margin-top: 2px; overflow-wrap: anywhere; }
+  .prm .src a { color: #7fb3ff; }
+  .tag { display: inline-block; border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; margin-left: 6px; font-size: 10.5px; color: #ffd28a; }
+  .tag.measured { color: #5fe3a1; }
+  .tag.model { color: #9fe7ff; }
+  canvas.plot.hist { height: 280px; }
+  .btn { background: rgba(60,116,148,0.35); color: #eaffff; border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; font: inherit; font-size: 12px; cursor: pointer; }
+  .btn:hover { background: rgba(60,116,148,0.6); }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <a class="home" href="/">&larr; Interstellar</a>
+    <div id="langtoggle"><span data-set="en">EN</span><span data-set="ru">RU</span></div>
+  </header>
+
+<h1><span data-lang="en" class="active">WHERE TO LOOK FOR LIFE: THE DRAKE EQUATION AND THE FERMI PARADOX</span><span data-lang="ru">ГДЕ ИСКАТЬ ЖИЗНЬ: УРАВНЕНИЕ ДРЕЙКА И ПАРАДОКС ФЕРМИ</span></h1>
+
+<div data-lang="en" class="active">
+  <p>The Drake equation estimates how many civilisations in the Galaxy could be sending detectable signals: <code>N = R* &middot; fp &middot; ne &middot; fl &middot; fi &middot; fc &middot; L</code>. Some factors are already measured, others are pure guesses. So instead of one number this page takes a <b>range</b> for each factor, draws 20&nbsp;000 random combinations (Monte-Carlo) and shows the whole spread of N, the chance that N is below one (we are alone), and how far the nearest neighbour would be.</p>
+</div>
+<div data-lang="ru">
+  <p>Уравнение Дрейка оценивает, сколько цивилизаций в Галактике могут слать заметные сигналы: <code>N = R* &middot; fp &middot; ne &middot; fl &middot; fi &middot; fc &middot; L</code>. Часть множителей уже измерена, остальные &mdash; чистые догадки. Поэтому вместо одного числа здесь для каждого множителя берётся <b>диапазон</b>, случайно разыгрывается 20&nbsp;000 сочетаний (Монте-Карло), и показывается весь разброс N, шанс того, что N меньше единицы (мы одни), и как далеко находился бы ближайший сосед.</p>
+</div>
+<div class="note">
+  <p data-lang="en" class="active"><b>Honest caveat.</b> Only R*, fp and partly ne are measured. fl, fi, fc and L have a single data point (Earth), so their ranges are subjective assumptions, not estimates with error bars. The result says what follows from the assumptions you choose, not how many civilisations exist.</p>
+  <p data-lang="ru"><b>Честная оговорка.</b> Измерены только R*, fp и отчасти ne. Для fl, fi, fc и L есть одна точка данных (Земля), поэтому их диапазоны &mdash; субъективные допущения, а не оценки с погрешностью. Результат показывает, что следует из выбранных допущений, а не сколько цивилизаций существует на самом деле.</p>
+</div>
+
+<h2><span data-lang="en" class="active">Presets</span><span data-lang="ru">Пресеты</span></h2>
+<div class="card">
+  <div class="presets" id="presets"></div>
+  <div class="legend" id="preset-note"></div>
+</div>
+
+<h2><span data-lang="en" class="active">The seven factors (min&ndash;max)</span><span data-lang="ru">Семь множителей (мин&ndash;макс)</span></h2>
+<div id="params"></div>
+<p><button class="btn" id="resample"><span data-lang="en" class="active">Resample (new random seed)</span><span data-lang="ru">Пересчитать (новый seed)</span></button>
+  <span class="legend" id="seed-info"></span></p>
+
+<h2><span data-lang="en" class="active">Result</span><span data-lang="ru">Результат</span></h2>
+<div class="stats">
+  <div class="stat"><span data-lang="en" class="active">Median N</span><span data-lang="ru">Медиана N</span><b id="out-median"></b></div>
+  <div class="stat"><span data-lang="en" class="active">16&ndash;84 % interval</span><span data-lang="ru">Интервал 16&ndash;84 %</span><b id="out-p68"></b></div>
+  <div class="stat"><span data-lang="en" class="active">2.5&ndash;97.5 % interval</span><span data-lang="ru">Интервал 2,5&ndash;97,5 %</span><b id="out-p95"></b></div>
+  <div class="stat"><span data-lang="en" class="active">P(N &lt; 1): we are alone</span><span data-lang="ru">P(N &lt; 1): мы одни</span><b id="out-plt1"></b></div>
+</div>
+<div class="card"><canvas id="drake-hist" class="plot hist" role="img" aria-label="Histogram of log10 N"></canvas>
+  <div class="legend" id="hist-legend"></div></div>
+
+<h2><span data-lang="en" class="active">The Fermi paradox in numbers</span><span data-lang="ru">Парадокс Ферми в числах</span></h2>
+<div class="stats">
+  <div class="stat"><span data-lang="en" class="active">Typical distance to the nearest (median N)</span><span data-lang="ru">Типичное расстояние до ближайшей (медиана N)</span><b id="out-dist"></b></div>
+  <div class="stat"><span data-lang="en" class="active">Range for N at 84 % / 16 %</span><span data-lang="ru">Диапазон для N на уровнях 84 % / 16 %</span><b id="out-dist-range"></b></div>
+  <div class="stat"><span data-lang="en" class="active">P(nobody within our radio bubble, ~100 ly)</span><span data-lang="ru">P(никого в нашем радиопузыре, ~100 св. лет)</span><b id="out-silence"></b></div>
+</div>
+<div data-lang="en" class="active">
+  <div class="note">
+    <p><b>Model.</b> N civilisations are scattered at random through a flat cylinder: radius 50&nbsp;000 ly, thickness 1&nbsp;000 ly (round numbers, not a fit). Then the chance that none lies within distance r of us is exp(&minus;N&middot;V(r)/V<sub>gal</sub>), where V(r) is a ball of radius r clipped to the disc thickness. The &ldquo;typical distance&rdquo; is the r at which this chance is 50 %. It is meaningful for N well above one; edge effects (the Sun is not at the centre) and the clumping of real stars are ignored. &ldquo;Infinity&rdquo; means: more likely than not there is no neighbour anywhere in the Galaxy.</p>
+    <p><b>Comparison with silence.</b> Our own radio leakage has had about a century to spread, so a bubble of roughly 100 ly has been &ldquo;lit&rdquo; by us (order of magnitude). The last number above is the average chance that no signalling neighbour sits inside such a radius. If it is high, silence nearby is exactly what the assumptions predict &mdash; no paradox.</p>
+  </div>
+</div>
+<div data-lang="ru">
+  <div class="note">
+    <p><b>Модель.</b> N цивилизаций случайно разбросаны по плоскому цилиндру: радиус 50&nbsp;000 св. лет, толщина 1&nbsp;000 св. лет (круглые числа, не подгонка). Тогда вероятность того, что в радиусе r от нас никого нет, равна exp(&minus;N&middot;V(r)/V<sub>гал</sub>), где V(r) &mdash; шар радиуса r, обрезанный толщиной диска. &laquo;Типичное расстояние&raquo; &mdash; такое r, при котором эта вероятность равна 50 %. Оценка осмысленна при N заметно больше единицы; краевые эффекты (Солнце не в центре) и скученность реальных звёзд не учтены. &laquo;Бесконечность&raquo; значит: скорее всего соседа нет нигде в Галактике.</p>
+    <p><b>Сравнение с тишиной.</b> Наша радиоутечка распространяется около века, так что мы &laquo;засветили&raquo; пузырь порядка 100 св. лет. Последнее число выше &mdash; средняя вероятность того, что внутри такого радиуса нет сигналящего соседа. Если она велика, тишина рядом &mdash; ровно то, что предсказывают допущения, и парадокса нет.</p>
+  </div>
+</div>
+
+<h2><span data-lang="en" class="active">The Fermi paradox and where to look</span><span data-lang="ru">Парадокс Ферми и где искать</span></h2>
+<div data-lang="en" class="active">
+  <div class="note">
+    <p><b>The paradox.</b> Enrico Fermi's question &ldquo;Where is everybody?&rdquo; (1950): if civilisations were common, the Galaxy is old enough that some should be visible or should have visited, yet we see nothing. One resolution is on this page: with honest uncertainty on fl, fi, fc and L the spread of N is so wide that a quiet sky is not surprising (Sandberg, Drexler &amp; Ord 2018).</p>
+    <p><b>What astronomy already measures.</b> R* (star-formation rate of the Galaxy), fp (microlensing: Cassan et al. 2012; transit surveys) and ne (the share of Sun-like stars with an Earth-size planet in the habitable zone: Petigura et al. 2013, Bryson et al. 2021; habitable-zone limits: Kopparapu et al. 2013). These three factors narrow, but the rest stay open.</p>
+    <p><b>What would measure the rest.</b> <i>Biosignatures</i>: chemical traces of life in the atmosphere of a transiting planet by spectroscopy &mdash; this probes fl. <i>Technosignatures</i>: narrow-band radio or laser signals, anomalous infrared excess, atmospheric industrial gases &mdash; this probes fc and L. Each non-detection excludes part of the (fl, fi, fc, L) space; this is how silence turns into data.</p>
+  </div>
+</div>
+<div data-lang="ru">
+  <div class="note">
+    <p><b>Парадокс.</b> Вопрос Энрико Ферми &laquo;Где все?&raquo; (1950): если бы цивилизации были обычны, то Галактика достаточно стара, чтобы кто-то был виден или прилетал, но мы ничего не видим. Один из выходов показан на этой странице: при честной неопределённости fl, fi, fc и L разброс N так велик, что тихое небо не удивляет (Sandberg, Drexler &amp; Ord 2018).</p>
+    <p><b>Что астрономия уже измеряет.</b> R* (темп звездообразования Галактики), fp (микролинзирование: Cassan и др. 2012; транзитные обзоры) и ne (доля солнцеподобных звёзд с планетой размером с Землю в зоне обитаемости: Petigura и др. 2013, Bryson и др. 2021; границы зоны обитаемости: Kopparapu и др. 2013). Эти три множителя сужаются, остальные остаются открытыми.</p>
+    <p><b>Что измерило бы остальное.</b> <i>Биосигнатуры</i>: химические следы жизни в атмосфере транзитной планеты по спектрам &mdash; это про fl. <i>Техносигнатуры</i>: узкополосные радио- или лазерные сигналы, аномальный инфракрасный избыток, промышленные газы в атмосфере &mdash; это про fc и L. Каждое необнаружение исключает часть пространства (fl, fi, fc, L): так тишина становится данными.</p>
+  </div>
+</div>
+
+<h2><span data-lang="en" class="active">Sources of the selected preset</span><span data-lang="ru">Источники выбранного пресета</span></h2>
+<div class="card"><div id="preset-sources"></div>
+  <div class="legend active" data-lang="en">Tags: <span class="tag measured">measured</span> astronomical measurement, <span class="tag model">model</span> model-based, <span class="tag">assumption</span> subjective assumption. Ranges are this page's log-uniform encoding of the cited position, not numbers copied from the papers.</div>
+  <div class="legend" data-lang="ru">Метки: <span class="tag measured">measured</span> астрономическое измерение, <span class="tag model">model</span> по модели, <span class="tag">assumption</span> субъективное допущение. Диапазоны &mdash; лог-равномерная запись позиции из источника на этой странице, а не числа, скопированные из статей.</div>
+</div>
+
+<p>
+  <a href="/"><span data-lang="en" class="active">Back to the simulator</span><span data-lang="ru">Назад к симулятору</span></a> &middot;
+  <a href="neighbors.html"><span data-lang="en" class="active">Neighbours in the galaxy</span><span data-lang="ru">Соседи в галактике</span></a> &middot;
+  <a href="twins.html"><span data-lang="en" class="active">Twin paradox in transit</span><span data-lang="ru">Парадокс близнецов в пути</span></a>
+</p>
+
+<footer class="bottom">
+  <span data-lang="en" class="active">Formula: N = R*&middot;fp&middot;ne&middot;fl&middot;fi&middot;fc&middot;L. Each factor is log-uniform between its min and max; 20&nbsp;000 draws, seeded PRNG (mulberry32), so a result is reproducible. Fermi part: Poisson scatter in a cylinder 50&nbsp;000 &times; 1&nbsp;000 ly.</span>
+  <span data-lang="ru">Формула: N = R*&middot;fp&middot;ne&middot;fl&middot;fi&middot;fc&middot;L. Каждый множитель лог-равномерен между min и max; 20&nbsp;000 розыгрышей, PRNG с seed (mulberry32), результат воспроизводим. Часть про Ферми: пуассоновский разброс в цилиндре 50&nbsp;000 &times; 1&nbsp;000 св. лет.</span>
+</footer>
+</main>
+
+<script type="module">
+import { KEYS, summarize } from './js/physics/drake.js';
+import { PRESETS, PARAM_META, SOURCES, presetParams } from './js/data/drake.js';
+
+const NSAMP = 20000;
+const T = {
+  en: { yr: 'yr', ly: 'ly', min: 'min', max: 'max', alone: 'N < 1', inf: '∞ (probably none in the Galaxy)', axis: 'log10 N (number of civilisations)', med: 'median', band: '16–84 %', one: 'N = 1', seed: 'seed', aria: 'Histogram of log10 N: median, 16–84 % interval, N = 1', basis: { measured: 'measured', model: 'model', assumption: 'assumption' }, par: 'Parameter', rng: 'Range', src: 'Sources', thr: 'thousand' },
+  ru: { yr: 'г.', ly: 'св. л.', min: 'мин', max: 'макс', alone: 'N < 1', inf: '∞ (скорее всего никого в Галактике)', axis: 'log10 N (число цивилизаций)', med: 'медиана', band: '16–84 %', one: 'N = 1', seed: 'seed', aria: 'Гистограмма log10 N: медиана, интервал 16–84 %, N = 1', basis: { measured: 'measured', model: 'model', assumption: 'assumption' }, par: 'Параметр', rng: 'Диапазон', src: 'Источники', thr: 'тыс.' },
+};
+
+let lang = 'en';
+try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en' ? s : ((navigator.language || 'en').slice(0, 2) === 'ru' ? 'ru' : 'en'); } catch (e) {}
+
+const $ = (id) => document.getElementById(id);
+const SUP = { '-': '⁻', 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴', 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹' };
+const sup = (n) => String(n).split('').map((c) => SUP[c] || c).join('');
+function dec(s) { return lang === 'ru' ? s.replace('.', ',') : s; }
+// value in compact form: 0.2, 12, 3.3×10⁻¹², 1×10⁴
+function fmt(v) {
+  if (!Number.isFinite(v)) return '—';
+  if (v === 0) return '0';
+  const a = Math.abs(v);
+  if (a >= 0.01 && a < 1000) return dec(String(Number(v.toPrecision(2))));
+  let e = Math.floor(Math.log10(a)), m = a / Math.pow(10, e);
+  m = Number(m.toPrecision(2));
+  if (m >= 10) { m /= 10; e += 1; }
+  return dec(String(m)) + '×10' + sup(e);
+}
+function pct(p) { return dec((p * 100 < 10 ? (p * 100).toFixed(1) : Math.round(p * 100).toString())) + ' %'; }
+function ly(v) {
+  if (!Number.isFinite(v)) return T[lang].inf;
+  return (v >= 100 ? Math.round(v).toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US') : dec(v.toFixed(1))) + ' ' + T[lang].ly;
+}
+
+// ---- state: ranges in real values ----
+const cur = {};
+let activePreset = null, seed = 20240611;
+
+function applyPreset(p) {
+  const pp = presetParams(p);
+  for (const k of KEYS) cur[k] = { min: pp[k].min, max: pp[k].max };
+  activePreset = p.id;
+  syncSliders(); render();
+}
+const lg = (v) => Math.log10(v);
+
+function buildParams() {
+  const box = $('params');
+  box.innerHTML = '';
+  for (const k of KEYS) {
+    const m = PARAM_META[k];
+    const d = document.createElement('div');
+    d.className = 'prm';
+    d.innerHTML =
+      '<div><span class="nm" data-nm="' + k + '"></span> <span class="legend" data-unit="' + k + '"></span></div>' +
+      '<div class="hint" data-hint="' + k + '"></div>' +
+      '<div class="rng">' +
+      '<div><label for="min-' + k + '"><span data-t="min"></span><output id="o-min-' + k + '"></output></label>' +
+      '<input id="min-' + k + '" type="range" min="' + m.lo + '" max="' + m.hi + '" step="0.01" /></div>' +
+      '<div><label for="max-' + k + '"><span data-t="max"></span><output id="o-max-' + k + '"></output></label>' +
+      '<input id="max-' + k + '" type="range" min="' + m.lo + '" max="' + m.hi + '" step="0.01" /></div>' +
+      '</div>';
+    box.appendChild(d);
+    const onIn = (which) => () => {
+      const v = Number((Math.pow(10, +$(which + '-' + k).value)).toPrecision(3));
+      cur[k][which] = v;
+      if (cur[k].min > cur[k].max) {
+        const other = which === 'min' ? 'max' : 'min';
+        cur[k][other] = v;
+        $(other + '-' + k).value = lg(v);
+      }
+      activePreset = null;
+      render();
+    };
+    $('min-' + k).addEventListener('input', onIn('min'));
+    $('max-' + k).addEventListener('input', onIn('max'));
+  }
+}
+function syncSliders() {
+  for (const k of KEYS) { $('min-' + k).value = lg(cur[k].min); $('max-' + k).value = lg(cur[k].max); }
+}
+
+// ---- histogram ----
+function niceStep(range, maxTicks) {
+  const raw = range / maxTicks, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+  return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p;
+}
+function drawHist(s) {
+  const cv = $('drake-hist');
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  const padL = 36, padR = 10, padT = 12, padB = 34;
+  const pw = Math.max(10, w - padL - padR), ph = Math.max(10, h - padT - padB);
+  const { lo, hi, bins, counts } = s.hist;
+  const X = (v) => padL + ((v - lo) / (hi - lo)) * pw;
+  const maxC = Math.max(...counts);
+  const Y = (c) => padT + ph - (c / maxC) * ph;
+  g.font = '11px monospace'; g.lineWidth = 1;
+  const step = Math.max(1, Math.round(niceStep(hi - lo, Math.max(2, Math.floor(pw / 52)))));
+  g.strokeStyle = 'rgba(120,200,230,0.18)'; g.fillStyle = '#5b7c88'; g.textAlign = 'center'; g.textBaseline = 'top';
+  for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) {
+    g.beginPath(); g.moveTo(X(v), padT); g.lineTo(X(v), padT + ph); g.stroke();
+    g.fillText('10' + sup(v), Math.min(Math.max(X(v), padL + 8), w - 16), padT + ph + 3);
+  }
+  const bw = pw / bins;
+  for (let i = 0; i < bins; i++) {
+    const mid = (s.hist.edges[i] + s.hist.edges[i + 1]) / 2;
+    const inBand = mid >= s.log10.p16 && mid <= s.log10.p84;
+    g.fillStyle = inBand ? 'rgba(127,179,255,0.85)' : 'rgba(91,124,136,0.7)';
+    const y = Y(counts[i]);
+    g.fillRect(padL + i * bw + 0.5, y, Math.max(1, bw - 1), padT + ph - y);
+  }
+  g.setLineDash([]);
+  g.strokeStyle = '#ffd28a'; g.lineWidth = 2;
+  g.beginPath(); g.moveTo(X(s.log10.median), padT); g.lineTo(X(s.log10.median), padT + ph); g.stroke();
+  if (0 >= lo && 0 <= hi) {
+    g.strokeStyle = '#ff9c9c'; g.lineWidth = 1; g.setLineDash([4, 3]);
+    g.beginPath(); g.moveTo(X(0), padT); g.lineTo(X(0), padT + ph); g.stroke(); g.setLineDash([]);
+  }
+  g.fillStyle = '#9fe7ff'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+  g.fillText(T[lang].axis, padL + pw / 2, h - 2);
+}
+
+function renderSources() {
+  const t = T[lang];
+  const box = $('preset-sources');
+  const p = PRESETS.find((x) => x.id === activePreset);
+  if (!p) { box.innerHTML = '<p class="legend">' + (lang === 'ru' ? 'Диапазоны изменены вручную: выберите пресет, чтобы увидеть источники.' : 'Ranges edited by hand: pick a preset to see its sources.') + '</p>'; return; }
+  let html = '<table><thead><tr><th>' + t.par + '</th><th>' + t.rng + '</th><th>' + t.src + '</th></tr></thead><tbody>';
+  for (const k of KEYS) {
+    const pr = p.params[k];
+    const range = pr.min === pr.max ? fmt(pr.min) : fmt(pr.min) + ' – ' + fmt(pr.max);
+    const srcs = pr.src.map((id) => {
+      const s = SOURCES[id];
+      return s.url ? '<a href="' + s.url + '" rel="noopener">' + s.cite + '</a>' : s.cite;
+    }).join('<br>');
+    html += '<tr><td data-label="' + t.par + '">' + k + ' <span class="tag ' + pr.basis + '">' + pr.basis + '</span></td><td data-label="' + t.rng + '">' + range + '</td><td data-label="' + t.src + '" style="text-align:left">' + srcs + '</td></tr>';
+  }
+  box.innerHTML = html + '</tbody></table>';
+}
+
+function render() {
+  const t = T[lang];
+  for (const k of KEYS) {
+    const m = PARAM_META[k];
+    document.querySelector('[data-nm="' + k + '"]').textContent = m.label[lang];
+    document.querySelector('[data-unit="' + k + '"]').textContent = '(' + m.unit[lang] + ')';
+    document.querySelector('[data-hint="' + k + '"]').textContent = m.hint[lang];
+    $('o-min-' + k).textContent = fmt(cur[k].min); $('o-max-' + k).textContent = fmt(cur[k].max);
+  }
+  document.querySelectorAll('[data-t]').forEach((el) => { el.textContent = t[el.getAttribute('data-t')]; });
+  const pr = $('presets');
+  pr.innerHTML = '';
+  for (const p of PRESETS) {
+    const b = document.createElement('button');
+    b.textContent = p.name[lang]; b.dataset.id = p.id;
+    b.classList.toggle('on', p.id === activePreset);
+    pr.appendChild(b);
+  }
+  const ap = PRESETS.find((x) => x.id === activePreset);
+  $('preset-note').textContent = ap ? ap.note[lang] : (lang === 'ru' ? 'Свои диапазоны.' : 'Custom ranges.');
+
+  const params = {};
+  for (const k of KEYS) params[k] = { min: cur[k].min, max: cur[k].max, dist: 'log' };
+  const s = summarize(params, NSAMP, seed);
+  $('out-median').textContent = fmt(s.median);
+  $('out-p68').textContent = fmt(s.p16) + ' – ' + fmt(s.p84);
+  $('out-p95').textContent = fmt(s.p025) + ' – ' + fmt(s.p975);
+  $('out-plt1').textContent = pct(s.pLessThanOne);
+  $('out-dist').textContent = ly(s.nearestLy.atMedian);
+  $('out-dist-range').textContent = ly(s.nearestLy.atP84) + ' / ' + ly(s.nearestLy.atP16);
+  $('out-silence').textContent = pct(s.pSilenceInBubble);
+  $('seed-info').textContent = t.seed + ' ' + seed + ', n = ' + NSAMP.toLocaleString(lang === 'ru' ? 'ru-RU' : 'en-US');
+  $('hist-legend').textContent = (lang === 'ru'
+    ? 'Жёлтая линия — медиана; светлые столбцы — интервал 16–84 %; красный пунктир — N = 1.'
+    : 'Yellow line: median; light bars: 16–84 % interval; red dashed: N = 1.');
+  $('drake-hist').setAttribute('aria-label', t.aria);
+  drawHist(s);
+  renderSources();
+  document.body.dataset.median = String(s.median);
+}
+
+function applyLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  document.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el.getAttribute('data-lang') === l));
+  document.querySelectorAll('#langtoggle span').forEach((el) => el.classList.toggle('active', el.getAttribute('data-set') === l));
+  render();
+}
+
+buildParams();
+applyPreset(PRESETS.find((p) => p.id === 'drake1961'));
+$('presets').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button'); if (!b) return;
+  applyPreset(PRESETS.find((p) => p.id === b.dataset.id));
+});
+$('resample').addEventListener('click', () => { seed = (seed * 1664525 + 1013904223) >>> 0; render(); });
+$('langtoggle').addEventListener('click', (ev) => {
+  const s = ev.target.closest('span'); if (!s) return;
+  const l = s.getAttribute('data-set'); applyLang(l);
+  try { localStorage.setItem('iss_lang', l); } catch (e) {}
+});
+window.addEventListener('resize', render);
+applyLang(lang);
+document.body.dataset.ready = '1';
+</script>
+</body>
+</html>

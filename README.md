@@ -224,7 +224,7 @@ orbital flight is untouched — then blooms dramatically as you burn toward *c*.
 > bodies don't perturb each other — appropriate simplifications for a real-time
 > sim. The *kinematics* of motion near light speed are fully special-relativistic.
 
-**How this is checked:** the claims above are covered by a 53-file regression
+**How this is checked:** the claims above are covered by a 55-file regression
 suite (`bash tests/run.sh`) with explicit reference formulas and tolerances —
 see [`PHYSICS-VERIFICATION.md`](PHYSICS-VERIFICATION.md) for exactly what is,
 and isn't, gated (also published at
@@ -257,6 +257,18 @@ instant boost to a cruise speed β, or four phases of constant proper
 acceleration (hyperbolic motion). Shows both clocks along the way, the age gap
 at the finish, the farthest point and top speed. Maths in
 `js/physics/twins.js`.
+
+## Drake equation and the Fermi paradox
+
+[`drake.html`](drake.html) — the Drake equation N = R*·fp·ne·fl·fi·fc·L with a
+min–max range per factor (log-uniform), 20 000 seeded Monte-Carlo draws, a
+log10 N histogram, median, 16–84 % and 2.5–97.5 % intervals and P(N < 1).
+Fermi part: typical distance to the nearest civilisation for N random points in
+a 50 000 × 1 000 ly cylinder, and the chance of silence inside a ~100 ly radio
+bubble. Presets (pessimist, optimist, Drake 1961, Sandberg–Drexler–Ord 2018)
+carry a cited source per parameter; fl, fi, fc and L are flagged as unmeasured.
+Maths in `js/physics/drake.js`, presets/sources in `js/data/drake.js`, tests
+`tests/drake.*.test.mjs`, smoke `tests/smoke_drake.py`.
 
 ## Communicating with the ship
 
