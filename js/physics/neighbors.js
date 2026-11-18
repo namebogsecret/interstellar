@@ -6,7 +6,7 @@ import { flightForDistance } from './flight.js';
 import { flyby } from './accel.js';
 import { NEIGHBORS } from '../data/neighbors.js';
 
-export const GROUPS = ['O', 'B', 'A', 'F', 'G', 'K', 'M', 'L', 'T', 'D'];
+export const GROUPS = ['O', 'B', 'A', 'F', 'G', 'K', 'M', 'L', 'T', 'Y', 'D'];
 export const MODES = ['flip', 'flyby'];
 export const ACCEL_MIN_G = 0.1;
 export const ACCEL_MAX_G = 10;

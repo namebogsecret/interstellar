@@ -207,7 +207,8 @@ function ruYears(s) {
 function fmtYears(v) { const n = sig(v); return n + ' ' + (lang === 'ru' ? ruYears(n) : T.en.yr); }
 function fmtG(g) { return loc(g.toPrecision(3)) + ' g'; } // 3 significant digits everywhere
 
-let accelG = 1;
+const qa = Number(new URLSearchParams(location.search).get('a')); // ?a= in g, valid 0.1..10 only
+let accelG = qa >= 0.1 && qa <= 10 ? qa : 1;
 let target = 'proxima';
 const tgt = (id) => TARGETS.find((x) => x.id === id);
 

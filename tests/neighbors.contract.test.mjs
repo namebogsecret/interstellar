@@ -24,7 +24,7 @@ const refFly = (g, d) => { const a = g * A1G, y = 1 + a * d; return { tau: Math.
 }
 
 // ---- formulas vs independent references on several stars and accelerations ----
-for (const id of ['proxima', 'barnard', 'sirius-a', 'tau-ceti', 'gj674']) {
+for (const id of ['proxima', 'barnard', 'sirius-a', 'tau-ceti', 'wise0855']) {
   const d = NEIGHBORS.find((s) => s.id === id).ly;
   for (const g of [0.1, 0.3, 1, 3, 10]) {
     const f = tripTo(d, g, 'flip'), rf = refFlip(g, d);
@@ -68,7 +68,7 @@ assert.ok(rows.every((r) => Number.isFinite(r.tau) && Number.isFinite(r.t) && r.
 {
   const ids = (a) => a.map((r) => r.id);
   const byLyDesc = sortRows(rows, 'ly', 'desc');
-  assert.equal(byLyDesc[0].id, 'gj674'); assert.equal(byLyDesc[49].id, 'proxima');
+  assert.equal(byLyDesc[0].id, 'van-maanen'); assert.equal(byLyDesc[49].id, 'proxima');
   assert.deepEqual(ids(sortRows(rows, 'ly', 'asc')), ids(rows), 'asc by ly = catalogue order');
   assert.deepEqual(ids(sortRows(rows, 'tau', 'asc')), ids(rows), 'asc by tau = by distance');
   assert.deepEqual(ids(sortRows(rows, 't', 'desc')), ids(rows.slice().sort((x, y) => y.ly - x.ly || x.no - y.no)), 'desc by t = distance desc, ties by catalogue no');
@@ -103,7 +103,7 @@ assert.ok(rows.every((r) => Number.isFinite(r.tau) && Number.isFinite(r.t) && r.
   const d = filterRows(rows, { groups: ['D'] });
   assert.deepEqual(d.map((r) => r.id).sort(), ['procyon-b', 'sirius-b', 'van-maanen']);
   const lt = filterRows(rows, { groups: ['L', 'T'] });
-  assert.equal(lt.length, 4); assert.ok(lt.every((r) => r.group === 'L' || r.group === 'T'));
+  assert.equal(lt.length, 6); assert.deepEqual(filterRows(rows, { groups: ['Y'] }).map((r) => r.id), ['wise0855']); assert.ok(lt.every((r) => r.group === 'L' || r.group === 'T'));
   const near5 = filterRows(rows, { maxLy: 5 });
   assert.deepEqual(near5.map((r) => r.id), ['proxima', 'alpha-cen-a', 'alpha-cen-b']);
   assert.equal(filterRows(rows, { maxLy: 4.2465 }).length, 1, 'inclusive bound');
@@ -122,7 +122,8 @@ assert.ok(rows.every((r) => Number.isFinite(r.tau) && Number.isFinite(r.t) && r.
 assert.equal(spectralGroup('M5.5Ve'), 'M'); assert.equal(spectralGroup('sdM1'), 'M'); assert.equal(spectralGroup('DA2'), 'D');
 assert.equal(spectralGroup('X1'), null); assert.equal(spectralGroup(''), null); assert.equal(spectralGroup(undefined), null);
 assert.ok(spectralKey('M5.5Ve') > spectralKey('M0V') && spectralKey('M0V') > spectralKey('K5V'));
-assert.ok(spectralKey('DQZ') > spectralKey('T6'));
+assert.ok(spectralKey('DQZ') > spectralKey('T6') && spectralKey('Y4') > spectralKey('T9') && spectralKey('DQZ') > spectralKey('Y4'));
+assert.equal(spectralGroup('Y4'), 'Y');
 
 // ---- ?a= parsing and slider ----
 assert.equal(parseAccelParam(''), 1); assert.equal(parseAccelParam('?a=3'), 3); assert.equal(parseAccelParam('?a=0.5'), 0.5);

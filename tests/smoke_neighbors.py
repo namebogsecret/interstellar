@@ -138,7 +138,7 @@ def run_viewport(browser, base, label, ctx_kwargs):
     check("descending reverses", ids() == after[::-1] or ids() != after)
     page.click('th[data-k="ly"] button')
     page.click('th[data-k="ly"] button')
-    check("distance desc: farthest first", ids()[0] == "gj674", str(ids()[:2]))
+    check("distance desc: farthest first", ids()[0] == "van-maanen", str(ids()[:2]))
     page.click('th[data-k="tau"] button')
     check("tau asc: Proxima first", ids()[0] == "proxima")
 
@@ -147,7 +147,7 @@ def run_viewport(browser, base, label, ctx_kwargs):
     n = rows()
     check("unchecking M reduces rows", 0 < n < 50, str(n))
     check("counter updated", f"{n} of 50" in txt("#count"), repr(txt("#count")))
-    check("no M-class rows", all("M" not in t for t in page.eval_on_selector_all("#tbody .sp", "els => els.map(e => e.textContent[0])")) or True)
+    check("no M-class rows", all(t != "M" for t in page.eval_on_selector_all("#tbody .sp", "els => els.map(e => e.textContent[0])")))
     page.check('#chips input[value="M"]')
     check("re-check M restores 50", rows() == 50)
     page.select_option("#maxly", "5")
@@ -160,12 +160,12 @@ def run_viewport(browser, base, label, ctx_kwargs):
     check("count has aria-live", page.get_attribute("#count", "aria-live") == "polite")
     setv("#q", "")
     check("cleared search restores 50", rows() == 50)
-    for g in "OBAFGKMLTD":
+    for g in "OBAFGKMLTYD":
         cb = page.query_selector(f'#chips input[value="{g}"]')
         if cb and cb.is_enabled() and cb.is_checked():
             cb.uncheck()
     check("all chips off -> empty", rows() == 0 and page.query_selector("#empty") is not None)
-    for g in "OBAFGKMLTD":
+    for g in "OBAFGKMLTYD":
         cb = page.query_selector(f'#chips input[value="{g}"]')
         if cb and cb.is_enabled() and not cb.is_checked():
             cb.check()
@@ -199,6 +199,18 @@ def run_viewport(browser, base, label, ctx_kwargs):
     check("?a=0.5 applied", abs(num(page.inner_text("#accel-val")) - 0.5) < 0.01, repr(page.inner_text("#accel-val")))
     r5 = ref_flip(0.5, 4.2465)
     check("?a=0.5 Proxima tau", abs(num(page.inner_text("#out-proxima-tau")) - r5["tau"]) < 0.01)
+    # the sibling pages read ?a= too (follow the links the page produces)
+    page.goto(base.rstrip("/") + "/where-we-reach.html?a=3", wait_until="load", timeout=45000)
+    page.wait_for_selector("#aout", state="attached")
+    check("where-we-reach ?a=3 -> 3.0 g", abs(num(page.inner_text("#aout")) - 3) < 0.15, repr(page.inner_text("#aout")))
+    page.goto(base.rstrip("/") + "/where-we-reach.html?a=junk", wait_until="load", timeout=45000)
+    check("where-we-reach ?a=junk -> 1.0 g", abs(num(page.inner_text("#aout")) - 1) < 0.1, repr(page.inner_text("#aout")))
+    page.goto(base.rstrip("/") + "/accel.html?a=0.5", wait_until="load", timeout=45000)
+    page.wait_for_selector('body[data-ready="1"]', timeout=20000, state="attached")
+    check("accel ?a=0.5 -> 0.5 g", abs(num(page.inner_text("#accel-val")) - 0.5) < 0.01, repr(page.inner_text("#accel-val")))
+    page.goto(base.rstrip("/") + "/accel.html?a=99", wait_until="load", timeout=45000)
+    page.wait_for_selector('body[data-ready="1"]', timeout=20000, state="attached")
+    check("accel ?a=99 ignored -> 1 g", abs(num(page.inner_text("#accel-val")) - 1) < 0.01, repr(page.inner_text("#accel-val")))
     page.goto(base.rstrip("/") + "/neighbors.html?a=junk", wait_until="load", timeout=45000)
     page.wait_for_selector('body[data-ready="1"]', timeout=20000, state="attached")
     check("?a=junk falls back to 1 g", abs(num(page.inner_text("#accel-val")) - 1) < 0.01)

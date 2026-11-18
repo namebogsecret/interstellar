@@ -153,7 +153,8 @@ try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en
 
 const $ = (id) => document.getElementById(id);
 const aIn = $('a'), tIn = $('t');
-aIn.value = vOf(1);
+const qa = Number(new URLSearchParams(location.search).get('a')); // ?a= in g, valid 0.1..10 only
+aIn.value = vOf(qa >= 0.1 && qa <= 10 ? qa : 1);
 
 function render() {
   const g = gOf(+aIn.value), tauY = +tIn.value, a = g * G0, tau = tauY * YEAR, t = T[lang];

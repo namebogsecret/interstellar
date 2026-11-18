@@ -111,7 +111,7 @@
   .sp { display: inline-block; border-radius: 10px; padding: 0 8px; font-size: 11.5px; font-weight: 700; color: #06121a; white-space: nowrap; }
   .sp-O { background: #9db4ff; } .sp-B { background: #aabfff; } .sp-A { background: #d5e0ff; } .sp-F { background: #f8f7ff; }
   .sp-G { background: #ffe97a; } .sp-K { background: #ffb866; } .sp-M { background: #ff8f6b; }
-  .sp-L { background: #c4574a; color: #fff; } .sp-T { background: #b05fb8; color: #fff; } .sp-D { background: #cfd6dc; }
+  .sp-L { background: #c4574a; color: #fff; } .sp-T { background: #b05fb8; color: #fff; } .sp-Y { background: #7a5fb8; color: #fff; } .sp-D { background: #cfd6dc; }
   td.empty { text-align: center; color: #ffd28a; padding: 18px 9px; }
   td.nm { min-width: 150px; }
   td.nm small { color: var(--dim); }
@@ -186,13 +186,13 @@
 <div data-lang="en" class="active">
   <div class="note">
     <p><b>Model.</b> Flip-and-burn: constant proper acceleration <i>a</i> for the first half of the way, turnover, the same braking; with rapidity <i>x</i> = 2 asinh(&radic;(<i>aD</i>/4c&sup2;)): &tau; = 2c<i>x</i>/<i>a</i>, T = (2c/<i>a</i>) sinh <i>x</i>, peak &gamma; = cosh <i>x</i> in the middle. Flyby: accelerate the whole way, one leg, the peak &gamma; is at the finish and the ship does not stop. Special relativity, a straight line, the target at rest relative to Earth; no gravity, no fuel or energy budget, no dust.</p>
-    <p><b>Data.</b> Distances and spectral types: the RECONS 10-parsec census and the Wikipedia list of nearest stars and brown dwarfs (parallaxes: Gaia DR3 / Hipparcos / ground-based, epoch about J2016), accuracy about 0.1&ndash;1%. Components of one system share the system distance. The list is a careful selection, not a guaranteed complete census: faint objects near the 15 ly cutoff may be missing, and the Y dwarf WISE 0855-0714 (7.4 ly) is not included. Proxima is listed with its own parallax distance and is about 2% nearer than Alpha Centauri A/B. D = white dwarf, L and T = brown dwarfs.</p>
+    <p><b>Data.</b> Distances and spectral types were compiled by hand from memory of the RECONS 10-parsec census and the Wikipedia list of nearest stars and brown dwarfs (parallaxes: Gaia DR3 / Hipparcos / ground-based, epoch about J2016) and were not cross-checked against the live catalogue. The cutoff is about 14 ly; the last positions may differ from an authoritative list. Accuracy of distances about 0.1&ndash;1%. Components of one system share the system distance. Proxima is listed with its own parallax distance and is about 2% nearer than Alpha Centauri A/B. D = white dwarf, L, T and Y = brown dwarfs.</p>
   </div>
 </div>
 <div data-lang="ru">
   <div class="note">
     <p><b>Модель.</b> Разгон с торможением: постоянное собственное ускорение <i>a</i> первую половину пути, разворот, такое же торможение; при быстроте <i>x</i> = 2 asinh(&radic;(<i>aD</i>/4c&sup2;)): &tau; = 2c<i>x</i>/<i>a</i>, T = (2c/<i>a</i>) sinh <i>x</i>, пик &gamma; = cosh <i>x</i> в середине пути. Пролёт: разгон всю дорогу, один участок, пик &gamma; в конце, корабль не останавливается. Специальная теория относительности, прямая линия, цель неподвижна относительно Земли; без гравитации, бюджета топлива и энергии, пыли.</p>
-    <p><b>Данные.</b> Расстояния и спектральные классы: перепись RECONS в 10 парсеках и список ближайших звёзд и коричневых карликов в Википедии (параллаксы Gaia DR3 / Hipparcos / наземные, эпоха около J2016), точность примерно 0,1&ndash;1%. Компоненты одной системы имеют расстояние системы. Список &mdash; аккуратная выборка, а не гарантированно полная перепись: слабые объекты около границы 15 св. лет могут отсутствовать, Y-карлик WISE 0855-0714 (7,4 св. года) не включён. Проксима указана со своим параллаксным расстоянием, она примерно на 2% ближе, чем Альфа Центавра A/B. D &mdash; белый карлик, L и T &mdash; коричневые карлики.</p>
+    <p><b>Данные.</b> Расстояния и спектральные классы собраны вручную по памяти из переписи RECONS в 10 парсеках и списка ближайших звёзд и коричневых карликов в Википедии (параллаксы Gaia DR3 / Hipparcos / наземные, эпоха около J2016) и не сверялись с живым каталогом. Граница около 14 св. лет; последние позиции могут отличаться от авторитетного списка. Точность расстояний примерно 0,1&ndash;1%. Компоненты одной системы имеют расстояние системы. Проксима указана со своим параллаксным расстоянием, она примерно на 2% ближе, чем Альфа Центавра A/B. D &mdash; белый карлик, L, T и Y &mdash; коричневые карлики.</p>
   </div>
 </div>
 
@@ -316,7 +316,7 @@ function render() {
     tr.appendChild(td(String(r.no), 'num', labels[0]));
     tr.appendChild(nm);
     tr.appendChild(td(badge(r), '', labels[2], 'out-' + r.id + '-sp'));
-    tr.appendChild(td(loc(r.ly.toFixed(r.ly < 5 ? 4 : 2)), 'num', labels[3], 'out-' + r.id + '-ly'));
+    tr.appendChild(td(loc(r.ly.toFixed(2)), 'num', labels[3], 'out-' + r.id + '-ly'));
     tr.appendChild(td(fmtYears(r.tau), 'num', labels[4], 'out-' + r.id + '-tau'));
     tr.appendChild(td(fmtYears(r.t), 'num', labels[5], 'out-' + r.id + '-t'));
     tr.appendChild(td(sig(r.peakGamma), 'num', labels[6], 'out-' + r.id + '-gamma'));
