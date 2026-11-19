@@ -303,6 +303,13 @@ filters by spectral class, distance and name. Flip-and-burn reuses
 entries noted in the file) in `js/data/neighbors.js`; tests `tests/neighbors.*.test.mjs`,
 smoke `tests/smoke_neighbors.py`.
 
+[`relativistic-flight.html`](relativistic-flight.html) — hub page tying together
+`accel.html`, `twins.html` and `neighbors.html`: gamma / Earth time / ship time for the 10
+nearest star systems at 1 g (flip-and-burn) and the twins' clocks on a round trip to
+Proxima Centauri. Logic in `js/physics/relflight.js` (wraps `neighbors.js` and
+`twins.js`, no formulas of its own); tests `tests/relativistic-flight.contract.test.mjs`,
+smoke `tests/smoke_relativistic_flight.py`.
+
 ## Known limitations
 
 - **Transverse thrust** — the sim models the honest relativistic 4-force: a

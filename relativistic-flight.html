@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Relativistic flight — Interstellar</title>
+<meta name="description" content="Relativistic flight at constant 1 g: gamma factor, ship-clock and Earth-clock time for the nearest stars (flip-and-burn), and the twins' clocks on a round trip to Proxima Centauri. Hub for the acceleration, twin-paradox and neighbours pages." />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="120x120" href="/favicon-120.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<style>
+  :root { --fg: #9fe7ff; --dim: #5b7c88; --bg: rgba(6, 14, 20, 0.66); --line: rgba(120, 200, 230, 0.18); --card: rgba(8, 16, 24, 0.92); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #05070c; }
+  body { color: #cfeefc; font: 14px/1.65 "SF Mono", "Cascadia Code", Menlo, Consolas, monospace; padding: 0 0 60px; overflow-x: hidden; }
+  a { color: #7fb3ff; }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 22px 0; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  header.top a.home { color: var(--dim); text-decoration: none; }
+  header.top a.home:hover { color: var(--fg); }
+  #langtoggle { display: flex; gap: 3px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+  #langtoggle span { cursor: pointer; padding: 3px 10px; border-radius: 5px; color: var(--dim); font-size: 12px; }
+  #langtoggle span.active { color: #eaffff; background: rgba(60,116,148,0.5); }
+  h1 { font-size: 22px; letter-spacing: 0.06em; color: #bfeeff; margin: 0 0 6px; overflow-wrap: anywhere; }
+  h2 { font-size: 15px; letter-spacing: 0.05em; color: #d7f6ff; margin: 30px 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  p { color: #b9d8e6; margin: 10px 0; }
+  b, strong { color: #eaffff; }
+  code { background: rgba(120,200,230,0.1); border-radius: 3px; padding: 1px 5px; color: #d7f6ff; overflow-wrap: anywhere; }
+  .note { background: rgba(40,90,120,0.18); border-left: 2px solid #4a8fb0; padding: 10px 14px; border-radius: 5px; color: #bfe6f4; margin: 14px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 14px 0; min-width: 0; }
+  .ctl { margin: 10px 0 14px; }
+  .ctl label { display: flex; justify-content: space-between; gap: 10px; color: var(--dim); font-size: 12px; }
+  .ctl label output { color: #eaffff; font-weight: 700; }
+  .ctl input[type=range] { width: 100%; min-width: 0; margin: 6px 0 2px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+  .presets button { background: rgba(60,116,148,0.25); color: #cfeefc; border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+  .presets button:hover, .presets button.on { background: rgba(60,116,148,0.55); }
+  .big { font-size: 15px; color: #eaffff; margin: 6px 0 10px; overflow-wrap: anywhere; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0; }
+  .stat { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0; }
+  .stat span { display: block; color: var(--dim); font-size: 11.5px; }
+  .stat b { font-size: 14px; overflow-wrap: anywhere; }
+  .warn { color: #ffd28a; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid rgba(120,200,230,0.1); overflow-wrap: anywhere; }
+  th { color: var(--dim); font-weight: 600; font-size: 11.5px; }
+  tr.yes td { background: rgba(95,227,161,0.07); }
+  .yes-mark { color: #5fe3a1; font-weight: 700; }
+  .no-mark { color: var(--dim); }
+  footer.bottom { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
+  @media (max-width: 480px) {
+    main { padding: 28px 14px 0; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    thead { display: none; }
+    tr { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; padding: 4px 8px; }
+    td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 10px; text-align: right; }
+    td:not([data-label])::before { content: none; }
+    td::before { content: attr(data-label); color: var(--dim); text-align: left; flex: 0 0 42%; }
+  }
+  [data-lang] { display: none; }
+  [data-lang].active { display: block; }
+  span[data-lang].active, b[data-lang].active { display: inline; }
+
+  .ctl select { width: 100%; background: rgba(8,16,24,0.92); color: #eaffff; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; margin-top: 6px; }
+  .chart { margin: 8px 0; }
+  .crow { margin: 9px 0; min-width: 0; }
+  .crow .lbl { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: #cfeefc; }
+  .crow .lbl em { font-style: normal; color: #eaffff; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+  .crow svg { display: block; width: 100%; height: 16px; margin-top: 3px; }
+  .axis { position: relative; height: 16px; color: var(--dim); font-size: 10.5px; margin-top: 2px; }
+  .axis span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+  .axis span.first { transform: none; } .axis span.last { transform: translateX(-100%); }
+  .oos { color: #ffd28a; font-size: 10.5px; margin-left: 5px; font-weight: 400; }
+  .badge { display: inline-block; border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; margin: 1px 3px 1px 0; font-size: 11px; color: #ffd28a; white-space: nowrap; }
+  .badge.bad { color: #ff9c9c; }
+  .legend { color: var(--dim); font-size: 11.5px; margin: 4px 0; }
+  ul.src { padding-left: 18px; margin: 6px 0; } ul.src li { margin: 3px 0; overflow-wrap: anywhere; }
+
+  [hidden] { display: none !important; }
+  .stat span[data-lang]:not(.active) { display: none; }
+  .stat span[data-lang].active { display: block; }
+  canvas.plot { display: block; width: 100%; height: 260px; margin: 6px 0; }
+  canvas.plot.short { height: 200px; }
+  .ctl .presets { margin-top: 6px; }
+  .hub { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin: 12px 0; }
+  .hub a { display: block; border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; text-decoration: none; background: var(--card); }
+  .hub a b { display: block; color: #bfeeff; }
+  .hub a span.d { color: var(--dim); font-size: 12px; }
+  td.n, th.n { text-align: right; }
+</style>
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "WebPage",
+ "name": "Relativistic flight at 1 g — Interstellar",
+ "url": "https://space.podlevskikh.com/relativistic-flight.html",
+ "description": "Hub: gamma factor and clock times for flights to the nearest stars at constant 1 g, and the twin paradox on a round trip to Proxima Centauri.",
+ "inLanguage": ["en", "ru"],
+ "isPartOf": {"@type": "WebApplication", "name": "Interstellar — Relativistic Solar System Flight", "url": "https://space.podlevskikh.com/"},
+ "author": {"@type": "Person", "@id": "https://tutor.podlevskikh.com/#vladimir", "name": "Vladimir Podlevskikh", "alternateName": "Владимир Подлевских", "url": "https://tutor.podlevskikh.com/"}
+}
+</script>
+</head>
+<body>
+<main>
+  <header class="top">
+    <a class="home" href="/">&larr; Interstellar</a>
+    <div id="langtoggle"><span data-set="en">EN</span><span data-set="ru">RU</span></div>
+  </header>
+
+<h1><span data-lang="en" class="active">RELATIVISTIC FLIGHT</span><span data-lang="ru">РЕЛЯТИВИСТСКИЙ ПОЛЁТ</span></h1>
+
+<div data-lang="en" class="active">
+  <p>What does a flight at a constant, comfortable 1&nbsp;g do to the clocks? This page gathers the three tools on the subject and shows a live summary computed by the same modules.</p>
+  <div class="note">
+    <p><b>Hyperbolic motion.</b> Under constant proper acceleration <i>a</i>, starting from rest, after covering distance <i>x</i>: &gamma; = 1 + <i>ax</i>/c&sup2;; the ship clock reads &tau; = (c/<i>a</i>)&middot;acosh&nbsp;&gamma;; the Earth clock reads <i>t</i> = (c/<i>a</i>)&middot;&radic;(&gamma;&sup2;&minus;1). In flip-and-burn you accelerate over the first half of the distance and brake over the second, so the peak &gamma; is reached at the midpoint.</p>
+  </div>
+</div>
+<div data-lang="ru">
+  <p>Что делает с часами полёт с постоянным комфортным ускорением 1&nbsp;g? Здесь собраны три инструмента по теме и живая сводка, посчитанная теми же модулями.</p>
+  <div class="note">
+    <p><b>Гиперболическое движение.</b> При постоянном собственном ускорении <i>a</i> из состояния покоя, пройдя расстояние <i>x</i>: &gamma; = 1 + <i>ax</i>/c&sup2;; часы корабля показывают &tau; = (c/<i>a</i>)&middot;acosh&nbsp;&gamma;; земные часы &mdash; <i>t</i> = (c/<i>a</i>)&middot;&radic;(&gamma;&sup2;&minus;1). В режиме flip-and-burn первую половину пути разгоняются, вторую тормозят, поэтому пик &gamma; &mdash; на середине.</p>
+  </div>
+</div>
+
+<div class="hub">
+  <a href="accel.html"><b><span data-lang="en" class="active">Acceleration and braking</span><span data-lang="ru">Разгон и торможение</span></b><span class="d"><span data-lang="en" class="active">Ship and Earth clocks, flip-and-burn vs flyby</span><span data-lang="ru">Часы корабля и Земли, flip-and-burn и пролёт</span></span></a>
+  <a href="twins.html"><b><span data-lang="en" class="active">Twin paradox in transit</span><span data-lang="ru">Парадокс близнецов в пути</span></b><span class="d"><span data-lang="en" class="active">Round trip, both clocks and the world line</span><span data-lang="ru">Туда-обратно, часы обоих и мировая линия</span></span></a>
+  <a href="neighbors.html"><b><span data-lang="en" class="active">Neighbours in the galaxy</span><span data-lang="ru">Соседи по галактике</span></b><span class="d"><span data-lang="en" class="active">The 50 nearest stars, any acceleration</span><span data-lang="ru">50 ближайших звёзд при любом ускорении</span></span></a>
+</div>
+
+<h2><span data-lang="en" class="active">&gamma; by route at 1 g (flip-and-burn)</span><span data-lang="ru">&gamma; по маршрутам при 1 g (flip-and-burn)</span></h2>
+<div class="card">
+  <table id="summary">
+    <thead><tr>
+      <th>#</th>
+      <th><span data-lang="en" class="active">Star system</span><span data-lang="ru">Звёздная система</span></th>
+      <th class="n"><span data-lang="en" class="active">Distance, ly</span><span data-lang="ru">Расстояние, св. л.</span></th>
+      <th class="n"><span data-lang="en" class="active">Earth time, yr</span><span data-lang="ru">Время Земли, г.</span></th>
+      <th class="n"><span data-lang="en" class="active">Ship time &tau;, yr</span><span data-lang="ru">Время корабля &tau;, г.</span></th>
+      <th class="n"><span data-lang="en" class="active">Peak &gamma;</span><span data-lang="ru">Пик &gamma;</span></th>
+    </tr></thead>
+    <tbody id="summary-body"></tbody>
+  </table>
+  <div class="legend"><span data-lang="en" class="active">One row per star system (nearest 10); accelerate to the midpoint, then brake; flat special relativity, no gravity or fuel limits. Distances: <code>js/data/neighbors.js</code>.</span><span data-lang="ru">Одна строка на звёздную систему (10 ближайших); разгон до середины пути, затем торможение; плоская СТО, без гравитации и ограничений на топливо. Расстояния: <code>js/data/neighbors.js</code>.</span></div>
+</div>
+
+<h2><span data-lang="en" class="active">Twins: round trip to Proxima Centauri at 1 g</span><span data-lang="ru">Близнецы: туда-обратно до Проксимы при 1 g</span></h2>
+<div class="stats">
+  <div class="stat"><span data-lang="en" class="active">Earth clock, whole trip</span><span data-lang="ru">Часы Земли, весь полёт</span><b id="out-earth"></b></div>
+  <div class="stat"><span data-lang="en" class="active">Ship clock, whole trip</span><span data-lang="ru">Часы корабля, весь полёт</span><b id="out-ship"></b></div>
+  <div class="stat"><span data-lang="en" class="active">Age gap</span><span data-lang="ru">Разница в возрасте</span><b id="out-gap"></b></div>
+</div>
+<div class="card"><canvas id="twins-chart" class="plot" role="img" aria-label="Ship proper time against Earth time"></canvas></div>
+
+<p>
+  <a href="/"><span data-lang="en" class="active">Back to the simulator</span><span data-lang="ru">Назад к симулятору</span></a> &middot;
+  <a href="accel.html"><span data-lang="en" class="active">Acceleration and braking to a star</span><span data-lang="ru">Разгон и торможение до звезды</span></a> &middot;
+  <a href="twins.html"><span data-lang="en" class="active">Twin paradox in transit</span><span data-lang="ru">Парадокс близнецов в пути</span></a> &middot;
+  <a href="neighbors.html"><span data-lang="en" class="active">Neighbours in the galaxy</span><span data-lang="ru">Соседи по галактике</span></a>
+</p>
+
+<footer class="bottom">
+  <span data-lang="en" class="active">Formulas: &gamma; = 1 + <i>ax</i>/c&sup2;, &tau; = (c/<i>a</i>)&middot;acosh&nbsp;&gamma;, <i>t</i> = (c/<i>a</i>)&middot;&radic;(&gamma;&sup2;&minus;1); flip-and-burn applies them to each half of the distance.</span>
+  <span data-lang="ru">Формулы: &gamma; = 1 + <i>ax</i>/c&sup2;, &tau; = (c/<i>a</i>)&middot;acosh&nbsp;&gamma;, <i>t</i> = (c/<i>a</i>)&middot;&radic;(&gamma;&sup2;&minus;1); flip-and-burn применяет их к каждой половине пути.</span>
+</footer>
+</main>
+
+<script type="module">
+import { summaryRows, twinsTo, ACCEL_G } from './js/physics/relflight.js';
+
+const T = {
+  en: { aria: 'Ship proper time against Earth time on a round trip to Proxima Centauri at 1 g', yr: 'yr', ship: 'ship clock τ', earth: 'Earth clock t (τ = t)', axT: 'Earth time t, years', axTau: 'ship time τ, years' },
+  ru: { aria: 'Собственное время корабля против земного при полёте туда-обратно до Проксимы при 1 g', yr: 'г.', ship: 'часы корабля τ', earth: 'часы Земли t (τ = t)', axT: 'земное время t, годы', axTau: 'время корабля τ, годы' },
+};
+let lang = 'en';
+try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en' ? s : ((navigator.language || 'en').slice(0, 2) === 'ru' ? 'ru' : 'en'); } catch (e) {}
+
+const $ = (id) => document.getElementById(id);
+function num(v, d) {
+  if (!Number.isFinite(v)) return '—';
+  let s = Math.abs(v) >= 1e6 ? v.toExponential(2) : v.toFixed(d);
+  if (lang === 'ru') s = s.replace('.', ',');
+  return s;
+}
+function sig(v) { const a = Math.abs(v); return num(v, a >= 100 ? 0 : a >= 10 ? 1 : a >= 1 ? 2 : 3); }
+
+const rows = summaryRows();
+const proxima = twinsTo(rows[0].ly, ACCEL_G);
+
+function niceStep(range, maxTicks) {
+  const raw = range / maxTicks, p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+  return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10) * p;
+}
+function plot(cv, { xMax, yMax, series, xLabel, yLabel }) {
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  const padL = 40, padR = 10, padT = 10, padB = 34;
+  const pw = Math.max(10, w - padL - padR), ph = Math.max(10, h - padT - padB);
+  const X = (v) => padL + (v / xMax) * pw, Y = (v) => padT + ph - (v / yMax) * ph;
+  g.font = '11px monospace'; g.lineWidth = 1;
+  const sx = niceStep(xMax, Math.max(2, Math.floor(pw / 56))), sy = niceStep(yMax, Math.max(2, Math.floor(ph / 36)));
+  const dp = (s) => (s >= 1 ? 0 : Math.min(3, Math.ceil(-Math.log10(s))));
+  g.strokeStyle = 'rgba(120,200,230,0.18)'; g.fillStyle = '#5b7c88';
+  g.textAlign = 'center'; g.textBaseline = 'top';
+  for (let v = 0; v <= xMax + 1e-9; v += sx) {
+    g.beginPath(); g.moveTo(X(v), padT); g.lineTo(X(v), padT + ph); g.stroke();
+    g.fillText(num(v, dp(sx)), Math.min(Math.max(X(v), padL + 6), w - 14), padT + ph + 3);
+  }
+  g.textAlign = 'right'; g.textBaseline = 'middle';
+  for (let v = 0; v <= yMax + 1e-9; v += sy) {
+    g.beginPath(); g.moveTo(padL, Y(v)); g.lineTo(padL + pw, Y(v)); g.stroke();
+    g.fillText(num(v, dp(sy)), padL - 4, Y(v));
+  }
+  g.fillStyle = '#9fe7ff'; g.textAlign = 'center'; g.textBaseline = 'bottom';
+  g.fillText(xLabel, padL + pw / 2, h - 2);
+  g.textAlign = 'left'; g.textBaseline = 'top'; g.fillText(yLabel, padL + 2, 0);
+  for (const s of series) {
+    g.strokeStyle = s.color; g.lineWidth = 2; g.setLineDash(s.dash || []);
+    g.beginPath();
+    s.pts.forEach(([a, b], i) => (i ? g.lineTo(X(a), Y(b)) : g.moveTo(X(a), Y(b))));
+    g.stroke();
+  }
+  g.setLineDash([]);
+  let ly = padT + 14; g.textAlign = 'left'; g.textBaseline = 'middle';
+  for (const s of series) {
+    g.strokeStyle = s.color; g.lineWidth = 2; g.setLineDash(s.dash || []);
+    g.beginPath(); g.moveTo(padL + 8, ly); g.lineTo(padL + 26, ly); g.stroke(); g.setLineDash([]);
+    g.fillStyle = s.color; g.fillText(s.label, padL + 31, ly); ly += 14;
+  }
+}
+
+function render() {
+  const t = T[lang];
+  const body = $('summary-body');
+  body.textContent = '';
+  for (const r of rows) {
+    const tr = document.createElement('tr');
+    const cells = [
+      [String(r.no), null, false],
+      [lang === 'ru' && r.ru ? r.ru : r.name, 'star', false],
+      [num(r.ly, 2), 'ly', true], [num(r.t, 2), 'earth', true], [num(r.tau, 2), 'ship', true], [num(r.peakGamma, 2), 'gamma', true],
+    ];
+    const labels = { star: lang === 'ru' ? 'Система' : 'System', ly: lang === 'ru' ? 'Расст., св. л.' : 'Distance, ly', earth: lang === 'ru' ? 'Время Земли, г.' : 'Earth time, yr', ship: lang === 'ru' ? 'Время корабля, г.' : 'Ship time, yr', gamma: lang === 'ru' ? 'Пик γ' : 'Peak γ' };
+    for (const [text, key, right] of cells) {
+      const td = document.createElement('td');
+      td.textContent = text;
+      if (right) td.className = 'n';
+      if (key) td.setAttribute('data-label', labels[key]);
+      tr.appendChild(td);
+    }
+    body.appendChild(tr);
+  }
+  const trip = proxima.trip;
+  $('out-earth').textContent = sig(trip.earthYears) + ' ' + t.yr;
+  $('out-ship').textContent = sig(trip.shipYears) + ' ' + t.yr;
+  $('out-gap').textContent = sig(trip.ageGapYears) + ' ' + t.yr;
+  $('twins-chart').setAttribute('aria-label', t.aria);
+  const T0 = trip.earthYears;
+  plot($('twins-chart'), {
+    xMax: T0, yMax: T0, xLabel: t.axT, yLabel: t.axTau,
+    series: [
+      { color: '#5b7c88', dash: [5, 4], label: t.earth, pts: [[0, 0], [T0, T0]] },
+      { color: '#7fb3ff', label: t.ship, pts: proxima.samples.map((p) => [p.t, p.tau]) },
+    ],
+  });
+}
+
+function applyLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  document.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el.getAttribute('data-lang') === l));
+  document.querySelectorAll('#langtoggle span').forEach((el) => el.classList.toggle('active', el.getAttribute('data-set') === l));
+  render();
+}
+$('langtoggle').addEventListener('click', (ev) => {
+  const s = ev.target.closest('span'); if (!s) return;
+  const l = s.getAttribute('data-set'); applyLang(l);
+  try { localStorage.setItem('iss_lang', l); } catch (e) {}
+});
+window.addEventListener('resize', render);
+applyLang(lang);
+document.body.dataset.ready = '1';
+</script>
+</body>
+</html>
