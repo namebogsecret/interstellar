@@ -22,7 +22,7 @@
 //   If L >= distance to the star the laser never switches off: the craft only accelerates until it arrives.
 //
 // Integration: RK4 on (w, x, tau) over Earth time with geometrically growing step h = FRAC * (t + t0) —
-// deterministic, ~4000 steps; the end of the beam (x = L or the star) is hit exactly by bisection on the last step.
+// deterministic, ~1800 steps; the end of the beam (x = L or the star) is hit exactly by bisection on the last step.
 import { C, G0, LY, YEAR } from './constants.js';
 import { STARS } from '../data/stars.js';
 

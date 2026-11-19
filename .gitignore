@@ -9,3 +9,7 @@ Thumbs.db
 # scratch / logs
 *.log
 /tmp/
+
+# python bytecode
+__pycache__/
+*.pyc

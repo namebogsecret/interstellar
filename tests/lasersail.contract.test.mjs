@@ -284,10 +284,15 @@ for (const bad of [NaN, Infinity, -Infinity]) {
   const outs = [fmtMassKg(bad), fmtPower(bad), fmtLen(bad), fmtDur(bad), fmtBetaC(bad), fmtPct(bad)];
   ok(outs.every((s) => !/NaN|Infinity/.test(s)), 'presenter never prints NaN/Infinity: ' + outs.join('|'));
 }
-ok(fmtIntensity(1e10, 'en') === '10.0 GW/m²' && fmtIntensity(1e9, 'ru') === '1.00 ГВт/м²' && fmtIntensity(Infinity) === '—', 'fmtIntensity');
+ok(fmtIntensity(1e10, 'en') === '10.0 GW/m²' && fmtIntensity(1e9, 'ru') === '1,00 ГВт/м²' && fmtIntensity(Infinity) === '—', 'fmtIntensity');
 near(logFrac(10, 1, 100), 0.5, 1e-12, 'logFrac midpoint'); ok(logFrac(-1, 1, 100) === 0 && logFrac(1e9, 1, 100) === 1, 'logFrac clamps');
 { const r = launch({ payload: 1e-3, power: 1e11, area: 10 });
   const pts = curvePoints(r.profile, 'beta', r.profile[1].t, r.tFlight, r.betaMax * 1.1);
   ok(pts.length > 0 && !/NaN|Infinity/.test(pts), 'curve points clean'); }
 
+ok(fmtMassKg(2.5, 'ru') === '2,50 кг' && fmtMassKg(2.5, 'en') === '2.50 kg', 'fmtMassKg decimal comma ru / point en');
+ok(fmtPower(2.5e9, 'ru') === '2,50 ГВт' && fmtPower(2.5e9, 'en') === '2.50 GW', 'fmtPower decimal comma');
+ok(fmtLen(2.5e9, 'ru') === '2,50 млн км' && fmtLen(2.5e9, 'en') === '2.50 million km', 'fmtLen decimal comma');
+ok(fmtDur(90, 'ru') === '1,50 мин' && fmtDur(90, 'en') === '1.50 min' && fmtDur(5.5, 'ru') === '5,50 с', 'fmtDur decimal comma');
+ok(!/\d\.\d/.test(fmtFlight(3.15576e7 * 4.2, 'ru', 'x')) && /\d,\d/.test(fmtG(0.123, 'ru')) && /\d\.\d/.test(fmtG(0.123, 'en')), 'time / g decimal comma');
 console.log(`lasersail.contract: ${checks} checks OK`);

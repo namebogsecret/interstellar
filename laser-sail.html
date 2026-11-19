@@ -204,7 +204,7 @@ const T = {
     quantity: 'Quantity', relc: 'Relativistic', newt: 'Newtonian', aBeam: 'Acceleration (F/m, at start)', vTop: 'Speed after the beam', tFl: 'Flight time (Earth)',
     diff: 'Relativistic vs Newtonian flight time', dil: 'Time dilation τ/t (craft clock / Earth clock)', dilV: 'γ at top speed',
     note: 'Difference = (relativistic − Newtonian)/Newtonian. At β ≪ 1 they agree; the Doppler loss of the force and γ make the real flight slower.',
-    ax: 'β vs Earth time (log); gridlines: 1 s … 1 Myr', gAx: 'Felt acceleration in g vs Earth time, both axes logarithmic; the beam phase only', beamEnd: 'beam off', star: PROXIMA.name },
+    ax: 'β vs Earth time (log); gridlines: 1 s … 1 Myr', gAx: 'Felt acceleration in g vs Earth time, both axes logarithmic; the beam phase only', beamEnd: 'beam off', star: PROXIMA.name, starGen: PROXIMA.name },
   ru: { never: 'не долетит', beta: 'Максимальная скорость', gamma: 'Лоренц-фактор γ', tE: 'Время полёта, часы Земли', tS: 'Время полёта, часы аппарата',
     g0: 'Перегрузка на старте', gEnd: 'Перегрузка в конце луча', I: 'Интенсивность на парусе P/A', L: 'Дальность луча L', tb: 'Время под лучом (Земля)',
     mass: 'Полная масса', heat: 'Предупреждение о нагреве: интенсивность P/A = {I} выше принятой тепловой стойкости {H}. Парус, скорее всего, не выдержит; показано только для сравнения.',
@@ -214,7 +214,7 @@ const T = {
     quantity: 'Величина', relc: 'Релятивистский', newt: 'Ньютоновский', aBeam: 'Ускорение (F/m, на старте)', vTop: 'Скорость после луча', tFl: 'Время полёта (Земля)',
     diff: 'Релятивистское и ньютоновское время полёта', dil: 'Замедление времени τ/t (часы аппарата / часы Земли)', dilV: 'γ при максимальной скорости',
     note: 'Разница = (релятивистское − ньютоновское)/ньютоновское. При β ≪ 1 они совпадают; допплеровская потеря силы и γ делают реальный полёт медленнее.',
-    ax: 'β от времени Земли (логарифм); линии: 1 с … 1 млн лет', gAx: 'Перегрузка в g от времени Земли, обе оси логарифмические; только участок под лучом', beamEnd: 'луч выкл.', star: PROXIMA.ru },
+    ax: 'β от времени Земли (логарифм); линии: 1 с … 1 млн лет', gAx: 'Перегрузка в g от времени Земли, обе оси логарифмические; только участок под лучом', beamEnd: 'луч выкл.', star: PROXIMA.ru, starGen: 'Проксимы Центавра' },
 };
 
 let lang = 'en';
@@ -281,7 +281,7 @@ function render() {
     b.classList.toggle('on', Math.abs(p.mass - mass) / p.mass < 0.02 && Math.abs(p.power - power) / p.power < 0.02 && Math.abs(p.area - area) / p.area < 0.02);
   });
   const r = launch({ payload: mass, power, area });
-  const star = t.star;
+  const star = t.starGen;
 
   const warns = [];
   if (r.overheat) warns.push('<div class="note warn">' + sub(t.heat, { I: fmtIntensity(r.intensity, lang), H: fmtIntensity(HEAT_LIMIT, lang) }) + '</div>');

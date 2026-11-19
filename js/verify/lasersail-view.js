@@ -1,6 +1,12 @@
 // Pure presentation helpers for laser-sail.html (no DOM) so the page logic is testable.
-import { fmt } from './wwr-view.js';
-import { fmtTime, fmtSci } from './engines-view.js';
+import { fmt as fmtBase } from './wwr-view.js';
+import { fmtTime as fmtTimeBase, fmtSci as fmtSciBase } from './engines-view.js';
+
+// Local locale wrappers: the shared formatters emit a decimal point; Russian text needs a decimal comma.
+const dec = (s, lang) => (lang === 'ru' ? s.replace(/(\d)\.(\d)/g, '$1,$2') : s);
+const fmt = (n, lang = 'en') => dec(fmtBase(n), lang);
+const fmtTime = (sec, lang = 'en') => dec(fmtTimeBase(sec, lang), lang);
+const fmtSci = (x, lang = 'en') => dec(fmtSciBase(x), lang);
 
 // ---- log sliders (0..1000) <-> physical value ----
 export const SLIDER_MAX = 1000;
@@ -27,8 +33,8 @@ export const PRESETS = [
 export function fmtMassKg(kg, lang = 'en') {
   if (!Number.isFinite(kg)) return '—';
   const ru = lang === 'ru';
-  if (kg < 1) return fmt(kg * 1000) + (ru ? ' г' : ' g');
-  return fmt(kg) + (ru ? ' кг' : ' kg');
+  if (kg < 1) return fmt(kg * 1000, lang) + (ru ? ' г' : ' g');
+  return fmt(kg, lang) + (ru ? ' кг' : ' kg');
 }
 // W -> "100 GW"
 export function fmtPower(W, lang = 'en') {
@@ -37,25 +43,25 @@ export function fmtPower(W, lang = 'en') {
   const u = ru ? ['Вт', 'кВт', 'МВт', 'ГВт', 'ТВт'] : ['W', 'kW', 'MW', 'GW', 'TW'];
   let i = 0, x = W;
   while (x >= 1000 && i < u.length - 1) { x /= 1000; i++; }
-  return fmt(x) + ' ' + u[i];
+  return fmt(x, lang) + ' ' + u[i];
 }
-export const fmtArea = (a, lang = 'en') => fmt(a) + (lang === 'ru' ? ' м²' : ' m²');
+export const fmtArea = (a, lang = 'en') => fmt(a, lang) + (lang === 'ru' ? ' м²' : ' m²');
 export function fmtIntensity(x, lang = 'en') {
   if (!Number.isFinite(x)) return '—';
   const ru = lang === 'ru';
   const u = ru ? ['Вт', 'кВт', 'МВт', 'ГВт', 'ТВт', 'ПВт'] : ['W', 'kW', 'MW', 'GW', 'TW', 'PW'];
   let i = 0, v = x;
   while (v >= 1000 && i < u.length - 1) { v /= 1000; i++; }
-  return fmt(v) + ' ' + u[i] + (ru ? '/м²' : '/m²');
+  return fmt(v, lang) + ' ' + u[i] + (ru ? '/м²' : '/m²');
 }
 // distance in m -> km / thousand km / light-seconds is unnecessary: km, million km, AU-free
 export function fmtLen(m, lang = 'en') {
   if (!Number.isFinite(m)) return '—';
   const ru = lang === 'ru';
-  if (m < 1000) return fmt(m) + (ru ? ' м' : ' m');
+  if (m < 1000) return fmt(m, lang) + (ru ? ' м' : ' m');
   const km = m / 1000;
-  if (km < 1e6) return fmt(km) + (ru ? ' км' : ' km');
-  return fmt(km / 1e6) + (ru ? ' млн км' : ' million km');
+  if (km < 1e6) return fmt(km, lang) + (ru ? ' км' : ' km');
+  return fmt(km / 1e6, lang) + (ru ? ' млн км' : ' million km');
 }
 // beta -> "0.0419 c"; "<0.0001 c" for tiny; decimal comma in Russian
 export function fmtBetaC(b, lang = 'en') {
@@ -67,7 +73,7 @@ export function fmtBetaC(b, lang = 'en') {
 }
 export const fmtGamma = (g, lang = 'en') => { const s = g < 1.0001 ? g.toFixed(6) : g.toFixed(4); return lang === 'ru' ? s.replace('.', ',') : s; };
 // proper acceleration in g
-export const fmtG = (g, lang = 'en') => fmtSci(g) + (lang === 'ru' ? ' g' : ' g');
+export const fmtG = (g, lang = 'en') => fmtSci(g, lang) + (lang === 'ru' ? ' g' : ' g');
 export const fmtPct = (p, lang = 'en') => {
   if (p == null || !Number.isFinite(p)) return '—';
   const a = Math.abs(p), s = a >= 100 ? p.toFixed(0) : a >= 10 ? p.toFixed(1) : a >= 0.01 ? p.toFixed(2) : String(+p.toPrecision(2));
@@ -113,8 +119,8 @@ export function curvePointsLog(pts, key, tMin, tMax, yMin, yMax, W = 1000, H = 1
 export function fmtDur(sec, lang = 'en') {
   if (!Number.isFinite(sec)) return '—';
   const ru = lang === 'ru';
-  if (sec < 60) return fmt(sec) + (ru ? ' с' : ' s');
-  if (sec < 3600) return fmt(sec / 60) + (ru ? ' мин' : ' min');
+  if (sec < 60) return fmt(sec, lang) + (ru ? ' с' : ' s');
+  if (sec < 3600) return fmt(sec / 60, lang) + (ru ? ' мин' : ' min');
   return fmtTime(sec, lang);
 }
 // nice time-axis ticks (seconds) inside [tMin, tMax]
