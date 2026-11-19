@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Laser sail to the nearest star — Interstellar</title>
+<meta name="description" content="Laser light sail to Proxima Centauri: choose craft mass, laser power and sail area; relativistic flight time on Earth and craft clocks, top speed, felt acceleration, heat warning and the Newtonian error side by side (flat special relativity, assumptions stated)." />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="120x120" href="/favicon-120.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<style>
+  :root { --fg: #9fe7ff; --dim: #5b7c88; --bg: rgba(6, 14, 20, 0.66); --line: rgba(120, 200, 230, 0.18); --card: rgba(8, 16, 24, 0.92); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #05070c; }
+  body { color: #cfeefc; font: 14px/1.65 "SF Mono", "Cascadia Code", Menlo, Consolas, monospace; padding: 0 0 60px; overflow-x: hidden; }
+  a { color: #7fb3ff; }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 22px 0; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  header.top a.home { color: var(--dim); text-decoration: none; }
+  header.top a.home:hover { color: var(--fg); }
+  #langtoggle { display: flex; gap: 3px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+  #langtoggle span { cursor: pointer; padding: 3px 10px; border-radius: 5px; color: var(--dim); font-size: 12px; }
+  #langtoggle span.active { color: #eaffff; background: rgba(60,116,148,0.5); }
+  h1 { font-size: 22px; letter-spacing: 0.06em; color: #bfeeff; margin: 0 0 6px; overflow-wrap: anywhere; }
+  h2 { font-size: 15px; letter-spacing: 0.05em; color: #d7f6ff; margin: 30px 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  p { color: #b9d8e6; margin: 10px 0; }
+  b, strong { color: #eaffff; }
+  code { background: rgba(120,200,230,0.1); border-radius: 3px; padding: 1px 5px; color: #d7f6ff; overflow-wrap: anywhere; }
+  .note { background: rgba(40,90,120,0.18); border-left: 2px solid #4a8fb0; padding: 10px 14px; border-radius: 5px; color: #bfe6f4; margin: 14px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 14px 0; min-width: 0; }
+  .ctl { margin: 10px 0 14px; }
+  .ctl label { display: flex; justify-content: space-between; gap: 10px; color: var(--dim); font-size: 12px; }
+  .ctl label output { color: #eaffff; font-weight: 700; }
+  .ctl input[type=range] { width: 100%; min-width: 0; margin: 6px 0 2px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+  .presets button { background: rgba(60,116,148,0.25); color: #cfeefc; border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+  .presets button:hover, .presets button.on { background: rgba(60,116,148,0.55); }
+  .big { font-size: 15px; color: #eaffff; margin: 6px 0 10px; overflow-wrap: anywhere; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0; }
+  .stat { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0; }
+  .stat span { display: block; color: var(--dim); font-size: 11.5px; }
+  .stat b { font-size: 14px; overflow-wrap: anywhere; }
+  .warn { color: #ffd28a; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid rgba(120,200,230,0.1); overflow-wrap: anywhere; }
+  th { color: var(--dim); font-weight: 600; font-size: 11.5px; }
+  tr.yes td { background: rgba(95,227,161,0.07); }
+  .yes-mark { color: #5fe3a1; font-weight: 700; }
+  .no-mark { color: var(--dim); }
+  footer.bottom { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
+  @media (max-width: 480px) {
+    main { padding: 28px 14px 0; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    thead { display: none; }
+    tr { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; padding: 4px 8px; }
+    td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 10px; text-align: right; }
+    td:not([data-label])::before { content: none; }
+    td::before { content: attr(data-label); color: var(--dim); text-align: left; flex: 0 0 42%; }
+  }
+  [data-lang] { display: none; }
+  [data-lang].active { display: block; }
+  span[data-lang].active, b[data-lang].active { display: inline; }
+
+  .ctl select { width: 100%; background: rgba(8,16,24,0.92); color: #eaffff; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; margin-top: 6px; }
+  .chart { margin: 8px 0; }
+  .crow { margin: 9px 0; min-width: 0; }
+  .crow .lbl { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: #cfeefc; }
+  .crow .lbl em { font-style: normal; color: #eaffff; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+  .crow svg { display: block; width: 100%; height: 16px; margin-top: 3px; }
+  .axis { position: relative; height: 16px; color: var(--dim); font-size: 10.5px; margin-top: 2px; }
+  .axis span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+  .axis span.first { transform: none; } .axis span.last { transform: translateX(-100%); }
+  .oos { color: #ffd28a; font-size: 10.5px; margin-left: 5px; font-weight: 400; }
+  .badge { display: inline-block; border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; margin: 1px 3px 1px 0; font-size: 11px; color: #ffd28a; white-space: nowrap; }
+  .badge.bad { color: #ff9c9c; }
+  .legend { color: var(--dim); font-size: 11.5px; margin: 4px 0; }
+  .achart { position: relative; margin: 10px 4px 26px 62px; height: 240px; }
+  .achart svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: rgba(120,200,230,0.04); }
+  .achart .yl { position: absolute; left: -60px; width: 56px; text-align: right; transform: translateY(-50%); font-size: 10.5px; color: var(--dim); white-space: nowrap; }
+  .achart .xl { position: absolute; top: 100%; margin-top: 4px; transform: translateX(-50%); font-size: 10.5px; color: var(--dim); white-space: nowrap; }
+  .achart .xl.last { transform: translateX(-100%); }
+  .keys { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: #cfeefc; margin: 4px 0; }
+  .tscroll { overflow-x: auto; }
+  ul.src { padding-left: 18px; margin: 6px 0; } ul.src li { margin: 3px 0; overflow-wrap: anywhere; }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <a class="home" href="/">&larr; Interstellar</a>
+    <div id="langtoggle"><span data-set="en">EN</span><span data-set="ru">RU</span></div>
+  </header>
+
+<h1><span data-lang="en" class="active">LASER SAIL TO THE NEAREST STAR</span><span data-lang="ru">ЛАЗЕРНЫЙ ПАРУС К БЛИЖАЙШЕЙ ЗВЕЗДЕ</span></h1>
+
+<div data-lang="en" class="active">
+  <p>A laser on Earth pushes a thin mirror sail towards Proxima Centauri (4.2465 light-years), as in the Breakthrough Starshot idea. Choose the craft mass, the laser power and the sail area: see how fast it gets, how long the flight takes on Earth's clock and on the craft's clock, how hard it is squeezed, and how much a Newtonian estimate would be wrong.</p>
+</div>
+<div data-lang="ru">
+  <p>Лазер на Земле толкает тонкий зеркальный парус к Проксиме Центавра (4,2465 светового года), как в идее Breakthrough Starshot. Выберите массу аппарата, мощность лазера и площадь паруса: узнайте скорость, время полёта по часам Земли и по часам аппарата, перегрузку и то, насколько ошибается ньютоновская оценка.</p>
+</div>
+
+<div class="card">
+  <div class="ctl">
+    <label for="m"><span><span data-lang="en" class="active">Payload mass</span><span data-lang="ru">Масса полезной нагрузки</span></span><output id="mout"></output></label>
+    <input id="m" type="range" min="0" max="1000" step="1" value="0" />
+  </div>
+  <div class="ctl">
+    <label for="pw"><span><span data-lang="en" class="active">Laser power</span><span data-lang="ru">Мощность лазера</span></span><output id="pout"></output></label>
+    <input id="pw" type="range" min="0" max="1000" step="1" value="0" />
+  </div>
+  <div class="ctl">
+    <label for="ar"><span><span data-lang="en" class="active">Sail area</span><span data-lang="ru">Площадь паруса</span></span><output id="aout"></output></label>
+    <input id="ar" type="range" min="0" max="1000" step="1" value="0" />
+  </div>
+  <div class="presets" id="pre"></div>
+</div>
+
+<div id="warn"></div>
+
+<h2><span data-lang="en" class="active">Result</span><span data-lang="ru">Результат</span></h2>
+<div class="card">
+  <div class="big" id="verdict"></div>
+  <div class="stats" id="stats"></div>
+</div>
+
+<h2><span data-lang="en" class="active">Relativistic vs Newtonian</span><span data-lang="ru">Релятивистский расчёт и ньютоновский</span></h2>
+<div class="tscroll" id="cmp"></div>
+<div class="legend" id="cmpNote"></div>
+
+<h2><span data-lang="en" class="active">Speed along the flight &beta;(t)</span><span data-lang="ru">Скорость вдоль полёта &beta;(t)</span></h2>
+<div class="card chart" id="chartBeta" role="img" aria-label="Speed as a fraction of c versus Earth time, log time axis"></div>
+
+<h2><span data-lang="en" class="active">Felt acceleration (g)</span><span data-lang="ru">Перегрузка (g)</span></h2>
+<div class="card chart" id="chartG" role="img" aria-label="Proper acceleration in g versus Earth time, log-log"></div>
+
+<h2><span data-lang="en" class="active">Model and assumptions</span><span data-lang="ru">Модель и допущения</span></h2>
+<div data-lang="en" class="active">
+  <div class="note">
+    <p><b>Force.</b> An ideal mirror (reflectivity R = 1, assumption) with the laser at Earth: F = (2P&eta;/c)&middot;(1 &minus; &beta;)/(1 + &beta;). At rest it is 2P/c; the Doppler factor (1 &minus; &beta;)/(1 + &beta;) accounts for the receding sail seeing fewer and redder photons. Coupling efficiency &eta; = 1 (assumption).</p>
+    <p><b>Dynamics.</b> Relativistic: d(&gamma;mv)/dt = F, i.e. dw/dt = F/(mc) with w = &gamma;&beta;, integrated by RK4 over Earth time. Speed is always below c. Felt (proper) acceleration is a = &gamma;&sup3;&middot;c&middot;d&beta;/dt = F/m.</p>
+    <p><b>Mass.</b> m = payload + &sigma;&middot;A with sail areal density &sigma; = 1&nbsp;g/m&sup2; (assumption; real sails are an open engineering problem).</p>
+    <p><b>Beam range.</b> Diffraction: L = D<sub>tx</sub>&middot;D<sub>sail</sub>/(2.44&middot;&lambda;) with &lambda; = 1064&nbsp;nm, transmitter aperture D<sub>tx</sub> = 1&nbsp;km (assumptions), D<sub>sail</sub> = &radic;(4A/&pi;). The laser pushes while the sail is closer than L (Earth frame), then it coasts. If L is beyond the star, the laser never switches off.</p>
+    <p><b>Heat.</b> The page only <i>warns</i> when the intensity P/A exceeds 1&nbsp;GW/m&sup2; (assumed thermal tolerance, no refusal). The model ignores heating, deceleration at the target, interstellar dust, beam pointing errors, sail tumbling and the laser power needed to keep the beam coherent over millions of km.</p>
+    <p><b>Newtonian column:</b> F = 2P/c constant (no Doppler loss, no &gamma;), v = at over the same beam range. The difference is shown as (relativistic &minus; Newtonian)/Newtonian flight time. Flat special relativity, no gravity.</p>
+  </div>
+</div>
+<div data-lang="ru">
+  <div class="note">
+    <p><b>Сила.</b> Идеальное зеркало (коэффициент отражения R = 1, допущение), лазер на Земле: F = (2P&eta;/c)&middot;(1 &minus; &beta;)/(1 + &beta;). В покое это 2P/c; допплеровский множитель (1 &minus; &beta;)/(1 + &beta;) учитывает, что удаляющийся парус видит меньше и более красных фотонов. КПД связи &eta; = 1 (допущение).</p>
+    <p><b>Динамика.</b> Релятивистская: d(&gamma;mv)/dt = F, то есть dw/dt = F/(mc), w = &gamma;&beta;; интегрируется методом РК4 по времени Земли. Скорость всегда меньше c. Ощущаемое (собственное) ускорение a = &gamma;&sup3;&middot;c&middot;d&beta;/dt = F/m.</p>
+    <p><b>Масса.</b> m = нагрузка + &sigma;&middot;A, поверхностная плотность паруса &sigma; = 1&nbsp;г/м&sup2; (допущение; реальные паруса &mdash; открытая инженерная задача).</p>
+    <p><b>Дальность луча.</b> Дифракция: L = D<sub>пер</sub>&middot;D<sub>пар</sub>/(2,44&middot;&lambda;), &lambda; = 1064&nbsp;нм, апертура передатчика D<sub>пер</sub> = 1&nbsp;км (допущения), D<sub>пар</sub> = &radic;(4A/&pi;). Лазер толкает, пока парус ближе L (в системе Земли), дальше &mdash; полёт по инерции. Если L дальше звезды, лазер не выключается.</p>
+    <p><b>Нагрев.</b> Страница лишь <i>предупреждает</i>, когда интенсивность P/A выше 1&nbsp;ГВт/м&sup2; (допущение о тепловой стойкости, без отказа). Модель не учитывает нагрев, торможение у цели, межзвёздную пыль, ошибки наведения, кувыркание паруса и мощность, нужную для когерентного луча на миллионы км.</p>
+    <p><b>Ньютоновский столбец:</b> F = 2P/c постоянна (без допплеровской потери и без &gamma;), v = at на той же дальности луча. Разница показана как (релятивистское &minus; ньютоновское)/ньютоновское время полёта. Плоская СТО, без гравитации.</p>
+  </div>
+</div>
+
+<h2><span data-lang="en" class="active">Data sources</span><span data-lang="ru">Источники данных</span></h2>
+<div data-lang="en" class="active"><ul class="src">
+  <li>Distance to Proxima Centauri 4.2465&nbsp;ly: the star list of this site (js/data/stars.js).</li>
+  <li><a href="https://arxiv.org/abs/1805.01306" target="_blank" rel="noopener">Parkin, K. L. G., The Breakthrough Starshot system model (2018)</a> &mdash; 100&nbsp;GW class laser, 1&nbsp;km array, ~1&nbsp;&micro;m wavelength, gram-scale craft.</li>
+  <li><b>Assumptions (no external source):</b> &sigma; = 1&nbsp;g/m&sup2;, R = 1, &eta; = 1, heat tolerance 1&nbsp;GW/m&sup2;, beam range = diffraction limit with spot = sail.</li>
+</ul></div>
+<div data-lang="ru"><ul class="src">
+  <li>Расстояние до Проксимы Центавра 4,2465&nbsp;св. года: список звёзд этого сайта (js/data/stars.js).</li>
+  <li><a href="https://arxiv.org/abs/1805.01306" target="_blank" rel="noopener">Parkin, K. L. G., The Breakthrough Starshot system model (2018)</a> &mdash; лазер класса 100&nbsp;ГВт, решётка 1&nbsp;км, длина волны ~1&nbsp;мкм, аппарат массой в граммы.</li>
+  <li><b>Допущения (внешнего источника нет):</b> &sigma; = 1&nbsp;г/м&sup2;, R = 1, &eta; = 1, тепловая стойкость 1&nbsp;ГВт/м&sup2;, дальность луча = дифракционный предел при пятне, равном парусу.</li>
+</ul></div>
+
+<p>
+  <a href="engines.html"><span data-lang="en" class="active">Engines compared</span><span data-lang="ru">Сравнение двигателей</span></a> &middot;
+  <a href="accel.html"><span data-lang="en" class="active">Accelerating and braking to a star</span><span data-lang="ru">Разгон и торможение до звезды</span></a> &middot;
+  <a href="neighbors.html"><span data-lang="en" class="active">Neighbours in the galaxy</span><span data-lang="ru">Соседи в галактике</span></a> &middot;
+  <a href="twins.html"><span data-lang="en" class="active">Twin paradox in transit</span><span data-lang="ru">Парадокс близнецов в пути</span></a> &middot;
+  <a href="comms.html"><span data-lang="en" class="active">Communicating with the ship</span><span data-lang="ru">Связь с кораблём</span></a> &middot;
+  <a href="where-we-reach.html"><span data-lang="en" class="active">How far in a lifetime</span><span data-lang="ru">Куда долетим за жизнь</span></a> &middot;
+  <a href="/"><span data-lang="en" class="active">Fly it yourself in the simulator</span><span data-lang="ru">Пролететь самому в симуляторе</span></a> &middot;
+  <a href="physics-verification.html"><span data-lang="en" class="active">How the physics is verified</span><span data-lang="ru">Как проверяется физика</span></a>
+</p>
+
+<footer class="bottom">
+  <span data-lang="en" class="active">Formulas: F = (2P&eta;/c)(1 &minus; &beta;)/(1 + &beta;); dw/dt = F/(mc); a<sub>proper</sub> = F/m = &gamma;&sup3;c&middot;d&beta;/dt; L = D<sub>tx</sub>D<sub>sail</sub>/(2.44&lambda;); d&tau; = dt/&gamma;.</span>
+  <span data-lang="ru">Формулы: F = (2P&eta;/c)(1 &minus; &beta;)/(1 + &beta;); dw/dt = F/(mc); a<sub>собств</sub> = F/m = &gamma;&sup3;c&middot;d&beta;/dt; L = D<sub>пер</sub>D<sub>пар</sub>/(2,44&lambda;); d&tau; = dt/&gamma;.</span>
+</footer>
+</main>
+
+<script type="module">
+import { launch, HEAT_LIMIT, PROXIMA } from './js/physics/lasersail.js';
+import { sliderToMass, massToSlider, sliderToPower, powerToSlider, sliderToArea, areaToSlider, PRESETS,
+  fmtMassKg, fmtPower, fmtArea, fmtIntensity, fmtLen, fmtBetaC, fmtGamma, fmtG, fmtPct, fmtFlight, fmtDur,
+  logFrac, curvePoints, curvePointsLog, TIME_TICKS } from './js/verify/lasersail-view.js';
+import { fmtTime } from './js/verify/engines-view.js';
+
+const T = {
+  en: { never: 'will not arrive', beta: 'Top speed', gamma: 'Lorentz factor γ', tE: 'Flight time, Earth clock', tS: 'Flight time, craft clock',
+    g0: 'Felt acceleration at start', gEnd: 'Felt acceleration at beam end', I: 'Intensity on the sail P/A', L: 'Beam range L', tb: 'Time under the beam (Earth)',
+    mass: 'Total mass', heat: 'Heat warning: intensity P/A = {I} exceeds the assumed thermal tolerance of {H}. The sail would likely not survive; shown for comparison only.',
+    rel: 'Relativistic regime (β > 0.1): the Newtonian estimate is inaccurate here.', endless: 'The beam range reaches beyond the star: the laser never switches off and the craft only accelerates.',
+    noflight: 'No thrust: the craft does not move and does not arrive.', excC: 'The Newtonian speed would exceed c — a sign that the classical formula fails here.',
+    verdict: 'Reaches {star} in {t} (Earth clock), {tau} on board; top speed {b}.', verdictNo: 'This craft will not reach {star}.',
+    quantity: 'Quantity', relc: 'Relativistic', newt: 'Newtonian', aBeam: 'Acceleration (F/m, at start)', vTop: 'Speed after the beam', tFl: 'Flight time (Earth)',
+    diff: 'Relativistic vs Newtonian flight time', dil: 'Time dilation τ/t (craft clock / Earth clock)', dilV: 'γ at top speed',
+    note: 'Difference = (relativistic − Newtonian)/Newtonian. At β ≪ 1 they agree; the Doppler loss of the force and γ make the real flight slower.',
+    ax: 'β vs Earth time (log); gridlines: 1 s … 1 Myr', gAx: 'Felt acceleration in g vs Earth time, both axes logarithmic; the beam phase only', beamEnd: 'beam off', star: PROXIMA.name },
+  ru: { never: 'не долетит', beta: 'Максимальная скорость', gamma: 'Лоренц-фактор γ', tE: 'Время полёта, часы Земли', tS: 'Время полёта, часы аппарата',
+    g0: 'Перегрузка на старте', gEnd: 'Перегрузка в конце луча', I: 'Интенсивность на парусе P/A', L: 'Дальность луча L', tb: 'Время под лучом (Земля)',
+    mass: 'Полная масса', heat: 'Предупреждение о нагреве: интенсивность P/A = {I} выше принятой тепловой стойкости {H}. Парус, скорее всего, не выдержит; показано только для сравнения.',
+    rel: 'Релятивистский режим (β > 0,1): ньютоновская оценка здесь неточна.', endless: 'Дальность луча больше расстояния до звезды: лазер не выключается, аппарат только разгоняется.',
+    noflight: 'Тяги нет: аппарат не движется и не долетит.', excC: 'Ньютоновская скорость превысила бы c — классическая формула здесь не работает.',
+    verdict: 'Долетит до {star} за {t} (часы Земли), {tau} на борту; максимальная скорость {b}.', verdictNo: 'Этот аппарат не долетит до {star}.',
+    quantity: 'Величина', relc: 'Релятивистский', newt: 'Ньютоновский', aBeam: 'Ускорение (F/m, на старте)', vTop: 'Скорость после луча', tFl: 'Время полёта (Земля)',
+    diff: 'Релятивистское и ньютоновское время полёта', dil: 'Замедление времени τ/t (часы аппарата / часы Земли)', dilV: 'γ при максимальной скорости',
+    note: 'Разница = (релятивистское − ньютоновское)/ньютоновское. При β ≪ 1 они совпадают; допплеровская потеря силы и γ делают реальный полёт медленнее.',
+    ax: 'β от времени Земли (логарифм); линии: 1 с … 1 млн лет', gAx: 'Перегрузка в g от времени Земли, обе оси логарифмические; только участок под лучом', beamEnd: 'луч выкл.', star: PROXIMA.ru },
+};
+
+let lang = 'en';
+try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en' ? s : ((navigator.language || 'en').slice(0, 2) === 'ru' ? 'ru' : 'en'); } catch (e) {}
+
+const $ = (id) => document.getElementById(id);
+const mIn = $('m'), pIn = $('pw'), aIn = $('ar');
+const P0 = PRESETS[0];
+// exact values live here (a preset must be exact, not rounded to a slider tick); a slider overwrites only its own field
+const cur = { mass: P0.mass, power: P0.power, area: P0.area };
+const syncSliders = () => { mIn.value = Math.round(massToSlider(cur.mass)); pIn.value = Math.round(powerToSlider(cur.power)); aIn.value = Math.round(areaToSlider(cur.area)); };
+syncSliders();
+$('pre').innerHTML = PRESETS.map((p) => '<button data-id="' + p.id + '"></button>').join('');
+const COLOR_REL = '#7fb3ff';
+const sub = (s, o) => s.replace(/\{(\w+)\}/g, (_, k) => o[k]);
+
+const decimal = (s) => (lang === 'ru' ? s.replace('.', ',') : s);
+
+function axisTicks(tMin, tMax) { return TIME_TICKS.filter(([v]) => v >= tMin && v <= tMax); }
+
+function betaChart(r, t) {
+  const W = 1000, H = 100;
+  const pts = r.profile.filter((p) => p.t > 0);
+  const tMin = pts.length ? pts[0].t : 1, tMax = Math.max(r.tFlight > 0 && Number.isFinite(r.tFlight) ? r.tFlight : (pts.length ? pts[pts.length - 1].t : 10), tMin * 10);
+  const yMax = Math.max(r.betaMax * 1.1, 1e-12);
+  const ticks = axisTicks(tMin, tMax);
+  const grid = ticks.map(([v]) => '<line y1="0" y2="' + H + '" x1="' + (logFrac(v, tMin, tMax) * W).toFixed(2) + '" x2="' + (logFrac(v, tMin, tMax) * W).toFixed(2) + '" stroke="rgba(120,200,230,0.15)" vector-effect="non-scaling-stroke" />').join('');
+  const hgrid = [0, 0.25, 0.5, 0.75, 1].map((f) => '<line x1="0" x2="' + W + '" y1="' + (f * H) + '" y2="' + (f * H) + '" stroke="rgba(120,200,230,0.12)" vector-effect="non-scaling-stroke" />').join('');
+  const line = '<polyline points="' + curvePoints(pts, 'beta', tMin, tMax, yMax, W, H) + '" fill="none" stroke="' + COLOR_REL + '" stroke-width="2.2" vector-effect="non-scaling-stroke" />';
+  const mark = r.tBeam > 0 && r.tBeam < tMax ? '<line y1="0" y2="' + H + '" x1="' + (logFrac(r.tBeam, tMin, tMax) * W).toFixed(2) + '" x2="' + (logFrac(r.tBeam, tMin, tMax) * W).toFixed(2) + '" stroke="#ff6b8a" stroke-dasharray="5 4" vector-effect="non-scaling-stroke" />' : '';
+  const yl = [0, 0.5, 1].map((f) => '<span class="yl" style="top:' + ((1 - f) * 100) + '%">' + decimal((yMax * f).toPrecision(2)) + '</span>').join('');
+  const xl = ticks.map(([v, en, ru], i) => '<span class="xl' + (i === ticks.length - 1 ? ' last' : '') + '" style="left:' + (logFrac(v, tMin, tMax) * 100).toFixed(2) + '%">' + (lang === 'ru' ? ru : en) + '</span>').join('');
+  return '<div class="legend">' + t.ax + '</div><div class="achart"><svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">' + hgrid + grid + mark + line + '</svg>' + yl + xl + '</div>' +
+    '<div class="keys"><span><span style="color:' + COLOR_REL + '">&#9632;</span> β</span><span><span style="color:#ff6b8a">&#9632;</span> ' + t.beamEnd + '</span></div>';
+}
+
+function gChart(r, t) {
+  const W = 1000, H = 100;
+  const pts = r.profile.filter((p) => p.t > 0 && p.g > 0 && (p.t <= r.tBeam * 1.0000001));
+  if (pts.length < 2) return '';
+  const tMin = pts[0].t, tMax = Math.max(pts[pts.length - 1].t, tMin * 10);
+  const gs = pts.map((p) => p.g), gHi = Math.max(...gs), gLo = Math.min(...gs);
+  const yMin = Math.pow(10, Math.floor(Math.log10(gLo) - 1e-9)), yMax = Math.max(Math.pow(10, Math.ceil(Math.log10(gHi) + 1e-9)), yMin * 10);
+  const decs = []; for (let e = Math.log10(yMin); e <= Math.log10(yMax) + 1e-9; e++) decs.push(Math.pow(10, e));
+  const stride = Math.ceil(decs.length / 6);
+  const yTicks = decs.filter((_, i) => i % stride === 0);
+  const ticks = axisTicks(tMin, tMax);
+  const hgrid = yTicks.map((v) => '<line x1="0" x2="' + W + '" y1="' + ((1 - logFrac(v, yMin, yMax)) * H).toFixed(2) + '" y2="' + ((1 - logFrac(v, yMin, yMax)) * H).toFixed(2) + '" stroke="rgba(120,200,230,0.15)" vector-effect="non-scaling-stroke" />').join('');
+  const vgrid = ticks.map(([v]) => '<line y1="0" y2="' + H + '" x1="' + (logFrac(v, tMin, tMax) * W).toFixed(2) + '" x2="' + (logFrac(v, tMin, tMax) * W).toFixed(2) + '" stroke="rgba(120,200,230,0.12)" vector-effect="non-scaling-stroke" />').join('');
+  const line = '<polyline points="' + curvePointsLog(pts, 'g', tMin, tMax, yMin, yMax, W, H) + '" fill="none" stroke="' + COLOR_REL + '" stroke-width="2.2" vector-effect="non-scaling-stroke" />';
+  const yl = yTicks.map((v) => '<span class="yl" style="top:' + ((1 - logFrac(v, yMin, yMax)) * 100).toFixed(2) + '%">' + (v >= 0.01 && v < 1e4 ? decimal(String(v)) : '1e' + Math.round(Math.log10(v))) + '</span>').join('');
+  const xl = ticks.map(([v, en, ru], i) => '<span class="xl' + (i === ticks.length - 1 ? ' last' : '') + '" style="left:' + (logFrac(v, tMin, tMax) * 100).toFixed(2) + '%">' + (lang === 'ru' ? ru : en) + '</span>').join('');
+  return '<div class="legend">' + t.gAx + '</div><div class="achart"><svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">' + hgrid + vgrid + line + '</svg>' + yl + xl + '</div>';
+}
+
+function render() {
+  const t = T[lang];
+  const { mass, power, area } = cur;
+  $('mout').textContent = fmtMassKg(mass, lang);
+  $('pout').textContent = fmtPower(power, lang);
+  $('aout').textContent = fmtArea(area, lang);
+  document.querySelectorAll('#pre button').forEach((b, i) => {
+    const p = PRESETS[i]; b.textContent = p.name[lang];
+    b.classList.toggle('on', Math.abs(p.mass - mass) / p.mass < 0.02 && Math.abs(p.power - power) / p.power < 0.02 && Math.abs(p.area - area) / p.area < 0.02);
+  });
+  const r = launch({ payload: mass, power, area });
+  const star = t.star;
+
+  const warns = [];
+  if (r.overheat) warns.push('<div class="note warn">' + sub(t.heat, { I: fmtIntensity(r.intensity, lang), H: fmtIntensity(HEAT_LIMIT, lang) }) + '</div>');
+  if (r.relativistic) warns.push('<div class="note">' + t.rel + '</div>');
+  if (r.beamNeverStops) warns.push('<div class="note">' + t.endless + '</div>');
+  if (!r.flights) warns.push('<div class="note warn">' + t.noflight + '</div>');
+  if (r.flags.includes('newtonExceedsC')) warns.push('<div class="note warn">' + t.excC + '</div>');
+  $('warn').innerHTML = warns.join('');
+
+  $('verdict').textContent = r.flights
+    ? sub(t.verdict, { star, t: fmtTime(r.tFlight, lang), tau: fmtTime(r.tau, lang), b: fmtBetaC(r.betaMax, lang) })
+    : sub(t.verdictNo, { star });
+  const st = (label, val, id) => '<div class="stat"><span>' + label + '</span><b id="' + id + '">' + val + '</b></div>';
+  $('stats').innerHTML =
+    st(t.beta, fmtBetaC(r.betaMax, lang), 'o-beta') + st(t.gamma, fmtGamma(r.gammaMax, lang), 'o-gamma') +
+    st(t.tE, fmtFlight(r.tFlight, lang, t.never), 'o-te') + st(t.tS, fmtFlight(r.tau, lang, t.never), 'o-ts') +
+    st(t.g0, fmtG(r.gPeak, lang), 'o-g0') + st(t.gEnd, fmtG(r.gEnd, lang), 'o-gend') +
+    st(t.I, fmtIntensity(r.intensity, lang), 'o-i') + st(t.L, fmtLen(r.beamLength, lang), 'o-l') +
+    st(t.tb, fmtDur(r.tBeam, lang), 'o-tb') + st(t.mass, fmtMassKg(r.mass, lang), 'o-mass');
+
+  const n = r.newtonian;
+  const row = (q, a, b, id) => '<tr><td data-label="' + t.quantity + '">' + q + '</td><td data-label="' + t.relc + '" id="' + id + '-r">' + a + '</td><td data-label="' + t.newt + '" id="' + id + '-n">' + b + '</td></tr>';
+  $('cmp').innerHTML = '<table><thead><tr><th>' + t.quantity + '</th><th>' + t.relc + '</th><th>' + t.newt + '</th></tr></thead><tbody>' +
+    row(t.vTop, fmtBetaC(r.betaMax, lang), n.noFlight ? '—' : fmtBetaC(n.betaBeam, lang), 'c-v') +
+    row(t.tFl, fmtFlight(r.tFlight, lang, t.never), fmtFlight(n.tFlight, lang, t.never), 'c-t') +
+    '<tr><td data-label="' + t.quantity + '">' + t.diff + '</td><td data-label="' + t.relc + '" id="c-diff" colspan="2">' + fmtPct(r.timeDiffPct, lang) + '</td></tr>' +
+    '<tr><td data-label="' + t.quantity + '">' + t.dil + '</td><td data-label="' + t.relc + '" id="c-dil" colspan="2">' + (r.flights ? decimal(r.dilation.toFixed(r.dilation > 0.9999 ? 6 : 4)) : '—') + ' (' + t.dilV + ' ' + fmtGamma(r.gammaMax, lang) + ')</td></tr>' +
+    '</tbody></table>';
+  $('cmpNote').textContent = t.note;
+
+  $('chartBeta').innerHTML = r.flights ? betaChart(r, t) : '';
+  $('chartG').innerHTML = r.flights ? gChart(r, t) : '';
+  document.body.setAttribute('data-ready', '1');
+}
+
+function applyLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  document.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el.getAttribute('data-lang') === l));
+  document.querySelectorAll('#langtoggle span').forEach((el) => el.classList.toggle('active', el.getAttribute('data-set') === l));
+  render();
+}
+mIn.addEventListener('input', () => { cur.mass = sliderToMass(+mIn.value); render(); });
+pIn.addEventListener('input', () => { cur.power = sliderToPower(+pIn.value); render(); });
+aIn.addEventListener('input', () => { cur.area = sliderToArea(+aIn.value); render(); });
+$('pre').addEventListener('click', (ev) => {
+  const b = ev.target.closest('button'); if (!b) return;
+  const p = PRESETS.find((x) => x.id === b.dataset.id);
+  cur.mass = p.mass; cur.power = p.power; cur.area = p.area; syncSliders();
+  render();
+});
+$('langtoggle').addEventListener('click', (ev) => {
+  const s = ev.target.closest('span'); if (!s) return;
+  const l = s.getAttribute('data-set'); applyLang(l);
+  try { localStorage.setItem('iss_lang', l); } catch (e) {}
+});
+applyLang(lang);
+</script>
+</body>
+</html>
