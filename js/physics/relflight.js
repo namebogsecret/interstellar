@@ -8,7 +8,7 @@ import { accelTrip, sampleTrip } from './twins.js';
 export const SUMMARY_COUNT = 10;
 export const ACCEL_G = 1;
 
-// One row per star SYSTEM (components of a system share the distance), nearest first, flip-and-burn.
+// One row per star SYSTEM: the nearest component of each system (catalogue is sorted by distance), nearest first, flip-and-burn.
 // Row: { no, name, ru, system, ly, t (Earth years), tau (ship years), peakGamma, peakBeta }.
 export function summaryRows({ count = SUMMARY_COUNT, accelG = ACCEL_G } = {}) {
   if (!Number.isInteger(count) || count < 1) throw new RangeError('count must be an integer >= 1');
