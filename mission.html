@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Build a mission to a star — Interstellar</title>
+<meta name="description" content="Build a mission to a nearby star: choose the star, the engine (chemical, ion, nuclear-thermal, fusion, solar sail, laser sail, photon rocket), payload and energy budget; get flight time on Earth and ship clocks, delta-v, peak speed, propellant or power, energy against the budget and the braking cost (assumptions stated)." />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="120x120" href="/favicon-120.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<style>
+  :root { --fg: #9fe7ff; --dim: #5b7c88; --bg: rgba(6, 14, 20, 0.66); --line: rgba(120, 200, 230, 0.18); --card: rgba(8, 16, 24, 0.92); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #05070c; }
+  body { color: #cfeefc; font: 14px/1.65 "SF Mono", "Cascadia Code", Menlo, Consolas, monospace; padding: 0 0 60px; overflow-x: hidden; }
+  a { color: #7fb3ff; }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 22px 0; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  header.top a.home { color: var(--dim); text-decoration: none; }
+  header.top a.home:hover { color: var(--fg); }
+  #langtoggle { display: flex; gap: 3px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+  #langtoggle span { cursor: pointer; padding: 3px 10px; border-radius: 5px; color: var(--dim); font-size: 12px; }
+  #langtoggle span.active { color: #eaffff; background: rgba(60,116,148,0.5); }
+  h1 { font-size: 22px; letter-spacing: 0.06em; color: #bfeeff; margin: 0 0 6px; overflow-wrap: anywhere; }
+  h2 { font-size: 15px; letter-spacing: 0.05em; color: #d7f6ff; margin: 30px 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  p { color: #b9d8e6; margin: 10px 0; }
+  b, strong { color: #eaffff; }
+  code { background: rgba(120,200,230,0.1); border-radius: 3px; padding: 1px 5px; color: #d7f6ff; overflow-wrap: anywhere; }
+  .note { background: rgba(40,90,120,0.18); border-left: 2px solid #4a8fb0; padding: 10px 14px; border-radius: 5px; color: #bfe6f4; margin: 14px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 14px 0; min-width: 0; }
+  .ctl { margin: 10px 0 14px; }
+  .ctl label { display: flex; justify-content: space-between; gap: 10px; color: var(--dim); font-size: 12px; }
+  .ctl label output { color: #eaffff; font-weight: 700; }
+  .ctl input[type=range] { width: 100%; min-width: 0; margin: 6px 0 2px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+  .presets button { background: rgba(60,116,148,0.25); color: #cfeefc; border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+  .presets button:hover, .presets button.on { background: rgba(60,116,148,0.55); }
+  .big { font-size: 15px; color: #eaffff; margin: 6px 0 10px; overflow-wrap: anywhere; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0; }
+  .stat { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0; }
+  .stat span { display: block; color: var(--dim); font-size: 11.5px; }
+  .stat b { font-size: 14px; overflow-wrap: anywhere; }
+  .warn { color: #ffd28a; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid rgba(120,200,230,0.1); overflow-wrap: anywhere; }
+  th { color: var(--dim); font-weight: 600; font-size: 11.5px; }
+  tr.yes td { background: rgba(95,227,161,0.07); }
+  .yes-mark { color: #5fe3a1; font-weight: 700; }
+  .no-mark { color: var(--dim); }
+  footer.bottom { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
+  @media (max-width: 480px) {
+    main { padding: 28px 14px 0; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    thead { display: none; }
+    tr { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; padding: 4px 8px; }
+    td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 10px; text-align: right; }
+    td:not([data-label])::before { content: none; }
+    td::before { content: attr(data-label); color: var(--dim); text-align: left; flex: 0 0 42%; }
+  }
+  [data-lang] { display: none; }
+  [data-lang].active { display: block; }
+  span[data-lang].active, b[data-lang].active { display: inline; }
+
+  .ctl select { width: 100%; background: rgba(8,16,24,0.92); color: #eaffff; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; margin-top: 6px; }
+  .chart { margin: 8px 0; }
+  .crow { margin: 9px 0; min-width: 0; }
+  .crow .lbl { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: #cfeefc; }
+  .crow .lbl em { font-style: normal; color: #eaffff; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+  .crow svg { display: block; width: 100%; height: 16px; margin-top: 3px; }
+  .axis { position: relative; height: 16px; color: var(--dim); font-size: 10.5px; margin-top: 2px; }
+  .axis span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+  .axis span.first { transform: none; } .axis span.last { transform: translateX(-100%); }
+  .oos { color: #ffd28a; font-size: 10.5px; margin-left: 5px; font-weight: 400; }
+  .badge { display: inline-block; border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; margin: 1px 3px 1px 0; font-size: 11px; color: #ffd28a; white-space: nowrap; }
+  .badge.bad { color: #ff9c9c; }
+  .legend { color: var(--dim); font-size: 11.5px; margin: 4px 0; }
+  .achart { position: relative; margin: 10px 4px 26px 62px; height: 240px; }
+  .achart svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: rgba(120,200,230,0.04); }
+  .achart .yl { position: absolute; left: -60px; width: 56px; text-align: right; transform: translateY(-50%); font-size: 10.5px; color: var(--dim); white-space: nowrap; }
+  .achart .xl { position: absolute; top: 100%; margin-top: 4px; transform: translateX(-50%); font-size: 10.5px; color: var(--dim); white-space: nowrap; }
+  .achart .xl.last { transform: translateX(-100%); }
+  .keys { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: #cfeefc; margin: 4px 0; }
+  .tscroll { overflow-x: auto; }
+  ul.src { padding-left: 18px; margin: 6px 0; } ul.src li { margin: 3px 0; overflow-wrap: anywhere; }
+  .ctl[hidden] { display: none; }
+  .ctl .chk { display: flex; align-items: center; gap: 8px; color: #cfeefc; font-size: 13px; }
+  .ctl .hint { color: var(--dim); font-size: 11.5px; margin-top: 2px; }
+  .bad-mark { color: #ff9c9c; font-weight: 700; }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <a class="home" href="/">&larr; Interstellar</a>
+    <div id="langtoggle"><span data-set="en">EN</span><span data-set="ru">RU</span></div>
+  </header>
+
+<h1><span data-lang="en" class="active">BUILD A MISSION TO A STAR</span><span data-lang="ru">СОБЕРИ МИССИЮ К ЗВЕЗДЕ</span></h1>
+
+<div data-lang="en" class="active">
+  <p>Pick a nearby star, an engine, the payload mass and the energy you are willing to spend. The page computes one honest trip plan: how long it takes on Earth's clock and on the ship's clock, the total change of speed, the peak speed, the propellant (or beam power), the energy against your budget, and how much of the starting mass is burnt just to stop.</p>
+</div>
+<div data-lang="ru">
+  <p>Выберите ближайшую звезду, двигатель, массу полезной нагрузки и энергию, которую готовы потратить. Страница считает один честный план полёта: время по часам Земли и по часам корабля, полное изменение скорости, пиковую скорость, расход рабочего тела (или мощность луча), энергию в сравнении с бюджетом и долю стартовой массы, сожжённую только ради остановки.</p>
+</div>
+
+<div class="card">
+  <div class="ctl">
+    <label for="star"><span><span data-lang="en" class="active">Target star</span><span data-lang="ru">Звезда-цель</span></span><output id="dout"></output></label>
+    <select id="star"></select>
+  </div>
+  <div class="ctl">
+    <label for="eng"><span><span data-lang="en" class="active">Engine</span><span data-lang="ru">Двигатель</span></span></label>
+    <select id="eng"></select>
+  </div>
+  <div class="ctl">
+    <label for="pl"><span><span data-lang="en" class="active">Payload mass</span><span data-lang="ru">Масса полезной нагрузки</span></span><output id="plout"></output></label>
+    <input id="pl" type="range" min="0" max="1000" step="1" value="0" />
+  </div>
+  <div class="ctl">
+    <label for="bd"><span><span data-lang="en" class="active">Energy budget</span><span data-lang="ru">Энергобюджет</span></span><output id="bdout"></output></label>
+    <input id="bd" type="range" min="0" max="1000" step="1" value="0" />
+    <div class="hint" id="bdhint"></div>
+  </div>
+  <div class="ctl">
+    <label class="chk" for="brake"><input id="brake" type="checkbox" checked /><span><span data-lang="en" class="active">Brake at the target</span><span data-lang="ru">Тормозить у цели</span></span></label>
+    <div class="hint" id="brakehint"></div>
+  </div>
+  <div class="ctl" id="g-ag" hidden>
+    <label for="ag"><span><span data-lang="en" class="active">Proper acceleration</span><span data-lang="ru">Собственное ускорение</span></span><output id="agout"></output></label>
+    <input id="ag" type="range" min="0" max="1000" step="1" value="500" />
+  </div>
+  <div class="ctl" id="g-pw" hidden>
+    <label for="pw"><span><span data-lang="en" class="active">Laser power</span><span data-lang="ru">Мощность лазера</span></span><output id="pwout"></output></label>
+    <input id="pw" type="range" min="0" max="1000" step="1" value="0" />
+  </div>
+  <div class="ctl" id="g-ar" hidden>
+    <label for="ar"><span><span data-lang="en" class="active">Sail area</span><span data-lang="ru">Площадь паруса</span></span><output id="arout"></output></label>
+    <input id="ar" type="range" min="0" max="1000" step="1" value="0" />
+  </div>
+</div>
+
+<div id="warn"></div>
+
+<h2><span data-lang="en" class="active">Mission summary</span><span data-lang="ru">Сводка миссии</span></h2>
+<div class="card">
+  <div class="big" id="verdict"></div>
+  <div class="stats" id="stats"></div>
+</div>
+
+<h2><span data-lang="en" class="active">Model and assumptions</span><span data-lang="ru">Модель и оговорки</span></h2>
+<div data-lang="en" class="active">
+  <div class="note">
+    <p><b>Rockets</b> (chemical, ion, nuclear-thermal, fusion): the same Newtonian model as <a href="engines.html">engines compared</a> &mdash; one stage of fixed size, constant thrust, Tsiolkovsky delta-v, braking by a second equal burn. The ship clock differs from the Earth clock only in the coasting leg (&tau; = t &minus; t<sub>coast</sub>(1 &minus; 1/&gamma;)); burn phases are treated as Newtonian. Energy = &frac12;&middot;(propellant)&middot;v<sub>e</sub>&sup2;; power = &frac12;&middot;F&middot;v<sub>e</sub>. The stage does not scale with the payload: a bigger payload simply lowers the delta-v.</p>
+    <p><b>Solar sail</b>: radiation pressure falling as 1/r&sup2; from 1 AU, flyby only, no energy cost counted (sunlight is free). <b>Laser sail</b>: ground laser, relativistic force with the Doppler loss, diffraction-limited beam range, flyby only (<a href="laser-sail.html">laser sail</a>); energy = beam power &times; time under the beam. A sail cannot brake at the target: the page says so instead of pretending.</p>
+    <p><b>Photon rocket</b>: an ideal rocket with exhaust speed c at constant proper acceleration (<a href="accel.html">accelerating and braking</a>). Mass ratio e<sup>2x</sup> with braking, e<sup>x</sup> without (x is the peak rapidity); energy = propellant&middot;c&sup2; (all of it is converted). No such engine exists; it is the physical limit.</p>
+    <p><b>Not modelled:</b> gravity of the Sun and the target star, interstellar dust and gas, the energy to make the propellant, crew life support, engine efficiency losses, the real mass of tanks for the photon rocket. The budget is only compared with the energy: it never changes the flight. The world energy use of about 6&middot;10<sup>20</sup> J per year is an order-of-magnitude figure. Star distances: hand-compiled list of the 50 nearest stars (<a href="neighbors.html">neighbours</a>).</p>
+  </div>
+</div>
+<div data-lang="ru">
+  <div class="note">
+    <p><b>Ракеты</b> (химическая, ионная, ядерно-тепловая, термоядерная): та же ньютоновская модель, что в <a href="engines.html">сравнении двигателей</a> &mdash; одна ступень фиксированного размера, постоянная тяга, Δv по Циолковскому, торможение вторым таким же включением. Часы корабля отличаются от часов Земли только на участке инерции (&tau; = t &minus; t<sub>инерц</sub>(1 &minus; 1/&gamma;)); участки тяги считаются ньютоновскими. Энергия = &frac12;&middot;(рабочее тело)&middot;v<sub>e</sub>&sup2;; мощность = &frac12;&middot;F&middot;v<sub>e</sub>. Ступень не масштабируется под нагрузку: большая нагрузка просто уменьшает Δv.</p>
+    <p><b>Солнечный парус</b>: давление света падает как 1/r&sup2; от 1 а.е., только пролёт, энергия не считается (солнечный свет бесплатен). <b>Лазерный парус</b>: лазер на Земле, релятивистская сила с допплеровской потерей, дальность луча по дифракции, только пролёт (<a href="laser-sail.html">лазерный парус</a>); энергия = мощность луча &times; время под лучом. Парус не умеет тормозить у цели: страница так и говорит, а не делает вид.</p>
+    <p><b>Фотонная ракета</b>: идеальная ракета со скоростью истечения c при постоянном собственном ускорении (<a href="accel.html">разгон и торможение</a>). Массовое число e<sup>2x</sup> с торможением и e<sup>x</sup> без него (x &mdash; пиковая быстрота); энергия = масса топлива&middot;c&sup2; (всё превращается в излучение). Такого двигателя нет; это физический предел.</p>
+    <p><b>Не учтено:</b> гравитация Солнца и звезды-цели, межзвёздная пыль и газ, энергия на производство топлива, жизнеобеспечение экипажа, потери КПД двигателя, реальная масса баков фотонной ракеты. Бюджет только сравнивается с энергией и не меняет полёт. Мировое энергопотребление около 6&middot;10<sup>20</sup> Дж в год &mdash; оценка по порядку величины. Расстояния до звёзд: список 50 ближайших звёзд, составленный вручную (<a href="neighbors.html">соседи</a>).</p>
+  </div>
+</div>
+
+<p>
+  <a href="engines.html"><span data-lang="en" class="active">Engines compared</span><span data-lang="ru">Сравнение двигателей</span></a> &middot;
+  <a href="laser-sail.html"><span data-lang="en" class="active">Laser sail to the nearest star</span><span data-lang="ru">Лазерный парус к ближайшей звезде</span></a> &middot;
+  <a href="accel.html"><span data-lang="en" class="active">Accelerating and braking to a star</span><span data-lang="ru">Разгон и торможение до звезды</span></a> &middot;
+  <a href="neighbors.html"><span data-lang="en" class="active">Neighbours in the galaxy</span><span data-lang="ru">Соседи в галактике</span></a> &middot;
+  <a href="twins.html"><span data-lang="en" class="active">Twin paradox in transit</span><span data-lang="ru">Парадокс близнецов в пути</span></a> &middot;
+  <a href="where-we-reach.html"><span data-lang="en" class="active">How far in a lifetime</span><span data-lang="ru">Куда долетим за жизнь</span></a> &middot;
+  <a href="/"><span data-lang="en" class="active">Fly it yourself in the simulator</span><span data-lang="ru">Пролететь самому в симуляторе</span></a> &middot;
+  <a href="physics-verification.html"><span data-lang="en" class="active">How the physics is verified</span><span data-lang="ru">Как проверяется физика</span></a>
+</p>
+
+<footer class="bottom">
+  <span data-lang="en" class="active">Formulas: &Delta;v = v<sub>e</sub> ln(m<sub>0</sub>/m<sub>1</sub>); E = &frac12; m<sub>fuel</sub> v<sub>e</sub>&sup2;; photon rocket: m<sub>0</sub>/m = e<sup>2x</sup>, E = m<sub>fuel</sub>c&sup2;; &tau; = t &minus; t<sub>coast</sub>(1 &minus; 1/&gamma;).</span>
+  <span data-lang="ru">Формулы: &Delta;v = v<sub>e</sub> ln(m<sub>0</sub>/m<sub>1</sub>); E = &frac12; m<sub>топл</sub> v<sub>e</sub>&sup2;; фотонная ракета: m<sub>0</sub>/m = e<sup>2x</sup>, E = m<sub>топл</sub>c&sup2;; &tau; = t &minus; t<sub>инерц</sub>(1 &minus; 1/&gamma;).</span>
+</footer>
+</main>
+
+<script type="module">
+import { planMission, canBrake, ENGINE_IDS, ENGINES, NEIGHBORS, DEFAULTS } from './js/physics/mission.js';
+import { sliderToPayload, payloadToSlider, sliderToBudget, budgetToSlider, sliderToPower, powerToSlider, sliderToArea, areaToSlider,
+  gOf, vOf, fmtMassKg, fmtPower, fmtArea, fmtBetaC, fmtGamma, fmtTime, fmtDv, fmtEnergy, fmtMassSci, fmtWorldYears, fmtBudgetVerdict,
+  fmtFrac, fmtLY, fmtSci, ENGINE_LABELS } from './js/verify/mission-view.js';
+
+const T = {
+  en: { tE: 'Time, Earth clock', tS: 'Time, ship clock', dv: 'Total delta-v', vmax: 'Peak speed', gamma: 'Lorentz factor γ', arr: 'Speed at the target',
+    fuel: 'Propellant used', power: 'Power', energy: 'Energy spent', budget: 'Energy vs budget', loss: 'Start mass burnt on braking', ratio: 'Mass ratio (start/end)',
+    verdict: 'Reaches {star} in {t} (Earth clock), {tau} on board; {how}.', stops: 'stops at the target', flies: 'flies past at {v}',
+    noBrake: 'Braking is impossible for a sail: it flies past the star at full speed.', noBrakeHint: 'Not available: a sail has nothing to brake with — it can only fly past.',
+    flyby: 'Flyby: the craft does not slow down and passes the star at {v}.', rel: 'Relativistic regime (β > 0.1): the rocket legs of this model are still Newtonian — treat the numbers as estimates.',
+    over: 'Over budget: the mission needs {r} the energy you allowed ({e}).', overheat: 'Heat warning: the sail intensity exceeds the assumed tolerance (laser sail page). Shown for comparison only.',
+    bad: 'This mission cannot be planned: {reason}', hintBd: '≈ {y}', beam: 'Laser beam power', na: '—', yes: 'yes', ly: 'ly' },
+  ru: { tE: 'Время, часы Земли', tS: 'Время, часы корабля', dv: 'Полное Δv', vmax: 'Пиковая скорость', gamma: 'Лоренц-фактор γ', arr: 'Скорость у цели',
+    fuel: 'Расход рабочего тела', power: 'Мощность', energy: 'Затраченная энергия', budget: 'Энергия и бюджет', loss: 'Доля стартовой массы, сожжённая на торможение', ratio: 'Массовое число (старт/финиш)',
+    verdict: 'Долетит до {star} за {t} (часы Земли), {tau} на борту; {how}.', stops: 'остановится у цели', flies: 'пролетит мимо со скоростью {v}',
+    noBrake: 'Торможение невозможно: парус пролетает мимо звезды на полной скорости.', noBrakeHint: 'Недоступно: парусу нечем тормозить — он может только пролететь мимо.',
+    flyby: 'Пролёт: аппарат не тормозит и проносится мимо звезды со скоростью {v}.', rel: 'Релятивистский режим (β > 0,1): ракетные участки модели всё ещё ньютоновские — числа ориентировочные.',
+    over: 'Превышение бюджета: миссии нужно в {r} раз больше энергии, чем вы разрешили ({e}).', overheat: 'Предупреждение о нагреве: интенсивность на парусе выше принятой стойкости (см. страницу лазерного паруса). Показано только для сравнения.',
+    bad: 'Эту миссию не рассчитать: {reason}', hintBd: '≈ {y}', beam: 'Мощность луча', na: '—', yes: 'да', ly: 'св. лет' },
+};
+
+let lang = 'en';
+try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en' ? s : ((navigator.language || 'en').slice(0, 2) === 'ru' ? 'ru' : 'en'); } catch (e) {}
+
+const $ = (id) => document.getElementById(id);
+const sub = (s, o) => s.replace(/\{(\w+)\}/g, (_, k) => o[k]);
+const params = new URLSearchParams(location.search);
+const cur = { star: NEIGHBORS.some((n) => n.id === params.get('star')) ? NEIGHBORS.find((n) => n.id === params.get('star')).name : 'Proxima Centauri',
+  engine: ENGINE_IDS.includes(params.get('engine')) ? params.get('engine') : 'fusion',
+  payload: DEFAULTS.payload, budget: DEFAULTS.budget, brake: true, accelG: DEFAULTS.accelG, laserPower: DEFAULTS.laserPower, laserArea: DEFAULTS.laserArea };
+
+const engName = (id) => { const e = ENGINES.find((x) => x.id === id); return e ? e.name[lang] : ENGINE_LABELS[id][lang]; };
+const starName = (n) => (lang === 'ru' && n.ru ? n.ru : n.name);
+function fillSelects() {
+  $('star').innerHTML = NEIGHBORS.map((n) => '<option value="' + n.name.replace(/"/g, '&quot;') + '">' + starName(n) + ' — ' + fmtLY(n.ly, lang) + '</option>').join('');
+  $('eng').innerHTML = ENGINE_IDS.map((id) => '<option value="' + id + '">' + engName(id) + '</option>').join('');
+  $('star').value = cur.star; $('eng').value = cur.engine;
+}
+const syncSliders = () => {
+  $('pl').value = Math.round(payloadToSlider(cur.payload)); $('bd').value = Math.round(budgetToSlider(cur.budget));
+  $('ag').value = vOf(cur.accelG); $('pw').value = Math.round(powerToSlider(cur.laserPower)); $('ar').value = Math.round(areaToSlider(cur.laserArea));
+};
+syncSliders();
+
+function render() {
+  const t = T[lang];
+  const star = NEIGHBORS.find((n) => n.name === cur.star);
+  $('dout').textContent = fmtLY(star.ly, lang);
+  $('plout').textContent = fmtMassKg(cur.payload, lang);
+  $('bdout').textContent = fmtEnergy(cur.budget, lang);
+  $('bdhint').textContent = sub(t.hintBd, { y: fmtWorldYears(cur.budget, lang) });
+  $('agout').textContent = fmtSci(cur.accelG, lang) + ' g';
+  $('pwout').textContent = fmtPower(cur.laserPower, lang);
+  $('arout').textContent = fmtArea(cur.laserArea, lang);
+  $('g-ag').hidden = cur.engine !== 'photon';
+  $('g-pw').hidden = cur.engine !== 'laser';
+  $('g-ar').hidden = cur.engine !== 'laser';
+  const cb = canBrake(cur.engine);
+  $('brake').disabled = !cb;
+  $('brake').checked = cb ? cur.brake : false;
+  $('brakehint').textContent = cb ? '' : t.noBrakeHint;
+
+  const p = planMission({ target: star, engine: cur.engine, payload: cur.payload, budget: cur.budget, brake: cur.brake,
+    accelG: cur.accelG, laserPower: cur.laserPower, laserArea: cur.laserArea });
+  if (!p.valid) {
+    $('warn').innerHTML = '<div class="note warn">' + sub(t.bad, { reason: p.reason }) + '</div>';
+    $('verdict').textContent = '';
+    $('stats').innerHTML = '';
+    document.body.setAttribute('data-ready', '1');
+    return;
+  }
+  const warns = [];
+  if (p.flags.includes('cannotBrake')) warns.push('<div class="note warn">' + t.noBrake + '</div>');
+  else if (!p.brake) warns.push('<div class="note">' + sub(t.flyby, { v: fmtDv(p.arrivalSpeed, lang) }) + '</div>');
+  if (p.flags.includes('relativistic')) warns.push('<div class="note">' + t.rel + '</div>');
+  if (p.flags.includes('overBudget')) warns.push('<div class="note warn">' + sub(t.over, { r: '×' + (p.budgetRatio >= 100 ? Math.round(p.budgetRatio) : p.budgetRatio.toFixed(1)), e: fmtEnergy(p.budget, lang) }) + '</div>');
+  if (p.flags.includes('overheat')) warns.push('<div class="note warn">' + t.overheat + '</div>');
+  $('warn').innerHTML = warns.join('');
+
+  const how = p.brake ? t.stops : sub(t.flies, { v: fmtDv(p.arrivalSpeed, lang) });
+  $('verdict').textContent = sub(t.verdict, { star: starName(star), t: fmtTime(p.tEarth, lang), tau: fmtTime(p.tShip, lang), how });
+  const st = (label, val, id, cls) => '<div class="stat"><span>' + label + '</span><b id="' + id + '"' + (cls ? ' class="' + cls + '"' : '') + '>' + val + '</b></div>';
+  const isLaser = p.engineId === 'laser', isSail = p.engineId === 'sail';
+  const powerLabel = isLaser ? t.beam : t.power;
+  const fuelOrPower = (isSail || isLaser) ? st(powerLabel, fmtPower(p.power, lang), 'o-power') : st(t.fuel, fmtMassSci(p.fuelMass, lang), 'o-fuel') + st(t.power, fmtPower(p.power, lang), 'o-power');
+  $('stats').innerHTML =
+    st(t.tE, fmtTime(p.tEarth, lang), 'o-te') + st(t.tS, fmtTime(p.tShip, lang), 'o-ts') +
+    st(t.dv, fmtDv(p.dv, lang), 'o-dv') + st(t.vmax, fmtBetaC(p.betaMax, lang) + ' (' + fmtDv(p.vMax, lang) + ')', 'o-vmax') +
+    st(t.gamma, fmtGamma(p.gammaMax, lang), 'o-gamma') + st(t.arr, p.brake ? '0' : fmtDv(p.arrivalSpeed, lang), 'o-arr') +
+    fuelOrPower +
+    st(t.energy, fmtEnergy(p.energy, lang) + ' (' + fmtWorldYears(p.energy, lang) + ')', 'o-energy') +
+    st(t.budget, fmtBudgetVerdict(p, lang), 'o-budget', p.withinBudget ? 'yes-mark' : 'bad-mark') +
+    st(t.loss, p.brake ? fmtFrac(p.brakeLoss, lang) : t.na, 'o-loss') +
+    st(t.ratio, fmtSci(p.massRatio, lang), 'o-mass');
+  document.body.setAttribute('data-ready', '1');
+}
+
+function applyLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  document.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el.getAttribute('data-lang') === l));
+  document.querySelectorAll('#langtoggle span').forEach((el) => el.classList.toggle('active', el.getAttribute('data-set') === l));
+  fillSelects();
+  render();
+}
+$('star').addEventListener('change', () => { cur.star = $('star').value; render(); });
+$('eng').addEventListener('change', () => { cur.engine = $('eng').value; render(); });
+$('pl').addEventListener('input', () => { cur.payload = sliderToPayload(+$('pl').value); render(); });
+$('bd').addEventListener('input', () => { cur.budget = sliderToBudget(+$('bd').value); render(); });
+$('ag').addEventListener('input', () => { cur.accelG = gOf(+$('ag').value); render(); });
+$('pw').addEventListener('input', () => { cur.laserPower = sliderToPower(+$('pw').value); render(); });
+$('ar').addEventListener('input', () => { cur.laserArea = sliderToArea(+$('ar').value); render(); });
+$('brake').addEventListener('change', () => { cur.brake = $('brake').checked; render(); });
+$('langtoggle').addEventListener('click', (ev) => {
+  const s = ev.target.closest('span'); if (!s) return;
+  const l = s.getAttribute('data-set'); applyLang(l);
+  try { localStorage.setItem('iss_lang', l); } catch (e) {}
+});
+applyLang(lang);
+</script>
+</body>
+</html>

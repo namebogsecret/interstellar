@@ -224,7 +224,7 @@ orbital flight is untouched — then blooms dramatically as you burn toward *c*.
 > bodies don't perturb each other — appropriate simplifications for a real-time
 > sim. The *kinematics* of motion near light speed are fully special-relativistic.
 
-**How this is checked:** the claims above are covered by a 58-file regression
+**How this is checked:** the claims above are covered by a 59-file regression
 suite (`bash tests/run.sh`) with explicit reference formulas and tolerances —
 see [`PHYSICS-VERIFICATION.md`](PHYSICS-VERIFICATION.md) for exactly what is,
 and isn't, gated (also published at
@@ -319,6 +319,15 @@ approximation, colours qualitative); azimuthal equidistant projection. Pure core
 positions (RA/Dec J2000) and V magnitudes in `js/data/neighbors.js` are reference values
 recalled from memory, not cross-checked against a live catalogue; tests
 `tests/porthole.contract.test.mjs`, smoke `tests/smoke_porthole.py`.
+
+[`mission.html`](mission.html) — mission builder: pick one of the 50 nearest stars, an engine
+(chemical / ion / nuclear-thermal / fusion / solar sail / laser sail / ideal photon rocket),
+payload and energy budget; one plan with Earth and ship time, delta-v, peak speed, propellant
+or beam power, energy vs budget and the start mass burnt on braking (sails cannot brake).
+Pure core `js/physics/mission.js` composes `engines.js`, `lasersail.js` and `flight.js`
+(no formulas of its own besides the photon-rocket mass ratio and the proper-time split of
+the coasting leg); view helpers `js/verify/mission-view.js`; tests
+`tests/mission.contract.test.mjs`, smoke `tests/smoke_mission.py`.
 
 ## Known limitations
 
