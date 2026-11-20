@@ -189,22 +189,22 @@
 import { planMission, canBrake, ENGINE_IDS, ENGINES, NEIGHBORS, DEFAULTS } from './js/physics/mission.js';
 import { sliderToPayload, payloadToSlider, sliderToBudget, budgetToSlider, sliderToPower, powerToSlider, sliderToArea, areaToSlider,
   gOf, vOf, fmtMassKg, fmtPower, fmtArea, fmtBetaC, fmtGamma, fmtTime, fmtDv, fmtEnergy, fmtMassSci, fmtWorldYears, fmtBudgetVerdict,
-  fmtFrac, fmtLY, fmtSci, ENGINE_LABELS } from './js/verify/mission-view.js';
+  fmtFrac, fmtLY, fmtOverBy, fmtSci, ENGINE_LABELS } from './js/verify/mission-view.js';
 
 const T = {
   en: { tE: 'Time, Earth clock', tS: 'Time, ship clock', dv: 'Total delta-v', vmax: 'Peak speed', gamma: 'Lorentz factor γ', arr: 'Speed at the target',
     fuel: 'Propellant used', power: 'Power', energy: 'Energy spent', budget: 'Energy vs budget', loss: 'Start mass burnt on braking', ratio: 'Mass ratio (start/end)',
-    verdict: 'Reaches {star} in {t} (Earth clock), {tau} on board; {how}.', stops: 'stops at the target', flies: 'flies past at {v}',
+    verdict: 'Target: {star}. Arrives in {t} (Earth clock), {tau} on board; {how}.', stops: 'stops at the target', flies: 'flies past at {v}',
     noBrake: 'Braking is impossible for a sail: it flies past the star at full speed.', noBrakeHint: 'Not available: a sail has nothing to brake with — it can only fly past.',
     flyby: 'Flyby: the craft does not slow down and passes the star at {v}.', rel: 'Relativistic regime (β > 0.1): the rocket legs of this model are still Newtonian — treat the numbers as estimates.',
     over: 'Over budget: the mission needs {r} the energy you allowed ({e}).', overheat: 'Heat warning: the sail intensity exceeds the assumed tolerance (laser sail page). Shown for comparison only.',
     bad: 'This mission cannot be planned: {reason}', hintBd: '≈ {y}', beam: 'Laser beam power', na: '—', yes: 'yes', ly: 'ly' },
   ru: { tE: 'Время, часы Земли', tS: 'Время, часы корабля', dv: 'Полное Δv', vmax: 'Пиковая скорость', gamma: 'Лоренц-фактор γ', arr: 'Скорость у цели',
     fuel: 'Расход рабочего тела', power: 'Мощность', energy: 'Затраченная энергия', budget: 'Энергия и бюджет', loss: 'Доля стартовой массы, сожжённая на торможение', ratio: 'Массовое число (старт/финиш)',
-    verdict: 'Долетит до {star} за {t} (часы Земли), {tau} на борту; {how}.', stops: 'остановится у цели', flies: 'пролетит мимо со скоростью {v}',
+    verdict: 'Цель — {star}: долетит за {t} (часы Земли), {tau} на борту; {how}.', stops: 'остановится у цели', flies: 'пролетит мимо со скоростью {v}',
     noBrake: 'Торможение невозможно: парус пролетает мимо звезды на полной скорости.', noBrakeHint: 'Недоступно: парусу нечем тормозить — он может только пролететь мимо.',
     flyby: 'Пролёт: аппарат не тормозит и проносится мимо звезды со скоростью {v}.', rel: 'Релятивистский режим (β > 0,1): ракетные участки модели всё ещё ньютоновские — числа ориентировочные.',
-    over: 'Превышение бюджета: миссии нужно в {r} раз больше энергии, чем вы разрешили ({e}).', overheat: 'Предупреждение о нагреве: интенсивность на парусе выше принятой стойкости (см. страницу лазерного паруса). Показано только для сравнения.',
+    over: 'Превышение бюджета: миссии нужно {r} больше энергии, чем вы разрешили ({e}).', overheat: 'Предупреждение о нагреве: интенсивность на парусе выше принятой стойкости (см. страницу лазерного паруса). Показано только для сравнения.',
     bad: 'Эту миссию не рассчитать: {reason}', hintBd: '≈ {y}', beam: 'Мощность луча', na: '—', yes: 'да', ly: 'св. лет' },
 };
 
@@ -261,8 +261,8 @@ function render() {
   const warns = [];
   if (p.flags.includes('cannotBrake')) warns.push('<div class="note warn">' + t.noBrake + '</div>');
   else if (!p.brake) warns.push('<div class="note">' + sub(t.flyby, { v: fmtDv(p.arrivalSpeed, lang) }) + '</div>');
-  if (p.flags.includes('relativistic')) warns.push('<div class="note">' + t.rel + '</div>');
-  if (p.flags.includes('overBudget')) warns.push('<div class="note warn">' + sub(t.over, { r: '×' + (p.budgetRatio >= 100 ? Math.round(p.budgetRatio) : p.budgetRatio.toFixed(1)), e: fmtEnergy(p.budget, lang) }) + '</div>');
+  if (p.flags.includes('relativistic') && !['photon', 'laser'].includes(p.engineId)) warns.push('<div class="note">' + t.rel + '</div>');
+  if (p.flags.includes('overBudget')) warns.push('<div class="note warn">' + sub(t.over, { r: fmtOverBy(p.budgetRatio, lang), e: fmtEnergy(p.budget, lang) }) + '</div>');
   if (p.flags.includes('overheat')) warns.push('<div class="note warn">' + t.overheat + '</div>');
   $('warn').innerHTML = warns.join('');
 

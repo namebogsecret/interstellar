@@ -2,17 +2,23 @@
 import { fmt as fmtBase } from './wwr-view.js';
 import { fmtTime as fmtTimeBase, fmtSci as fmtSciBase } from './engines-view.js';
 
+import * as LS from './lasersail-view.js';
+import { fmtDv as fmtDvBase } from './engines-view.js';
 export {
-  fmtMassKg, fmtPower, fmtArea, fmtBetaC, fmtGamma,
   sliderToPower, powerToSlider, sliderToArea, areaToSlider, POWER_MIN, POWER_MAX, AREA_MIN, AREA_MAX,
 } from './lasersail-view.js';
-export { fmtDv } from './engines-view.js';
 export { A_MIN, A_MAX, gOf, vOf } from './wwr-view.js';
 
 // Russian text needs a decimal comma where the shared formatters emit a point.
 const dec = (s, lang) => (lang === 'ru' ? s.replace(/(\d)\.(\d)/g, '$1,$2') : s);
 export const fmt = (n, lang = 'en') => dec(fmtBase(n), lang);
 export const fmtTime = (sec, lang = 'en') => dec(fmtTimeBase(sec, lang), lang);
+export const fmtMassKg = (x, lang = 'en') => dec(LS.fmtMassKg(x, lang), lang);
+export const fmtPower = (x, lang = 'en') => dec(LS.fmtPower(x, lang), lang);
+export const fmtArea = (x, lang = 'en') => dec(LS.fmtArea(x, lang), lang);
+export const fmtBetaC = (x, lang = 'en') => dec(LS.fmtBetaC(x, lang), lang);
+export const fmtGamma = (x, lang = 'en') => dec(LS.fmtGamma(x, lang), lang);
+export const fmtDv = (x, lang = 'en') => dec(fmtDvBase(x, lang), lang);
 export const fmtSci = (x, lang = 'en') => dec(fmtSciBase(x), lang);
 
 // ---- log sliders (0..1000) <-> physical value ----
@@ -53,6 +59,14 @@ export function fmtBudgetVerdict(plan, lang = 'en') {
   const pct = r < 0.01 ? fmtSci(r * 100, lang) : fmt(r * 100, lang);
   if (plan.withinBudget) return ru ? 'в бюджете (' + pct + '% бюджета)' : 'within budget (' + pct + '% of it)';
   return ru ? 'превышение бюджета в ' + fmt(r, lang) + ' раз' : 'over budget ×' + fmt(r, lang);
+}
+// over-budget factor: "×2.6" (EN) / "в 2,6 раза" (RU); same number formatting as the budget row
+export function fmtOverBy(r, lang = 'en') {
+  const num = r >= 100 ? fmt(Math.round(r), lang) : fmt(r, lang);
+  if (lang !== 'ru') return '×' + num;
+  const plain = num.replace(/\s/g, '').replace(',', '.');
+  const word = num.includes('·') ? 'раз' : Number.isInteger(+plain) ? ruPlural(+plain, ['раз', 'раза', 'раз']) : 'раза';
+  return 'в ' + num + ' ' + word;
 }
 // fraction -> "15,3%"
 export function fmtFrac(f, lang = 'en') {

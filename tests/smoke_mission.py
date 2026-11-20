@@ -100,7 +100,7 @@ def run_viewport(browser, base, label, ctx_kwargs):
         page.select_option("#eng", eng)
         cur = snap()
         check(f"engine {eng}: no NaN/Infinity", not bad(page.inner_text("main")))
-        check(f"engine {eng}: verdict present", "Reaches" in cur[-1], cur[-1][:80])
+        check(f"engine {eng}: verdict present", "Arrives" in cur[-1], cur[-1][:80])
         check(f"engine {eng}: output differs from previous engine", cur != prev)
         prev = cur
         dis = page.is_disabled("#brake")
@@ -155,7 +155,7 @@ def run_viewport(browser, base, label, ctx_kwargs):
     page.click('#langtoggle span[data-set="ru"]')
     check("RU: h1", "СОБЕРИ МИССИЮ" in txt("h1"))
     check("RU: html lang", page.evaluate("document.documentElement.lang") == "ru")
-    check("RU: verdict in Russian", "Долетит" in txt("#verdict"), txt("#verdict")[:60])
+    check("RU: verdict in Russian", "долетит" in txt("#verdict"), txt("#verdict")[:60])
     check("RU: star names in Russian", "Проксима" in page.inner_text("#star option:first-child"))
     check("RU: no NaN/Infinity", not bad(page.inner_text("main")))
     check("RU: lang persisted", page.evaluate("localStorage.getItem('iss_lang')") == "ru")
