@@ -224,7 +224,7 @@ orbital flight is untouched — then blooms dramatically as you burn toward *c*.
 > bodies don't perturb each other — appropriate simplifications for a real-time
 > sim. The *kinematics* of motion near light speed are fully special-relativistic.
 
-**How this is checked:** the claims above are covered by a 57-file regression
+**How this is checked:** the claims above are covered by a 58-file regression
 suite (`bash tests/run.sh`) with explicit reference formulas and tolerances —
 see [`PHYSICS-VERIFICATION.md`](PHYSICS-VERIFICATION.md) for exactly what is,
 and isn't, gated (also published at
@@ -309,6 +309,16 @@ nearest star systems at 1 g (flip-and-burn) and the twins' clocks on a round tri
 Proxima Centauri. Logic in `js/physics/relflight.js` (wraps `neighbors.js` and
 `twins.js`, no formulas of its own); tests `tests/relativistic-flight.contract.test.mjs`,
 smoke `tests/smoke_relativistic_flight.py`.
+
+[`porthole.html`](porthole.html) — the pilot's sky at relativistic speed: the 50 nearest
+stars seen from the Sun's position while flying at beta = v/c towards a chosen star (or
+looking aft). Aberration cos(theta') = (cos theta + beta)/(1 + beta cos theta), Doppler
+D = 1/(gamma(1 - beta cos theta)), T' = D T, brightness shift -2.5 log10(D^4) (bolometric
+approximation, colours qualitative); azimuthal equidistant projection. Pure core
+`js/physics/porthole.js` (uses `gammaFromV` from `relativity.js`, which is untouched);
+positions (RA/Dec J2000) and V magnitudes in `js/data/neighbors.js` are reference values
+recalled from memory, not cross-checked against a live catalogue; tests
+`tests/porthole.contract.test.mjs`, smoke `tests/smoke_porthole.py`.
 
 ## Known limitations
 

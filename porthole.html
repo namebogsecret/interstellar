@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>View from the porthole — Interstellar</title>
+<meta name="description" content="View from the porthole: the pilot's starry sky at relativistic speed. Aberration pulls the stars of the 50 nearest neighbours towards the flight direction, the Doppler effect recolours and brightens them. Interactive, any target star, forward or aft view." />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="120x120" href="/favicon-120.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<style>
+  :root { --fg: #9fe7ff; --dim: #5b7c88; --bg: rgba(6, 14, 20, 0.66); --line: rgba(120, 200, 230, 0.18); --card: rgba(8, 16, 24, 0.92); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #05070c; }
+  body { color: #cfeefc; font: 14px/1.65 "SF Mono", "Cascadia Code", Menlo, Consolas, monospace; padding: 0 0 60px; overflow-x: hidden; }
+  a { color: #7fb3ff; }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 22px 0; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  header.top a.home { color: var(--dim); text-decoration: none; }
+  header.top a.home:hover { color: var(--fg); }
+  #langtoggle { display: flex; gap: 3px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+  #langtoggle span { cursor: pointer; padding: 3px 10px; border-radius: 5px; color: var(--dim); font-size: 12px; }
+  #langtoggle span.active { color: #eaffff; background: rgba(60,116,148,0.5); }
+  h1 { font-size: 22px; letter-spacing: 0.06em; color: #bfeeff; margin: 0 0 6px; overflow-wrap: anywhere; }
+  h2 { font-size: 15px; letter-spacing: 0.05em; color: #d7f6ff; margin: 30px 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  p { color: #b9d8e6; margin: 10px 0; }
+  b, strong { color: #eaffff; }
+  code { background: rgba(120,200,230,0.1); border-radius: 3px; padding: 1px 5px; color: #d7f6ff; overflow-wrap: anywhere; }
+  .note { background: rgba(40,90,120,0.18); border-left: 2px solid #4a8fb0; padding: 10px 14px; border-radius: 5px; color: #bfe6f4; margin: 14px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 14px 0; min-width: 0; }
+  .ctl { margin: 10px 0 14px; }
+  .ctl label { display: flex; justify-content: space-between; gap: 10px; color: var(--dim); font-size: 12px; }
+  .ctl label output { color: #eaffff; font-weight: 700; }
+  .ctl input[type=range] { width: 100%; min-width: 0; margin: 6px 0 2px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+  .presets button { background: rgba(60,116,148,0.25); color: #cfeefc; border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+  .presets button:hover, .presets button.on { background: rgba(60,116,148,0.55); }
+  .big { font-size: 15px; color: #eaffff; margin: 6px 0 10px; overflow-wrap: anywhere; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0; }
+  .stat { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0; }
+  .stat span { display: block; color: var(--dim); font-size: 11.5px; }
+  .stat b { font-size: 14px; overflow-wrap: anywhere; }
+  .warn { color: #ffd28a; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid rgba(120,200,230,0.1); overflow-wrap: anywhere; }
+  th { color: var(--dim); font-weight: 600; font-size: 11.5px; }
+  tr.yes td { background: rgba(95,227,161,0.07); }
+  .yes-mark { color: #5fe3a1; font-weight: 700; }
+  .no-mark { color: var(--dim); }
+  footer.bottom { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
+  @media (max-width: 480px) {
+    main { padding: 28px 14px 0; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    thead { display: none; }
+    tr { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; padding: 4px 8px; }
+    td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 10px; text-align: right; }
+    td:not([data-label])::before { content: none; }
+    td::before { content: attr(data-label); color: var(--dim); text-align: left; flex: 0 0 42%; }
+  }
+  [data-lang] { display: none; }
+  [data-lang].active { display: block; }
+  span[data-lang].active, b[data-lang].active { display: inline; }
+
+  .ctl select { width: 100%; background: rgba(8,16,24,0.92); color: #eaffff; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; margin-top: 6px; }
+  .chart { margin: 8px 0; }
+  .crow { margin: 9px 0; min-width: 0; }
+  .crow .lbl { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: #cfeefc; }
+  .crow .lbl em { font-style: normal; color: #eaffff; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+  .crow svg { display: block; width: 100%; height: 16px; margin-top: 3px; }
+  .axis { position: relative; height: 16px; color: var(--dim); font-size: 10.5px; margin-top: 2px; }
+  .axis span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+  .axis span.first { transform: none; } .axis span.last { transform: translateX(-100%); }
+  .oos { color: #ffd28a; font-size: 10.5px; margin-left: 5px; font-weight: 400; }
+  .badge { display: inline-block; border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; margin: 1px 3px 1px 0; font-size: 11px; color: #ffd28a; white-space: nowrap; }
+  .badge.bad { color: #ff9c9c; }
+  .legend { color: var(--dim); font-size: 11.5px; margin: 4px 0; }
+  ul.src { padding-left: 18px; margin: 6px 0; } ul.src li { margin: 3px 0; overflow-wrap: anywhere; }
+
+  [hidden] { display: none !important; }
+  .stat span[data-lang]:not(.active) { display: none; }
+  .stat span[data-lang].active { display: block; }
+  .ctl .presets { margin-top: 6px; }
+  canvas#sky { display: block; width: 100%; aspect-ratio: 1 / 1; max-height: 78vh; margin: 0 auto; background: #02030a; border-radius: 8px; touch-action: pan-y; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .seg { display: flex; gap: 6px; margin-top: 6px; }
+  .seg button { flex: 1; background: rgba(60,116,148,0.25); color: #cfeefc; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+  .seg button.on { background: rgba(60,116,148,0.6); color: #fff; }
+  table.tip td.n, table.tip th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  tr.tgt td { background: rgba(255,210,138,0.08); }
+  @media (max-width: 480px) { .row2 { grid-template-columns: 1fr; } td.n { text-align: right; } }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <a class="home" href="/">&larr; Interstellar</a>
+    <div id="langtoggle"><span data-set="en">EN</span><span data-set="ru">RU</span></div>
+  </header>
+
+<h1><span data-lang="en" class="active">VIEW FROM THE PORTHOLE</span><span data-lang="ru">ВИД ИЗ ИЛЛЮМИНАТОРА</span></h1>
+
+<div data-lang="en" class="active">
+  <p>The sky as the pilot sees it when flying at a fraction of the speed of light towards a chosen star. Light aberration sweeps the stars forward into a shrinking circle ahead; the Doppler effect turns them blue and bright in front, red and dim behind. The dots are the 50 nearest stars and brown dwarfs, seen from the Sun&rsquo;s position.</p>
+</div>
+<div data-lang="ru">
+  <p>Небо глазами пилота, летящего с долей скорости света к выбранной звезде. Аберрация света сгоняет звёзды вперёд, в сжимающийся круг по курсу; эффект Доплера делает их синими и яркими впереди, красными и тусклыми позади. Точки &mdash; 50 ближайших звёзд и коричневых карликов, как они видны из точки, где сейчас Солнце.</p>
+</div>
+
+<div class="card">
+  <div class="ctl">
+    <label for="beta-slider"><span><span data-lang="en" class="active">Speed &beta; = v/c</span><span data-lang="ru">Скорость &beta; = v/c</span></span><output id="beta-val"></output></label>
+    <input id="beta-slider" type="range" min="0" max="1000" step="1" value="0" />
+    <div class="presets" id="bpre"><button data-b="0">0</button><button data-b="0.5">0.5</button><button data-b="0.9">0.9</button><button data-b="0.99">0.99</button><button data-b="0.999">0.999</button><button data-b="0.9999">0.9999</button></div>
+    <div class="legend"><span data-lang="en" class="active">The scale is logarithmic in 1&minus;&beta;, so 0.9, 0.99 and 0.999 are all within easy reach.</span><span data-lang="ru">Шкала логарифмическая по 1&minus;&beta;, поэтому 0,9, 0,99 и 0,999 легко достижимы.</span></div>
+  </div>
+  <div class="row2">
+    <div class="ctl">
+      <label for="target"><span><span data-lang="en" class="active">Target star (flight direction)</span><span data-lang="ru">Звезда-цель (направление полёта)</span></span></label>
+      <select id="target"></select>
+    </div>
+    <div class="ctl">
+      <label><span><span data-lang="en" class="active">Look</span><span data-lang="ru">Куда смотрим</span></span></label>
+      <div class="seg" id="dir"><button id="dir-fwd" data-dir="forward" class="on"><span data-lang="en" class="active">Forward</span><span data-lang="ru">Вперёд</span></button><button id="dir-back" data-dir="backward"><span data-lang="en" class="active">Backward</span><span data-lang="ru">Назад</span></button></div>
+    </div>
+  </div>
+  <div class="ctl">
+    <label for="fov"><span><span data-lang="en" class="active">Field of view (angle from the centre)</span><span data-lang="ru">Поле зрения (угол от центра)</span></span></label>
+    <select id="fov">
+      <option value="180">180&deg;</option>
+      <option value="90">90&deg;</option>
+      <option value="30">30&deg;</option>
+      <option value="10">10&deg;</option>
+    </select>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><span data-lang="en" class="active">Speed</span><span data-lang="ru">Скорость</span><b id="out-beta"></b></div>
+  <div class="stat"><span data-lang="en" class="active">Lorentz factor &gamma;</span><span data-lang="ru">Фактор Лоренца &gamma;</span><b id="out-gamma"></b></div>
+  <div class="stat"><span data-lang="en" class="active">Stars within 10&deg; of the view centre</span><span data-lang="ru">Звёзд в 10&deg; от центра обзора</span><b id="out-n10"></b></div>
+</div>
+
+<div class="card"><canvas id="sky" role="img" aria-label="Star sky seen from the porthole"></canvas></div>
+<div class="legend"><span data-lang="en" class="active">Azimuthal equidistant projection: distance from the centre = angle from the view axis; the direction (position angle) around the axis is preserved. Rings every 30&deg;. Colour = apparent temperature T&prime;, size = apparent brightness.</span><span data-lang="ru">Азимутальная равнопромежуточная проекция: расстояние от центра = угол от оси взгляда; направление вокруг оси сохраняется. Кольца через 30&deg;. Цвет = видимая температура T&prime;, размер = видимая яркость.</span></div>
+
+<h2><span data-lang="en" class="active">Cheat sheet: target and the brightest stars</span><span data-lang="ru">Подсказка: цель и самые яркие звёзды</span></h2>
+<div class="card">
+  <table class="tip" id="tip">
+    <thead><tr>
+      <th><span data-lang="en" class="active">Star</span><span data-lang="ru">Звезда</span></th>
+      <th class="n">&theta;, &deg;<br><span data-lang="en" class="active">(at rest)</span><span data-lang="ru">(в покое)</span></th>
+      <th class="n">&theta;&prime;, &deg;<br><span data-lang="en" class="active">(seen)</span><span data-lang="ru">(видно)</span></th>
+      <th class="n">D</th>
+      <th class="n">T, K</th>
+      <th class="n">T&prime;, K</th>
+      <th class="n">&Delta;m</th>
+    </tr></thead>
+    <tbody id="tip-body"></tbody>
+  </table>
+  <div class="legend"><span data-lang="en" class="active">&theta; is measured from the flight direction. The target is always at &theta; = 0 (it stays dead ahead). Temperatures T come from a coarse spectral-class table (approximate).</span><span data-lang="ru">&theta; отсчитывается от направления полёта. Цель всегда при &theta; = 0 (она остаётся строго по курсу). Температуры T берутся из грубой таблицы по спектральному классу (приближённо).</span></div>
+</div>
+
+<h2><span data-lang="en" class="active">What you are looking at</span><span data-lang="ru">Что мы видим</span></h2>
+<div data-lang="en" class="active">
+  <div class="note">
+    <p><b>Aberration.</b> A star at angle &theta; from the flight direction (in the Sun&rsquo;s frame) appears at &theta;&prime; with cos&theta;&prime; = (cos&theta; + &beta;)/(1 + &beta;cos&theta;). Stars slide forward; at &beta; = 0.5 a star at 90&deg; is seen at 60&deg;. Half of the sky ends up inside a circle that shrinks as &beta; grows.</p>
+    <p><b>Doppler and colour.</b> D = 1/(&gamma;(1 &minus; &beta;cos&theta;)). Frequencies, and so colour temperatures, scale by D: T&prime; = D&middot;T. Ahead D &gt; 1 (blueshift, hotter), behind D &lt; 1.</p>
+    <p><b>Brightness (approximation).</b> We shift the apparent magnitude by &Delta;m = &minus;2.5&middot;log<sub>10</sub>(D<sup>4</sup>), the bolometric law for a point source. It ignores the filter band: a real eye or camera sees an infrared star turn visible, an ultraviolet one fade out of the band. So colours and brightness here are qualitative, not photometry.</p>
+    <p><b>Data and limits.</b> Star positions (J2000) and magnitudes in <code>js/data/neighbors.js</code> are reference values recalled from memory and not cross-checked against a live catalogue. The viewpoint stays at the Sun (no parallax, no proper motion, no travel time); only direction and light are transformed. Physics: <code>js/physics/porthole.js</code>.</p>
+    <p>Related: <a href="relativistic-flight.html">relativistic flight</a>, <a href="neighbors.html">the 50 nearest stars</a>, <a href="twins.html">twin paradox in transit</a>, <a href="accel.html">accelerating and braking to a star</a>, <a href="/">the simulator</a>.</p>
+  </div>
+</div>
+<div data-lang="ru">
+  <div class="note">
+    <p><b>Аберрация.</b> Звезда на угле &theta; от направления полёта (в системе Солнца) видна под углом &theta;&prime;: cos&theta;&prime; = (cos&theta; + &beta;)/(1 + &beta;cos&theta;). Звёзды сползают вперёд; при &beta; = 0,5 звезда с 90&deg; видна под 60&deg;. Половина неба собирается в круг, который сжимается с ростом &beta;.</p>
+    <p><b>Доплер и цвет.</b> D = 1/(&gamma;(1 &minus; &beta;cos&theta;)). Частоты, а с ними цветовые температуры, умножаются на D: T&prime; = D&middot;T. Впереди D &gt; 1 (синее смещение, горячее), позади D &lt; 1.</p>
+    <p><b>Яркость (приближённо).</b> Видимая звёздная величина сдвигается на &Delta;m = &minus;2,5&middot;lg(D<sup>4</sup>) &mdash; болометрический закон для точечного источника. Он не учитывает полосу фильтра: настоящий глаз или камера увидит, как инфракрасная звезда становится видимой, а ультрафиолетовая уходит из полосы. Поэтому цвета и яркость здесь качественные, это не фотометрия.</p>
+    <p><b>Данные и ограничения.</b> Положения звёзд (J2000) и звёздные величины в <code>js/data/neighbors.js</code> &mdash; справочные значения по памяти, не сверенные с живым каталогом. Точка обзора остаётся у Солнца (без параллакса, собственного движения и времени пути); преобразуются только направления и свет. Физика: <code>js/physics/porthole.js</code>.</p>
+    <p>См. также: <a href="relativistic-flight.html">релятивистский полёт</a>, <a href="neighbors.html">50 ближайших звёзд</a>, <a href="twins.html">парадокс близнецов в пути</a>, <a href="accel.html">разгон и торможение до звезды</a>, <a href="/">симулятор</a>.</p>
+  </div>
+</div>
+
+<p>
+  <a href="/"><span data-lang="en" class="active">Back to the simulator</span><span data-lang="ru">Назад к симулятору</span></a> &middot;
+  <a href="relativistic-flight.html"><span data-lang="en" class="active">Relativistic flight</span><span data-lang="ru">Релятивистский полёт</span></a> &middot;
+  <a href="neighbors.html"><span data-lang="en" class="active">Neighbours in the galaxy</span><span data-lang="ru">Соседи по галактике</span></a>
+</p>
+
+<footer class="bottom">
+  <span data-lang="en" class="active">Formulas: cos&theta;&prime; = (cos&theta; + &beta;)/(1 + &beta;cos&theta;); D = 1/(&gamma;(1 &minus; &beta;cos&theta;)); T&prime; = D&middot;T; &Delta;m = &minus;2.5&middot;log<sub>10</sub>(D<sup>4</sup>).</span>
+  <span data-lang="ru">Формулы: cos&theta;&prime; = (cos&theta; + &beta;)/(1 + &beta;cos&theta;); D = 1/(&gamma;(1 &minus; &beta;cos&theta;)); T&prime; = D&middot;T; &Delta;m = &minus;2,5&middot;lg(D<sup>4</sup>).</span>
+</footer>
+</main>
+
+<script type="module">
+import { NEIGHBORS } from './js/data/neighbors.js';
+import { skyView, betaFromSlider, sliderFromBeta } from './js/physics/porthole.js';
+
+const T = {
+  en: { aria: 'Star sky seen from the porthole', fwd: 'flight direction', aft: 'astern', c: 'c', none: '—' },
+  ru: { aria: 'Звёздное небо в иллюминаторе', fwd: 'направление полёта', aft: 'корма', c: 'c', none: '—' },
+};
+let lang = 'en';
+try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en' ? s : ((navigator.language || 'en').slice(0, 2) === 'ru' ? 'ru' : 'en'); } catch (e) {}
+
+const $ = (id) => document.getElementById(id);
+const state = { target: 'proxima', mode: 'forward' };
+function num(v, d) {
+  if (!Number.isFinite(v)) return '—';
+  let s = Math.abs(v) >= 1e6 ? v.toExponential(2) : v.toFixed(d);
+  if (lang === 'ru') s = s.replace('.', ',');
+  return s;
+}
+function sig(v) { const a = Math.abs(v); return num(v, a >= 1000 ? 0 : a >= 100 ? 1 : a >= 10 ? 2 : 3); }
+const starName = (s) => (lang === 'ru' && s.ru ? s.ru : s.name);
+const betaNow = () => betaFromSlider(+$('beta-slider').value / 1000);
+
+// Blackbody colour (Tanner Helland approximation), T clamped to 1000..40000 K.
+function bbRGB(Tk) {
+  const t = Math.min(40000, Math.max(1000, Tk)) / 100;
+  const cl = (v) => Math.max(0, Math.min(255, v));
+  const r = t <= 66 ? 255 : cl(329.698727446 * Math.pow(t - 60, -0.1332047592));
+  const g = t <= 66 ? cl(99.4708025861 * Math.log(t) - 161.1195681661) : cl(288.1221695283 * Math.pow(t - 60, -0.0755148492));
+  const b = t >= 66 ? 255 : t <= 19 ? 0 : cl(138.5177312231 * Math.log(t - 10) - 305.0447927307);
+  return [Math.round(r), Math.round(g), Math.round(b)];
+}
+
+function setupCanvas(cv) {
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = cv.clientHeight;
+  cv.width = Math.max(1, Math.round(w * dpr)); cv.height = Math.max(1, Math.round(h * dpr));
+  const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  return { g, w, h };
+}
+
+function drawSky(view) {
+  const cv = $('sky');
+  const { g, w, h } = setupCanvas(cv);
+  const fov = (+$('fov').value) * Math.PI / 180;
+  const R = Math.min(w, h) / 2 - 6, cx = w / 2, cy = h / 2;
+  const k = R / fov; // px per radian of angle from the view axis
+  g.fillStyle = '#02030a'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = 'rgba(120,200,230,0.16)'; g.fillStyle = '#5b7c88'; g.lineWidth = 1; g.font = '10.5px monospace';
+  g.textAlign = 'left'; g.textBaseline = 'bottom';
+  const ringStep = fov > 1.5 ? 30 : fov > 0.4 ? 10 : 5;
+  for (let a = ringStep; a <= fov * 180 / Math.PI + 1e-6; a += ringStep) {
+    g.beginPath(); g.arc(cx, cy, a * Math.PI / 180 * k, 0, 2 * Math.PI); g.stroke();
+    g.fillText(a + '°', cx + a * Math.PI / 180 * k * 0.7071 + 2, cy - a * Math.PI / 180 * k * 0.7071);
+  }
+  g.beginPath(); g.moveTo(cx - 6, cy); g.lineTo(cx + 6, cy); g.moveTo(cx, cy - 6); g.lineTo(cx, cy + 6); g.stroke();
+  g.fillStyle = '#5b7c88'; g.textAlign = 'center'; g.textBaseline = 'top';
+  g.fillText(view.mode === 'forward' ? '↑ ' + T[lang].fwd : '↑ ' + T[lang].aft, cx, 3);
+
+  const pts = [];
+  let sig2 = 0;
+  for (const s of view.stars) {
+    if (view.mode === 'backward' && s.theta < 1e-4) continue; // the target is the opposite pole: no position angle
+    const X = cx + s.x * k, Y = cy - s.y * k;
+    sig2 += Math.round(s.x * 1e4) * 7 + Math.round(s.y * 1e4) * 13;
+    if (s.phi > fov) continue;
+    if (X < -10 || X > w + 10 || Y < -10 || Y > h + 10) continue;
+    pts.push({ s, X, Y });
+  }
+  cv.dataset.sig = String(sig2);
+  pts.sort((a, b) => (b.s.mag ?? 99) - (a.s.mag ?? 99)); // faint first, bright on top
+  for (const { s, X, Y } of pts) {
+    const [r, gg, b] = bbRGB(s.Tp);
+    if (s.mag === null) {
+      g.strokeStyle = `rgba(${r},${gg},${b},0.55)`; g.lineWidth = 1;
+      g.beginPath(); g.arc(X, Y, 2.2, 0, 2 * Math.PI); g.stroke();
+      continue;
+    }
+    const size = Math.max(1.1, Math.min(8, 1.3 + (8 - s.mag) * 0.5));
+    const alpha = Math.max(0.35, Math.min(1, 0.45 + (12 - s.mag) * 0.06));
+    g.fillStyle = `rgba(${r},${gg},${b},${alpha})`;
+    g.beginPath(); g.arc(X, Y, size, 0, 2 * Math.PI); g.fill();
+  }
+  // labels: target + the brightest, greedy, no overlaps
+  const labelled = [];
+  const cand = pts.slice().sort((a, b) => (b.s.id === view.target.id) - (a.s.id === view.target.id) || (a.s.mag ?? 99) - (b.s.mag ?? 99)); // target first
+  g.font = '11px monospace'; g.textBaseline = 'middle';
+  let n = 0;
+  for (const p of cand) {
+    const isT = p.s.id === view.target.id;
+    if (!isT && (n >= 9 || p.s.mag === null || p.s.mag > 9)) continue;
+    if (!isT && labelled.some((q) => Math.abs(q.X - p.X) < 70 && Math.abs(q.Y - p.Y) < 13)) continue;
+    const label = starName(p.s);
+    const right = p.X < w - 130;
+    g.textAlign = right ? 'left' : 'right';
+    g.fillStyle = isT ? '#ffd28a' : '#9fe7ff';
+    g.fillText(label, p.X + (right ? 8 : -8), p.Y - 2);
+    labelled.push(p); if (!isT) n++;
+  }
+  return pts.length;
+}
+
+function rowFor(s, isTarget) {
+  const tr = document.createElement('tr');
+  if (isTarget) tr.className = 'tgt';
+  const cells = [
+    [null, starName(s)],
+    ['n', num(s.theta * 180 / Math.PI, 1)],
+    ['n', num(s.thetaP * 180 / Math.PI, 1)],
+    ['n', sig(s.D)],
+    ['n', sig(s.T)],
+    ['n', sig(s.Tp)],
+    ['n', (s.dMag > 0 ? '+' : '') + num(s.dMag, 1)],
+  ];
+  const labels = lang === 'ru' ? ['Звезда', 'θ, ° (в покое)', "θ', ° (видно)", 'D', 'T, K', "T', K", 'Δm'] : ['Star', 'θ, ° (at rest)', "θ', ° (seen)", 'D', 'T, K', "T', K", 'Δm'];
+  cells.forEach(([cls, txt], i) => {
+    const td = document.createElement('td');
+    if (cls) td.className = cls;
+    td.setAttribute('data-label', labels[i]);
+    td.textContent = txt;
+    tr.appendChild(td);
+  });
+  return tr;
+}
+
+function render() {
+  const t = T[lang];
+  const beta = betaNow();
+  const view = skyView({ beta, target: state.target, mode: state.mode });
+  $('beta-val').textContent = 'β = ' + (beta > 0.99 ? num(beta, Math.min(7, Math.ceil(-Math.log10(1 - beta)) + 1)) : num(beta, 3));
+  $('out-beta').textContent = (beta > 0.99 ? num(beta, Math.min(7, Math.ceil(-Math.log10(1 - beta)) + 1)) : num(beta, 4)) + ' ' + t.c;
+  $('out-gamma').textContent = 'γ = ' + sig(view.gamma);
+  $('out-n10').textContent = String(view.stars.filter((s) => s.phi <= 10 * Math.PI / 180 && !(view.mode === 'backward' && s.theta < 1e-4)).length);
+  document.querySelectorAll('#bpre button').forEach((b) => b.classList.toggle('on', Math.abs(+b.dataset.b - beta) < 0.0005 + (1 - +b.dataset.b) * 0.05));
+  document.querySelectorAll('#dir button').forEach((b) => b.classList.toggle('on', b.dataset.dir === state.mode));
+  $('sky').setAttribute('aria-label', t.aria);
+  drawSky(view);
+  const body = $('tip-body'); body.replaceChildren();
+  const tgt = view.stars.find((s) => s.id === view.target.id);
+  if (tgt) body.appendChild(rowFor(tgt, true));
+  view.stars.filter((s) => s !== tgt && s.mag !== null).sort((a, b) => a.mag - b.mag).slice(0, 7).forEach((s) => body.appendChild(rowFor(s, false)));
+}
+
+function fillTargets() {
+  const sel = $('target'); const cur = state.target; sel.replaceChildren();
+  for (const s of NEIGHBORS) { const o = document.createElement('option'); o.value = s.id; o.textContent = starName(s) + ' (' + num(s.ly, 2) + (lang === 'ru' ? ' св. л.)' : ' ly)'); sel.appendChild(o); }
+  sel.value = cur;
+}
+
+function applyLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  document.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el.getAttribute('data-lang') === l));
+  document.querySelectorAll('#langtoggle span').forEach((el) => el.classList.toggle('active', el.getAttribute('data-set') === l));
+  fillTargets();
+  render();
+}
+$('beta-slider').addEventListener('input', render);
+$('fov').addEventListener('change', render);
+$('target').addEventListener('change', () => { state.target = $('target').value; render(); });
+$('dir').addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (b) { state.mode = b.dataset.dir; render(); } });
+$('bpre').addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (b) { $('beta-slider').value = String(Math.round(sliderFromBeta(+b.dataset.b) * 1000)); render(); } });
+$('langtoggle').addEventListener('click', (ev) => {
+  const s = ev.target.closest('span'); if (!s) return;
+  const l = s.getAttribute('data-set'); applyLang(l);
+  try { localStorage.setItem('iss_lang', l); } catch (e) {}
+});
+window.addEventListener('resize', render);
+applyLang(lang);
+document.body.dataset.ready = '1';
+</script>
+</body>
+</html>
