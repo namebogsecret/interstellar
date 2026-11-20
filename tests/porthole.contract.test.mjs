@@ -74,6 +74,10 @@ checks++; assert.throws(() => P.skyView({ beta: 0.5, mode: 'sideways' }), RangeE
 ok(P.teffOfSpectral('G2V') > 5000 && P.teffOfSpectral('G2V') < 6500, 'G2V ~ 5600');
 ok(P.teffOfSpectral('A1V') > P.teffOfSpectral('G2V'), 'A hotter than G');
 ok(P.teffOfSpectral('M5.5Ve') < P.teffOfSpectral('K1V'), 'M cooler than K');
+near(P.teffOfSpectral('DA2'), 25200, 1, 'DA2 ~ 25200 (Sirius B)');
+near(P.teffOfSpectral('DZ7'), 7200, 1, 'DZ7 ~ 7200');
+near(P.teffOfSpectral('DQZ'), 8000, 1e-9, 'DQZ without number = 8000');
+near(P.teffOfSpectral('DA'), 8000, 1e-9, 'DA without number = 8000');
 ok(P.teffOfSpectral('T9') < P.teffOfSpectral('L7.5'), 'T cooler than L');
 for (const s of NEIGHBORS) ok(Number.isFinite(P.teffOfSpectral(s.spectral)) && P.teffOfSpectral(s.spectral) > 0, 'Teff for ' + s.id);
 

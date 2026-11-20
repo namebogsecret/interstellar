@@ -327,7 +327,12 @@ function render() {
   $('out-beta').textContent = (beta > 0.99 ? num(beta, Math.min(7, Math.ceil(-Math.log10(1 - beta)) + 1)) : num(beta, 4)) + ' ' + t.c;
   $('out-gamma').textContent = 'γ = ' + sig(view.gamma);
   $('out-n10').textContent = String(view.stars.filter((s) => s.phi <= 10 * Math.PI / 180 && !(view.mode === 'backward' && s.theta < 1e-4)).length);
-  document.querySelectorAll('#bpre button').forEach((b) => b.classList.toggle('on', Math.abs(+b.dataset.b - beta) < 0.0005 + (1 - +b.dataset.b) * 0.05));
+  { // highlight only the single nearest preset, and only within tolerance
+    const pbs = [...document.querySelectorAll('#bpre button')];
+    let best = null, bd = Infinity;
+    pbs.forEach((b) => { const d = Math.abs(+b.dataset.b - beta); if (d < bd) { bd = d; best = b; } });
+    pbs.forEach((b) => b.classList.toggle('on', b === best && bd < 0.0005 + (1 - +b.dataset.b) * 0.05));
+  }
   document.querySelectorAll('#dir button').forEach((b) => b.classList.toggle('on', b.dataset.dir === state.mode));
   $('sky').setAttribute('aria-label', t.aria);
   drawSky(view);

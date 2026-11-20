@@ -71,6 +71,10 @@ const T_CLASS = { O: 35000, B: 20000, A: 9500, F: 6700, G: 5600, K: 4500, D: 800
 export function teffOfSpectral(spectral) {
   const m = /^(?:sd)?([OBAFGKMLTYD])\s*(\d+(?:\.\d+)?)?/.exec(String(spectral || ''));
   if (!m) return NaN;
+  if (m[1] === 'D') {                       // white dwarf: DA2 -> T ~ 50400/2 = 25200 K (Sirius B); no number -> 8000 K
+    const w = /^D[A-Z]*\s*(\d+(?:\.\d+)?)/.exec(String(spectral));
+    return w && parseFloat(w[1]) > 0 ? 50400 / parseFloat(w[1]) : T_CLASS.D;
+  }
   const sub = m[2] === undefined ? 5 : parseFloat(m[2]);
   switch (m[1]) {
     case 'M': return 3800 - 160 * sub;      // M0 ~3800 K ... M9 ~2400 K
