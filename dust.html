@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Interstellar dust and the shield — Interstellar</title>
+<meta name="description" content="How dangerous is interstellar dust and gas for a craft at 0.05–0.5 c: relativistic energy of one hydrogen atom (MeV) and one dust grain (J, TNT equivalent), shield erosion along the route to any of the 50 nearest stars, shield thickness and mass against the craft mass; upper estimate, assumptions stated." />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="120x120" href="/favicon-120.png" />
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+<style>
+  :root { --fg: #9fe7ff; --dim: #5b7c88; --bg: rgba(6, 14, 20, 0.66); --line: rgba(120, 200, 230, 0.18); --card: rgba(8, 16, 24, 0.92); }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #05070c; }
+  body { color: #cfeefc; font: 14px/1.65 "SF Mono", "Cascadia Code", Menlo, Consolas, monospace; padding: 0 0 60px; overflow-x: hidden; }
+  a { color: #7fb3ff; }
+  main { max-width: 880px; margin: 0 auto; padding: 40px 22px 0; }
+  header.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 22px; }
+  header.top a.home { color: var(--dim); text-decoration: none; }
+  header.top a.home:hover { color: var(--fg); }
+  #langtoggle { display: flex; gap: 3px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 3px; }
+  #langtoggle span { cursor: pointer; padding: 3px 10px; border-radius: 5px; color: var(--dim); font-size: 12px; }
+  #langtoggle span.active { color: #eaffff; background: rgba(60,116,148,0.5); }
+  h1 { font-size: 22px; letter-spacing: 0.06em; color: #bfeeff; margin: 0 0 6px; overflow-wrap: anywhere; }
+  h2 { font-size: 15px; letter-spacing: 0.05em; color: #d7f6ff; margin: 30px 0 10px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  p { color: #b9d8e6; margin: 10px 0; }
+  b, strong { color: #eaffff; }
+  code { background: rgba(120,200,230,0.1); border-radius: 3px; padding: 1px 5px; color: #d7f6ff; overflow-wrap: anywhere; }
+  .note { background: rgba(40,90,120,0.18); border-left: 2px solid #4a8fb0; padding: 10px 14px; border-radius: 5px; color: #bfe6f4; margin: 14px 0; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin: 14px 0; min-width: 0; }
+  .ctl { margin: 10px 0 14px; }
+  .ctl label { display: flex; justify-content: space-between; gap: 10px; color: var(--dim); font-size: 12px; }
+  .ctl label output { color: #eaffff; font-weight: 700; }
+  .ctl input[type=range] { width: 100%; min-width: 0; margin: 6px 0 2px; }
+  .presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+  .presets button { background: rgba(60,116,148,0.25); color: #cfeefc; border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px; font: inherit; font-size: 12px; cursor: pointer; }
+  .presets button:hover, .presets button.on { background: rgba(60,116,148,0.55); }
+  .big { font-size: 15px; color: #eaffff; margin: 6px 0 10px; overflow-wrap: anywhere; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 8px 0; }
+  .stat { border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-width: 0; }
+  .stat span { display: block; color: var(--dim); font-size: 11.5px; }
+  .stat b { font-size: 14px; overflow-wrap: anywhere; }
+  .warn { color: #ffd28a; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 4px; font-size: 12.5px; }
+  th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid rgba(120,200,230,0.1); overflow-wrap: anywhere; }
+  th { color: var(--dim); font-weight: 600; font-size: 11.5px; }
+  tr.yes td { background: rgba(95,227,161,0.07); }
+  .yes-mark { color: #5fe3a1; font-weight: 700; }
+  .no-mark { color: var(--dim); }
+  footer.bottom { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
+  @media (max-width: 480px) {
+    main { padding: 28px 14px 0; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    thead { display: none; }
+    tr { border: 1px solid var(--line); border-radius: 6px; margin: 8px 0; padding: 4px 8px; }
+    td { border: 0; padding: 3px 0; display: flex; justify-content: space-between; gap: 10px; text-align: right; }
+    td:not([data-label])::before { content: none; }
+    td::before { content: attr(data-label); color: var(--dim); text-align: left; flex: 0 0 42%; }
+  }
+  [data-lang] { display: none; }
+  [data-lang].active { display: block; }
+  span[data-lang].active, b[data-lang].active { display: inline; }
+
+  .ctl select { width: 100%; background: rgba(8,16,24,0.92); color: #eaffff; border: 1px solid var(--line); border-radius: 6px; padding: 7px 9px; font: inherit; margin-top: 6px; }
+  .chart { margin: 8px 0; }
+  .crow { margin: 9px 0; min-width: 0; }
+  .crow .lbl { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: #cfeefc; }
+  .crow .lbl em { font-style: normal; color: #eaffff; font-weight: 700; text-align: right; overflow-wrap: anywhere; }
+  .crow svg { display: block; width: 100%; height: 16px; margin-top: 3px; }
+  .axis { position: relative; height: 16px; color: var(--dim); font-size: 10.5px; margin-top: 2px; }
+  .axis span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; }
+  .axis span.first { transform: none; } .axis span.last { transform: translateX(-100%); }
+  .oos { color: #ffd28a; font-size: 10.5px; margin-left: 5px; font-weight: 400; }
+  .badge { display: inline-block; border: 1px solid var(--line); border-radius: 10px; padding: 0 7px; margin: 1px 3px 1px 0; font-size: 11px; color: #ffd28a; white-space: nowrap; }
+  .badge.bad { color: #ff9c9c; }
+  .legend { color: var(--dim); font-size: 11.5px; margin: 4px 0; }
+  .achart { position: relative; margin: 10px 4px 26px 62px; height: 240px; }
+  .achart svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: rgba(120,200,230,0.04); }
+  .achart .yl { position: absolute; left: -60px; width: 56px; text-align: right; transform: translateY(-50%); font-size: 10.5px; color: var(--dim); white-space: nowrap; }
+  .achart .xl { position: absolute; top: 100%; margin-top: 4px; transform: translateX(-50%); font-size: 10.5px; color: var(--dim); white-space: nowrap; }
+  .achart .xl.last { transform: translateX(-100%); }
+  .keys { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: #cfeefc; margin: 4px 0; }
+  .tscroll { overflow-x: auto; }
+  ul.src { padding-left: 18px; margin: 6px 0; } ul.src li { margin: 3px 0; overflow-wrap: anywhere; }
+  .ctl[hidden] { display: none; }
+  .ctl .chk { display: flex; align-items: center; gap: 8px; color: #cfeefc; font-size: 13px; }
+  .ctl .hint { color: var(--dim); font-size: 11.5px; margin-top: 2px; }
+  .bad-mark { color: #ff9c9c; font-weight: 700; }
+  .chartwrap { position: relative; margin: 10px 0 4px; }
+  .chartwrap canvas { display: block; width: 100%; height: 260px; background: rgba(120,200,230,0.04); border-radius: 4px; }
+  .cmp { color: #ffd28a; font-size: 12.5px; margin: 4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <a class="home" href="/">&larr; Interstellar</a>
+    <div id="langtoggle"><span data-set="en">EN</span><span data-set="ru">RU</span></div>
+  </header>
+
+<h1><span data-lang="en" class="active">INTERSTELLAR DUST AND THE SHIELD</span><span data-lang="ru">МЕЖЗВЁЗДНАЯ ПЫЛЬ И ЗАЩИТА</span></h1>
+
+<div data-lang="en" class="active">
+  <p>Space between the stars is not empty: about one hydrogen atom in every ten cubic centimetres, and one percent of that mass in microscopic dust grains. At a tenth of the speed of light and above, every atom is a particle-accelerator proton and every grain hits like a small explosive. This page estimates the energy of one hit, how much of a shield the route to a star eats away, and whether the shield ends up heavier than the craft it protects.</p>
+</div>
+<div data-lang="ru">
+  <p>Пространство между звёздами не пустое: примерно один атом водорода на десять кубических сантиметров и ещё один процент этой массы в виде микроскопических пылинок. На десятой доле скорости света и выше каждый атом &mdash; протон из ускорителя, а каждая пылинка бьёт как маленький заряд взрывчатки. Страница оценивает энергию одного удара, сколько щита съест маршрут до звезды и не окажется ли щит тяжелее самого аппарата.</p>
+</div>
+
+<div id="clampnote"></div>
+
+<h2><span data-lang="en" class="active">1. Impact energy</span><span data-lang="ru">1. Энергия удара</span></h2>
+<div class="card">
+  <div class="ctl">
+    <label for="beta"><span><span data-lang="en" class="active">Cruise speed</span><span data-lang="ru">Крейсерская скорость</span></span><output id="betaout"></output></label>
+    <input id="beta" type="range" min="0.05" max="0.5" step="0.01" value="0.2" />
+  </div>
+  <div class="ctl">
+    <label for="gr"><span><span data-lang="en" class="active">Dust grain radius</span><span data-lang="ru">Радиус пылинки</span></span><output id="grout"></output></label>
+    <input id="gr" type="range" min="0" max="1000" step="1" value="333" />
+  </div>
+  <div class="stats" id="s1"></div>
+  <div class="cmp" id="cmp"></div>
+  <div class="hint legend" id="hnote"></div>
+</div>
+
+<h2><span data-lang="en" class="active">2. Shield erosion on the route</span><span data-lang="ru">2. Эрозия щита на маршруте</span></h2>
+<div class="card">
+  <div class="ctl">
+    <label for="star"><span><span data-lang="en" class="active">Target star</span><span data-lang="ru">Звезда-цель</span></span><output id="dout"></output></label>
+    <select id="star"></select>
+  </div>
+  <div class="ctl">
+    <label for="nh"><span><span data-lang="en" class="active">Density of the medium n<sub>H</sub></span><span data-lang="ru">Плотность среды n<sub>H</sub></span></span><output id="nhout"></output></label>
+    <input id="nh" type="range" min="0" max="1000" step="1" value="333" />
+    <div class="presets" id="nhp"></div>
+  </div>
+  <div class="ctl">
+    <label for="mat"><span><span data-lang="en" class="active">Shield material</span><span data-lang="ru">Материал щита</span></span></label>
+    <select id="mat"></select>
+  </div>
+  <div class="stats" id="s2"></div>
+</div>
+
+<h2><span data-lang="en" class="active">3. Shield against the craft mass</span><span data-lang="ru">3. Щит против массы аппарата</span></h2>
+<div class="card">
+  <div class="ctl">
+    <label for="ar"><span><span data-lang="en" class="active">Frontal area</span><span data-lang="ru">Площадь лба</span></span><output id="arout"></output></label>
+    <input id="ar" type="range" min="0" max="1000" step="1" value="500" />
+  </div>
+  <div class="ctl">
+    <label for="pl"><span><span data-lang="en" class="active">Craft mass (without the shield)</span><span data-lang="ru">Масса аппарата (без щита)</span></span><output id="plout"></output></label>
+    <input id="pl" type="range" min="0" max="1000" step="1" value="500" />
+  </div>
+  <div class="ctl">
+    <label class="chk" for="sf"><input id="sf" type="checkbox" checked /><span><span data-lang="en" class="active">Thickness margin ×2</span><span data-lang="ru">Запас толщины ×2</span></span></label>
+  </div>
+  <div class="big" id="verdict"></div>
+  <div class="stats" id="s3"></div>
+  <div class="chartwrap"><canvas id="chart" aria-label="shield mass vs speed"></canvas></div>
+  <div class="legend" id="clegend"></div>
+  <p><a id="tomission" href="mission.html"><span data-lang="en" class="active">Open in &laquo;Build a mission&raquo; &rarr;</span><span data-lang="ru">Открыть в &laquo;Собери миссию&raquo; &rarr;</span></a></p>
+</div>
+
+<h2><span data-lang="en" class="active">Model and what is missing</span><span data-lang="ru">Модель и чего нет</span></h2>
+<div data-lang="en" class="active">
+  <div class="note">
+    <p><b>This is an upper estimate.</b> The whole route is flown at the cruise speed (in reality acceleration and braking are slower, so fewer and softer hits). All kinetic energy of the dust, (&gamma;&minus;1)&middot;m&middot;c&sup2;, is assumed to go into evaporating the shield (pessimistic: much of it is radiated away). The gas does not ablate the shield in this model, it only sputters it: 0.01 shield atoms knocked out per incoming atom &mdash; an order-of-magnitude, pessimistic yield. The energy brought by the gas is shown separately: it becomes heat and radiation dose, not a hole.</p>
+    <p><b>Not modelled:</b> magnetic or electrostatic deflection of charged particles, cascades of secondary particles inside the shield, the radiation dose to a crew, the heating and cooling of the shield, the real distribution of grain sizes (one radius is used for the hit count; the eroded mass does not depend on it). The density of the medium is taken constant along the whole route; around the Sun it is roughly 0.1&ndash;0.3 atoms per cm&sup3;. Gas mass per H atom 1.4&middot;m<sub>H</sub> (helium included), dust 1% of the gas mass, grain density 2.5 g/cm&sup3;.</p>
+    <p>Orientation sources: <a href="https://arxiv.org/abs/1608.05284" rel="noopener">Hoang et al. 2017, ApJ 837, 5 &laquo;Interaction of relativistic spacecraft with the interstellar medium&raquo;</a>; <a href="https://breakthroughinitiatives.org/initiative/3" rel="noopener">Breakthrough Starshot</a>. Star distances: hand-compiled list of the 50 nearest stars (<a href="neighbors.html">neighbours</a>).</p>
+  </div>
+</div>
+<div data-lang="ru">
+  <div class="note">
+    <p><b>Это оценка сверху.</b> Весь маршрут проходится на крейсерской скорости (на деле разгон и торможение медленнее, удары реже и слабее). Вся кинетическая энергия пыли, (&gamma;&minus;1)&middot;m&middot;c&sup2;, считается ушедшей на испарение щита (пессимистично: заметная часть уходит излучением). Газ в этой модели щит не испаряет, а только распыляет: 0,01 атома щита на каждый налетевший атом &mdash; оценка по порядку величины, пессимистичная. Энергия, принесённая газом, показана отдельно: она идёт в нагрев и радиационную дозу, а не в дыру.</p>
+    <p><b>Не учтено:</b> магнитное и электростатическое отклонение заряженных частиц, каскады вторичных частиц в щите, радиационная доза экипажа, нагрев и охлаждение щита, реальное распределение пылинок по размерам (один радиус используется для числа попаданий; на массу эрозии он не влияет). Плотность среды принята постоянной по всему маршруту; около Солнца это примерно 0,1&ndash;0,3 атома на см&sup3;. Масса газа на атом H 1,4&middot;m<sub>H</sub> (с гелием), пыль &mdash; 1% массы газа, плотность пылинки 2,5 г/см&sup3;.</p>
+    <p>Источники-ориентиры: <a href="https://arxiv.org/abs/1608.05284" rel="noopener">Hoang et al. 2017, ApJ 837, 5 &laquo;Interaction of relativistic spacecraft with the interstellar medium&raquo;</a>; <a href="https://breakthroughinitiatives.org/initiative/3" rel="noopener">Breakthrough Starshot</a>. Расстояния до звёзд: список 50 ближайших звёзд, составленный вручную (<a href="neighbors.html">соседи</a>).</p>
+  </div>
+</div>
+
+<p>
+  <a href="mission.html"><span data-lang="en" class="active">Build a mission to a star</span><span data-lang="ru">Собери миссию к звезде</span></a> &middot;
+  <a href="engines.html"><span data-lang="en" class="active">Engines compared</span><span data-lang="ru">Сравнение двигателей</span></a> &middot;
+  <a href="laser-sail.html"><span data-lang="en" class="active">Laser sail to the nearest star</span><span data-lang="ru">Лазерный парус к ближайшей звезде</span></a> &middot;
+  <a href="accel.html"><span data-lang="en" class="active">Accelerating and braking to a star</span><span data-lang="ru">Разгон и торможение до звезды</span></a> &middot;
+  <a href="neighbors.html"><span data-lang="en" class="active">Neighbours in the galaxy</span><span data-lang="ru">Соседи в галактике</span></a> &middot;
+  <a href="where-we-reach.html"><span data-lang="en" class="active">How far in a lifetime</span><span data-lang="ru">Куда долетим за жизнь</span></a> &middot;
+  <a href="/"><span data-lang="en" class="active">Fly it yourself in the simulator</span><span data-lang="ru">Пролететь самому в симуляторе</span></a> &middot;
+  <a href="physics-verification.html"><span data-lang="en" class="active">How the physics is verified</span><span data-lang="ru">Как проверяется физика</span></a>
+</p>
+
+<footer class="bottom">
+  <span data-lang="en" class="active">Formulas: E = (&gamma;&minus;1)mc&sup2; = m c&sup2; &beta;&sup2;/(s(1+s)), s = &radic;(1&minus;&beta;&sup2;); column N = n<sub>H</sub>&middot;L; eroded mass = E<sub>dust</sub>/Q + Y&middot;N&middot;A/N<sub>A</sub>; thickness = margin &times; eroded mass / &rho;.</span>
+  <span data-lang="ru">Формулы: E = (&gamma;&minus;1)mc&sup2; = m c&sup2; &beta;&sup2;/(s(1+s)), s = &radic;(1&minus;&beta;&sup2;); столб N = n<sub>H</sub>&middot;L; масса эрозии = E<sub>пыль</sub>/Q + Y&middot;N&middot;A/N<sub>A</sub>; толщина = запас &times; масса эрозии / &rho;.</span>
+</footer>
+</main>
+
+<script type="module">
+import { impact, shield, sweepBeta, NEIGHBORS, MATERIALS, MATERIAL_IDS, SAFETY, BETA_MIN, BETA_MAX, GRAIN_RADIUS_DEFAULT } from './js/physics/dust.js';
+import { sliderToRadius, radiusToSlider, sliderToNH, nhToSlider, sliderToPayload, payloadToSlider, sliderToArea, areaToSlider,
+  NH_PRESETS, MATERIAL_LABELS, parseParams, missionHref, compareEnergy,
+  fmtMeV, fmtTNT, fmtRadius, fmtNH, fmtPerM2, fmtKgM2, fmtJM2, fmtDepth, fmtRatio, fmtEnergy, fmtMassKg, fmtMassSci, fmtBetaC, fmtGamma, fmtSci } from './js/verify/dust-view.js';
+import { fmtArea, fmtLY } from './js/verify/mission-view.js';
+
+const T = {
+  en: { hMeV: 'One hydrogen atom', gJ: 'One dust grain', gTNT: 'Grain, TNT equivalent', gamma: 'Lorentz factor γ', gMass: 'Grain mass',
+    cmp: 'One grain hits like {x}.', hnote: 'For scale: proton therapy uses protons of 70–250 MeV; at 0.5 c every hydrogen atom in the path is such a proton.',
+    col: 'Gas column (H atoms)', gas: 'Gas mass swept', dust: 'Dust mass swept', hits: 'Grain hits', eGas: 'Energy of the gas (heat, dose)', eDust: 'Energy of the dust (ablation)',
+    eroD: 'Eroded by dust', eroG: 'Sputtered by gas', depth: 'Erosion depth',
+    thick: 'Shield thickness', smass: 'Shield mass', share: 'Shield / craft', extra: 'Extra energy to accelerate the shield',
+    heavy: 'The shield is heavier than the craft itself.', light: 'The shield is lighter than the craft.',
+    verdict: 'To {star} at {b}: {d} of {m} eaten away — a {t} shield of {sm}. {h}',
+    below: 'The mission\'s peak speed ({b}) is below this model\'s range: computed at 0.05 c (an overestimate — at that speed dust is a minor hazard).',
+    above: 'The mission\'s peak speed ({b}) is above this model\'s range: computed at 0.5 c (an underestimate).',
+    leg: 'Shield mass (left axis) and thickness (right axis) against cruise speed, log scale; dashed line — craft mass; vertical line — current speed.',
+    bad: 'Cannot compute: {reason}', area: 'm²', perM2: 'per m² of frontal area' },
+  ru: { hMeV: 'Один атом водорода', gJ: 'Одна пылинка', gTNT: 'Пылинка в тротиловом эквиваленте', gamma: 'Лоренц-фактор γ', gMass: 'Масса пылинки',
+    cmp: 'Одна пылинка бьёт как {x}.', hnote: 'Для масштаба: в протонной терапии используют протоны 70–250 МэВ; на 0,5 c каждый атом водорода на пути — такой протон.',
+    col: 'Столб газа (атомов H)', gas: 'Масса газа на пути', dust: 'Масса пыли на пути', hits: 'Попаданий пылинок', eGas: 'Энергия газа (нагрев, доза)', eDust: 'Энергия пыли (абляция)',
+    eroD: 'Испарено пылью', eroG: 'Распылено газом', depth: 'Глубина эрозии',
+    thick: 'Толщина щита', smass: 'Масса щита', share: 'Щит / аппарат', extra: 'Доп. энергия на разгон щита',
+    heavy: 'Щит тяжелее самого аппарата.', light: 'Щит легче аппарата.',
+    verdict: 'До звезды {star} на {b}: съедено {d} материала «{m}» — нужен щит {t} массой {sm}. {h}',
+    below: 'Пиковая скорость миссии ({b}) ниже диапазона модели: расчёт на 0,05 c (оценка завышена — на такой скорости пыль второстепенна).',
+    above: 'Пиковая скорость миссии ({b}) выше диапазона модели: расчёт на 0,5 c (оценка занижена).',
+    leg: 'Масса щита (левая ось) и толщина (правая ось) в зависимости от крейсерской скорости, лог-шкала; пунктир — масса аппарата; вертикаль — текущая скорость.',
+    bad: 'Не рассчитать: {reason}', area: 'м²', perM2: 'на м² лобовой площади' },
+};
+
+let lang = 'en';
+try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en' ? s : ((navigator.language || 'en').slice(0, 2) === 'ru' ? 'ru' : 'en'); } catch (e) {}
+
+const $ = (id) => document.getElementById(id);
+const sub = (s, o) => s.replace(/\{(\w+)\}/g, (_, k) => o[k]);
+const P = parseParams(location.search);
+const cur = { star: P.star, beta: P.beta, grain: GRAIN_RADIUS_DEFAULT, nH: P.nH, mat: P.mat, area: 10, payload: P.payload, margin: true,
+  clamped: P.clamped, betaMission: P.betaMission };
+
+const starName = (n) => (lang === 'ru' && n.ru ? n.ru : n.name);
+function fillSelects() {
+  $('star').innerHTML = NEIGHBORS.map((n) => '<option value="' + n.id + '">' + starName(n) + ' — ' + fmtLY(n.ly, lang) + '</option>').join('');
+  $('mat').innerHTML = MATERIAL_IDS.map((id) => '<option value="' + id + '">' + MATERIAL_LABELS[id][lang] + '</option>').join('');
+  $('star').value = cur.star; $('mat').value = cur.mat;
+  $('nhp').innerHTML = NH_PRESETS.map((p) => '<button type="button" data-n="' + p.n + '">' + p.name[lang] + '</button>').join('');
+}
+const syncSliders = () => {
+  $('beta').value = String(cur.beta); $('gr').value = Math.round(radiusToSlider(cur.grain)); $('nh').value = Math.round(nhToSlider(cur.nH));
+  $('ar').value = Math.round(areaToSlider(cur.area)); $('pl').value = Math.round(payloadToSlider(cur.payload));
+};
+syncSliders();
+
+const st = (label, val, id, cls) => '<div class="stat"><span>' + label + '</span><b id="' + id + '"' + (cls ? ' class="' + cls + '"' : '') + '>' + val + '</b></div>';
+
+function drawChart(pts, s) {
+  const cv = $('chart'), dpr = window.devicePixelRatio || 1;
+  const w = cv.clientWidth || 600, h = cv.clientHeight || 260;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr);
+  const g = cv.getContext('2d');
+  g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
+  cv.setAttribute('data-points', String(pts.length));
+  cv.setAttribute('data-beta', String(cur.beta));
+  if (!pts.length) return;
+  const narrow = w < 480;
+  const padL = narrow ? 50 : 62, padR = narrow ? 54 : 70, padT = 10, padB = 26;
+  const ys = pts.map((p) => p.shieldMass).concat([s.payload_kg]).filter((v) => v > 0);
+  let lo = Math.floor(Math.log10(Math.min(...ys))), hi = Math.ceil(Math.log10(Math.max(...ys)));
+  if (hi <= lo) hi = lo + 1;
+  const X = (b) => padL + (w - padL - padR) * (b - BETA_MIN) / (BETA_MAX - BETA_MIN);
+  const Y = (m) => padT + (h - padT - padB) * (1 - (Math.log10(m) - lo) / (hi - lo));
+  g.font = (narrow ? 9.5 : 10.5) + 'px Menlo, Consolas, monospace';
+  g.fillStyle = '#5b7c88'; g.strokeStyle = 'rgba(120,200,230,0.15)'; g.lineWidth = 1;
+  const step = Math.max(1, Math.ceil((hi - lo) / 6));
+  const k = MATERIALS[s.material].rho * s.area_m2;       // shieldMass = k * thickness
+  for (let e = lo; e <= hi; e += step) {
+    const y = Y(Math.pow(10, e));
+    g.beginPath(); g.moveTo(padL, y); g.lineTo(w - padR, y); g.stroke();
+    g.textAlign = 'right'; g.textBaseline = 'middle'; g.fillText('10^' + e + (lang === 'ru' ? ' кг' : ' kg'), padL - 4, y);
+    g.textAlign = 'left'; g.fillText(fmtDepth(Math.pow(10, e) / k, lang), w - padR + 4, y);
+  }
+  g.textBaseline = 'top';
+  for (const b of (narrow ? [0.05, 0.2, 0.3, 0.4, 0.5] : [0.05, 0.1, 0.2, 0.3, 0.4, 0.5])) {
+    g.textAlign = b === 0.05 ? 'left' : b === 0.5 ? 'right' : 'center';
+    g.fillText(fmtBetaC(b, lang).replace(/0+ c$/, ' c').replace(/[.,] c$/, ' c'), X(b), h - padB + 6);
+  }
+  // craft mass
+  const yp = Y(s.payload_kg);
+  g.setLineDash([5, 4]); g.strokeStyle = '#ffd28a'; g.beginPath(); g.moveTo(padL, yp); g.lineTo(w - padR, yp); g.stroke(); g.setLineDash([]);
+  // curve
+  g.strokeStyle = '#9fe7ff'; g.lineWidth = 2; g.beginPath();
+  pts.forEach((p, i) => (i ? g.lineTo(X(p.beta), Y(p.shieldMass)) : g.moveTo(X(p.beta), Y(p.shieldMass))));
+  g.stroke();
+  // current beta
+  g.strokeStyle = '#5fe3a1'; g.lineWidth = 1; g.beginPath(); g.moveTo(X(cur.beta), padT); g.lineTo(X(cur.beta), h - padB); g.stroke();
+  g.fillStyle = '#5fe3a1'; g.beginPath(); g.arc(X(cur.beta), Y(s.shieldMass), 3.5, 0, 2 * Math.PI); g.fill();
+}
+
+let lastPts = [], lastShield = null;
+function render() {
+  const t = T[lang];
+  const star = NEIGHBORS.find((n) => n.id === cur.star);
+  $('betaout').textContent = fmtBetaC(cur.beta, lang);
+  $('grout').textContent = fmtRadius(cur.grain, lang);
+  $('dout').textContent = fmtLY(star.ly, lang);
+  $('nhout').textContent = fmtNH(cur.nH, lang);
+  $('arout').textContent = fmtArea(cur.area, lang);
+  $('plout').textContent = fmtMassKg(cur.payload, lang);
+  for (const b of $('nhp').querySelectorAll('button')) b.classList.toggle('on', Math.abs(+b.dataset.n - cur.nH) / cur.nH < 0.02);
+  $('tomission').href = missionHref({ starId: cur.star, payload: cur.payload });
+  const bm = cur.betaMission === null ? '' : fmtBetaC(cur.betaMission, lang);
+  $('clampnote').innerHTML = cur.clamped ? '<div class="note warn">' + sub(t[cur.clamped], { b: bm || '?' }) + '</div>' : '';
+
+  const im = impact({ beta: cur.beta, grainRadius: cur.grain });
+  const sp = { beta: cur.beta, ly: star.ly, nH_cm3: cur.nH, material: cur.mat, grainRadius: cur.grain, area_m2: cur.area, payload_kg: cur.payload, safety: cur.margin ? SAFETY : 1 };
+  const s = shield(sp);
+  if (!im.valid || !s.valid) {
+    const r = !im.valid ? im.reason : s.reason;
+    $('s1').innerHTML = $('s2').innerHTML = $('s3').innerHTML = ''; $('cmp').textContent = ''; $('verdict').innerHTML = '<span class="warn">' + sub(t.bad, { reason: r }) + '</span>';
+    drawChart([], null);
+    document.body.setAttribute('data-ready', '1');
+    return;
+  }
+  $('s1').innerHTML = st(t.hMeV, fmtMeV(im.hydrogen.MeV, lang), 'o-hmev') + st(t.gJ, fmtEnergy(im.grain.J, lang), 'o-gj') +
+    st(t.gTNT, fmtTNT(im.grain.tntKg, lang), 'o-gtnt') + st(t.gamma, fmtGamma(im.gamma, lang), 'o-gamma') + st(t.gMass, fmtMassSci(im.grain.mass, lang), 'o-gmass');
+  const c = compareEnergy(im.grain.J, lang);
+  $('cmp').textContent = c ? sub(t.cmp, { x: c }) : '';
+  $('hnote').textContent = t.hnote;
+  $('s2').innerHTML = st(t.col, fmtPerM2(s.columnH, lang), 'o-col') + st(t.gas, fmtKgM2(s.gasMassPerArea, lang), 'o-gas') +
+    st(t.dust, fmtKgM2(s.dustMassPerArea, lang), 'o-dust') + st(t.hits, fmtPerM2(s.grainHitsPerArea, lang), 'o-hits') +
+    st(t.eGas, fmtJM2(s.energyPerArea.gas, lang), 'o-egas') + st(t.eDust, fmtJM2(s.energyPerArea.dust, lang), 'o-edust') +
+    st(t.eroD, fmtKgM2(s.erodedMassPerArea.dust, lang), 'o-erod') + st(t.eroG, fmtKgM2(s.erodedMassPerArea.gas, lang), 'o-erog') +
+    st(t.depth, fmtDepth(s.depth, lang), 'o-depth');
+  const heavy = s.heavierThanCraft;
+  $('s3').innerHTML = st(t.thick, fmtDepth(s.thickness, lang), 'o-thick') + st(t.smass, fmtMassKg(s.shieldMass, lang), 'o-smass') +
+    st(t.share, fmtRatio(s.massRatio, lang), 'o-share', heavy ? 'bad-mark' : 'yes-mark') + st(t.extra, fmtEnergy(s.extraKE, lang), 'o-extra');
+  $('verdict').innerHTML = sub(t.verdict, { star: starName(star), b: fmtBetaC(cur.beta, lang), d: fmtDepth(s.depth, lang), m: MATERIAL_LABELS[cur.mat][lang].toLowerCase(),
+    t: fmtDepth(s.thickness, lang), sm: fmtMassKg(s.shieldMass, lang), h: '<span id="o-heavy" class="' + (heavy ? 'bad-mark' : 'yes-mark') + '" data-heavy="' + (heavy ? 1 : 0) + '">' + (heavy ? t.heavy : t.light) + '</span>' });
+  $('clegend').textContent = t.leg;
+  lastPts = sweepBeta(sp); lastShield = s;
+  drawChart(lastPts, s);
+  document.body.setAttribute('data-ready', '1');
+}
+
+function applyLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  document.querySelectorAll('[data-lang]').forEach((el) => el.classList.toggle('active', el.getAttribute('data-lang') === l));
+  document.querySelectorAll('#langtoggle span').forEach((el) => el.classList.toggle('active', el.getAttribute('data-set') === l));
+  fillSelects();
+  render();
+}
+// a manual change of speed drops the "clamped from the mission" note: it no longer describes the shown numbers
+$('beta').addEventListener('input', () => { cur.beta = Math.min(BETA_MAX, Math.max(BETA_MIN, +$('beta').value)); cur.clamped = null; render(); });
+$('gr').addEventListener('input', () => { cur.grain = sliderToRadius(+$('gr').value); render(); });
+$('star').addEventListener('change', () => { cur.star = $('star').value; render(); });
+$('nh').addEventListener('input', () => { cur.nH = sliderToNH(+$('nh').value); render(); });
+$('nhp').addEventListener('click', (ev) => { const b = ev.target.closest('button'); if (!b) return; cur.nH = +b.dataset.n; syncSliders(); render(); });
+$('mat').addEventListener('change', () => { cur.mat = $('mat').value; render(); });
+$('ar').addEventListener('input', () => { cur.area = sliderToArea(+$('ar').value); render(); });
+$('pl').addEventListener('input', () => { cur.payload = sliderToPayload(+$('pl').value); render(); });
+$('sf').addEventListener('change', () => { cur.margin = $('sf').checked; render(); });
+$('langtoggle').addEventListener('click', (ev) => {
+  const s = ev.target.closest('span'); if (!s) return;
+  const l = s.getAttribute('data-set'); applyLang(l);
+  try { localStorage.setItem('iss_lang', l); } catch (e) {}
+});
+window.addEventListener('resize', () => { if (lastShield) drawChart(lastPts, lastShield); });
+applyLang(lang);
+</script>
+</body>
+</html>

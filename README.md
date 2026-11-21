@@ -329,6 +329,15 @@ Pure core `js/physics/mission.js` composes `engines.js`, `lasersail.js` and `fli
 the coasting leg); view helpers `js/verify/mission-view.js`; tests
 `tests/mission.contract.test.mjs`, smoke `tests/smoke_mission.py`.
 
+[`dust.html`](dust.html) — interstellar dust and the shield: relativistic energy of one
+hydrogen atom and one dust grain at 0.05–0.5 c, shield erosion along the route to one of
+the 50 nearest stars (medium density, shield material), shield thickness and mass against
+the craft mass, chart over speed; upper estimate (whole route at cruise speed, all dust
+energy into ablation, gas only sputters with a fixed yield). Pure core `js/physics/dust.js`
+(imports `constants.js` and the star list only); view helpers `js/verify/dust-view.js`;
+linked both ways with `mission.html`; tests `tests/dust.contract.test.mjs`, smoke
+`tests/smoke_dust.py`.
+
 ## Known limitations
 
 - **Transverse thrust** — the sim models the honest relativistic 4-force: a

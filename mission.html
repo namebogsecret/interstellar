@@ -148,6 +148,7 @@
 <div class="card">
   <div class="big" id="verdict"></div>
   <div class="stats" id="stats"></div>
+  <p><a id="todust" href="dust.html"><span data-lang="en" class="active">Dust and shield for this route &rarr;</span><span data-lang="ru">Пыль и щит для этого маршрута &rarr;</span></a></p>
 </div>
 
 <h2><span data-lang="en" class="active">Model and assumptions</span><span data-lang="ru">Модель и оговорки</span></h2>
@@ -156,7 +157,7 @@
     <p><b>Rockets</b> (chemical, ion, nuclear-thermal, fusion): the same Newtonian model as <a href="engines.html">engines compared</a> &mdash; one stage of fixed size, constant thrust, Tsiolkovsky delta-v, braking by a second equal burn. The ship clock differs from the Earth clock only in the coasting leg (&tau; = t &minus; t<sub>coast</sub>(1 &minus; 1/&gamma;)); burn phases are treated as Newtonian. Energy = &frac12;&middot;(propellant)&middot;v<sub>e</sub>&sup2;; power = &frac12;&middot;F&middot;v<sub>e</sub>. The stage does not scale with the payload: a bigger payload simply lowers the delta-v.</p>
     <p><b>Solar sail</b>: radiation pressure falling as 1/r&sup2; from 1 AU, flyby only, no energy cost counted (sunlight is free). <b>Laser sail</b>: ground laser, relativistic force with the Doppler loss, diffraction-limited beam range, flyby only (<a href="laser-sail.html">laser sail</a>); energy = beam power &times; time under the beam. A sail cannot brake at the target: the page says so instead of pretending.</p>
     <p><b>Photon rocket</b>: an ideal rocket with exhaust speed c at constant proper acceleration (<a href="accel.html">accelerating and braking</a>). Mass ratio e<sup>2x</sup> with braking, e<sup>x</sup> without (x is the peak rapidity); energy = propellant&middot;c&sup2; (all of it is converted). No such engine exists; it is the physical limit.</p>
-    <p><b>Not modelled:</b> gravity of the Sun and the target star, interstellar dust and gas, the energy to make the propellant, crew life support, engine efficiency losses, the real mass of tanks for the photon rocket. The budget is only compared with the energy: it never changes the flight. The world energy use of about 6&middot;10<sup>20</sup> J per year is an order-of-magnitude figure. Star distances: hand-compiled list of the 50 nearest stars (<a href="neighbors.html">neighbours</a>).</p>
+    <p><b>Not modelled:</b> gravity of the Sun and the target star, <a href="dust.html">interstellar dust and gas</a>, the energy to make the propellant, crew life support, engine efficiency losses, the real mass of tanks for the photon rocket. The budget is only compared with the energy: it never changes the flight. The world energy use of about 6&middot;10<sup>20</sup> J per year is an order-of-magnitude figure. Star distances: hand-compiled list of the 50 nearest stars (<a href="neighbors.html">neighbours</a>).</p>
   </div>
 </div>
 <div data-lang="ru">
@@ -164,7 +165,7 @@
     <p><b>Ракеты</b> (химическая, ионная, ядерно-тепловая, термоядерная): та же ньютоновская модель, что в <a href="engines.html">сравнении двигателей</a> &mdash; одна ступень фиксированного размера, постоянная тяга, Δv по Циолковскому, торможение вторым таким же включением. Часы корабля отличаются от часов Земли только на участке инерции (&tau; = t &minus; t<sub>инерц</sub>(1 &minus; 1/&gamma;)); участки тяги считаются ньютоновскими. Энергия = &frac12;&middot;(рабочее тело)&middot;v<sub>e</sub>&sup2;; мощность = &frac12;&middot;F&middot;v<sub>e</sub>. Ступень не масштабируется под нагрузку: большая нагрузка просто уменьшает Δv.</p>
     <p><b>Солнечный парус</b>: давление света падает как 1/r&sup2; от 1 а.е., только пролёт, энергия не считается (солнечный свет бесплатен). <b>Лазерный парус</b>: лазер на Земле, релятивистская сила с допплеровской потерей, дальность луча по дифракции, только пролёт (<a href="laser-sail.html">лазерный парус</a>); энергия = мощность луча &times; время под лучом. Парус не умеет тормозить у цели: страница так и говорит, а не делает вид.</p>
     <p><b>Фотонная ракета</b>: идеальная ракета со скоростью истечения c при постоянном собственном ускорении (<a href="accel.html">разгон и торможение</a>). Массовое число e<sup>2x</sup> с торможением и e<sup>x</sup> без него (x &mdash; пиковая быстрота); энергия = масса топлива&middot;c&sup2; (всё превращается в излучение). Такого двигателя нет; это физический предел.</p>
-    <p><b>Не учтено:</b> гравитация Солнца и звезды-цели, межзвёздная пыль и газ, энергия на производство топлива, жизнеобеспечение экипажа, потери КПД двигателя, реальная масса баков фотонной ракеты. Бюджет только сравнивается с энергией и не меняет полёт. Мировое энергопотребление около 6&middot;10<sup>20</sup> Дж в год &mdash; оценка по порядку величины. Расстояния до звёзд: список 50 ближайших звёзд, составленный вручную (<a href="neighbors.html">соседи</a>).</p>
+    <p><b>Не учтено:</b> гравитация Солнца и звезды-цели, <a href="dust.html">межзвёздная пыль и газ</a>, энергия на производство топлива, жизнеобеспечение экипажа, потери КПД двигателя, реальная масса баков фотонной ракеты. Бюджет только сравнивается с энергией и не меняет полёт. Мировое энергопотребление около 6&middot;10<sup>20</sup> Дж в год &mdash; оценка по порядку величины. Расстояния до звёзд: список 50 ближайших звёзд, составленный вручную (<a href="neighbors.html">соседи</a>).</p>
   </div>
 </div>
 
@@ -190,6 +191,7 @@ import { planMission, canBrake, ENGINE_IDS, ENGINES, NEIGHBORS, DEFAULTS } from 
 import { sliderToPayload, payloadToSlider, sliderToBudget, budgetToSlider, sliderToPower, powerToSlider, sliderToArea, areaToSlider,
   gOf, vOf, fmtMassKg, fmtPower, fmtArea, fmtBetaC, fmtGamma, fmtTime, fmtDv, fmtEnergy, fmtMassSci, fmtWorldYears, fmtBudgetVerdict,
   fmtFrac, fmtLY, fmtOverBy, fmtSci, ENGINE_LABELS } from './js/verify/mission-view.js';
+import { dustHref } from './js/verify/dust-view.js';
 
 const T = {
   en: { tE: 'Time, Earth clock', tS: 'Time, ship clock', dv: 'Total delta-v', vmax: 'Peak speed', gamma: 'Lorentz factor γ', arr: 'Speed at the target',
@@ -251,6 +253,7 @@ function render() {
 
   const p = planMission({ target: star, engine: cur.engine, payload: cur.payload, budget: cur.budget, brake: cur.brake,
     accelG: cur.accelG, laserPower: cur.laserPower, laserArea: cur.laserArea });
+  $('todust').href = p.valid ? dustHref({ starId: star.id, payload: cur.payload, beta: p.betaMax }) : dustHref({ starId: star.id, payload: cur.payload });
   if (!p.valid) {
     $('warn').innerHTML = '<div class="note warn">' + sub(t.bad, { reason: p.reason }) + '</div>';
     $('verdict').textContent = '';
