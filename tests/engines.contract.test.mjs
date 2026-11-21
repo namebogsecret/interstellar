@@ -645,4 +645,104 @@ for (const rid of ROUTE_IDS) for (const brake of [true, false]) {
   checks++; assert.ok(routeById('proxima') && Math.abs(routeById('proxima').D / LY - 4.2465) < 1e-9, 'proxima route 4.2465 ly');
 }
 
+// ---------- Orion + laser sail: cross-scale contract (physics-derived oracles) ----------
+{
+  const orion = engById('orion'), chem = engById('chemical'), laser = engById('laser');
+  const veOf = (e) => e.isp * G0;
+  const SIGMA = 1e-3;          // kg/m^2, laser sail areal density (1 g/m^2, per data comment)
+  const HEAT = 1e9;            // W/m^2 thermal limit
+  const D_AC = routeById('alphacen').D;
+  const rows = (r, p, o) => compareEngines(r, p, o);
+  const row = (rs, id) => rs.find((x) => x.id === id);
+
+  // (a) Orion: Tsiolkovsky budget from physics; Dyson's ve = 1e7/ln4 m/s (10 000 km/s for mass ratio 4)
+  for (const p of [100, 1e4, 1e6, 1e9, 1e11]) {
+    const m0 = p + orion.engineMass + orion.tankMass + orion.propMass, mdry = p + orion.engineMass + orion.tankMass;
+    near(dvBudget(orion, p), veOf(orion) * Math.log(m0 / mdry), 1e-12, `orion dvBudget payload=${p}`);
+  }
+  near(veOf(orion), 1e7 / Math.log(4), 1e-9, 'orion ve = 10000 km/s / ln 4');
+  near(dvBudget(orion, 1), 1e7, 1e-6, 'orion small-payload budget ~ 10000 km/s');
+
+  for (const brake of [true, false]) for (const p of [100, 1e6, 1e8]) {
+    const r = row(rows('alphacen', p, { brake }), 'orion');
+    const m0 = p + orion.engineMass + orion.tankMass + orion.propMass, ve = veOf(orion), tag = `orion ac brake=${brake} p=${p}`;
+    ok(Number.isFinite(r.time) && r.time > 0, tag + ': finite time');
+    ok(r.dvUsed <= dvBudget(orion, p) * (1 + 1e-9), tag + ': dvUsed <= budget');
+    near(r.mEnd, m0 * Math.exp(-r.dvUsed / ve), 1e-9, tag + ': mEnd = m0 exp(-dv/ve)');
+    near(r.propUsed, m0 - r.mEnd, 1e-9, tag + ': propUsed = m0 - mEnd');
+    ok(r.propUsed >= 0 && r.propUsed <= orion.propMass * (1 + 1e-9), tag + ': 0 <= propUsed <= propMass');
+    // cruise speed can never exceed dv (accelerating) / dv/2 (accelerate+brake); trip takes more than D / vCruise
+    const vmax = brake ? r.dvUsed / 2 : r.dvUsed;
+    ok(r.time > D_AC / vmax * (1 - 1e-9), tag + ': time > D / vmax');
+    ok(r.time > D_AC / dvBudget(orion, p), tag + ': time > D / budget (hard floor)');
+    near(r.mdot, orion.F / ve, 1e-12, tag + ': mdot = F/ve');
+  }
+  { // no braking (flyby) is never slower than braking; more thrust is never slower
+    const tb = row(rows('alphacen', 100, { brake: true }), 'orion').time, tf = row(rows('alphacen', 100, { brake: false }), 'orion').time;
+    ok(tf <= tb, 'orion flyby <= brake time');
+    // (rocket thrust scale also scales engine mass, so time is NOT monotone in k for rockets; only sanity here)
+    for (const k of [0.1, 0.5, 1, 2, 10]) { const t = row(rows('alphacen', 100, { thrustScale: k }), 'orion').time; ok(t > 0 && !Number.isNaN(t), `orion k=${k} valid time`); }
+  }
+
+  // (d) runtime check against own Tsiolkovsky for chemical and orion on alphacen (not metadata)
+  for (const e of [chem, orion]) for (const p of [1e3, 1e5]) {
+    const r = row(rows('alphacen', p), e.id), ve = e.isp * G0;
+    const m0 = p + e.engineMass + e.tankMass + e.propMass;
+    near(r.mEnd, m0 * Math.exp(-r.dvUsed / ve), 1e-9, `${e.id} p=${p} runtime mEnd`);
+    near(r.propUsed, m0 * (1 - Math.exp(-r.dvUsed / ve)), 1e-9, `${e.id} p=${p} runtime propUsed`);
+    near(r.dvBudget, ve * Math.log(m0 / (p + e.engineMass + e.tankMass)), 1e-12, `${e.id} p=${p} runtime dvBudget`);
+  }
+
+  // (b) laser sail on interstellar routes
+  for (const rid of ['alphacen', 'proxima']) for (const p of [1e-3, 1e-2, 0.1]) {
+    const r = row(rows(rid, p), 'laser'), D = routeById(rid).D, tag = `laser ${rid} p=${p}`;
+    ok(Number.isFinite(r.time), tag + ': finite time');
+    ok(r.propUsed === 0 && r.mdot === 0, tag + ': no propellant');
+    ok(r.dvUsed > 0 && r.dvUsed <= C, tag + ': 0 < v <= c');
+    ok(r.time >= D / C, tag + ': time >= light time');
+    ok(r.time >= D / r.dvUsed * (1 - 1e-9) - 1, tag + ': time >= D / v_max');
+    near(r.mEnd, p + SIGMA * laser.laserArea, 1e-12, tag + ': mEnd = payload + sigma A');
+    ok(laser.laserPower / laser.laserArea > HEAT ? r.flags.includes('overheat') : !r.flags.includes('overheat'), tag + ': overheat flag iff I > HEAT_LIMIT');
+    ok(!r.flags.includes('notApplicable'), tag + ': applicable');
+  }
+  { // overheat flips with intensity: shrink power below limit via scaleThrust
+    const lowK = (HEAT * laser.laserArea / laser.laserPower) * 0.5;
+    if (lowK >= THRUST_SCALE_MIN) ok(!row(rows('alphacen', 1e-2, { thrustScale: lowK }), 'laser').flags.includes('overheat'), 'laser: no overheat below limit');
+    ok(row(rows('alphacen', 1e-2, { thrustScale: THRUST_SCALE_MAX }), 'laser').flags.includes('overheat'), 'laser: overheat at 10x power');
+  }
+  // planetary routes: n/a, not NaN
+  for (const rid of ['mars', 'jupiter', 'pluto', 'sgl']) {
+    const r = row(rows(rid, 1), 'laser');
+    ok(r.time === Infinity, `laser ${rid}: time = Infinity`);
+    ok(!Number.isNaN(r.time) && !Number.isNaN(r.dvUsed) && !Number.isNaN(r.propUsed) && !Number.isNaN(r.mEnd), `laser ${rid}: no NaN`);
+    ok(r.flags.includes('notApplicable'), `laser ${rid}: notApplicable flag`);
+    ok(r.propUsed === 0 && r.mdot === 0, `laser ${rid}: no propellant`);
+  }
+  // scaleThrust(laser,k): no NaN, more power is not slower
+  { let prev = Infinity;
+    for (const k of [THRUST_SCALE_MIN, 0.3, 1, 3, THRUST_SCALE_MAX]) {
+      const e = scaleThrust(laser, k);
+      ok(Object.values(e).every((v) => typeof v !== 'number' || !Number.isNaN(v)), `scaleThrust laser k=${k}: no NaN`);
+      near(e.laserPower, laser.laserPower * k, 1e-12, `scaleThrust laser k=${k}: power x k`);
+      const r = row(rows('alphacen', 1e-2, { thrustScale: k }), 'laser');
+      ok(!Number.isNaN(r.time) && !Number.isNaN(r.dvUsed), `laser k=${k}: no NaN`);
+      ok(r.time <= prev * (1 + 1e-9), `laser k=${k}: more power not slower (${r.time} vs ${prev})`); prev = r.time;
+    } }
+
+  // (c)+(g) all 7 engines, all routes, several payloads/options: no NaN; (h) one scale, 7 rows in ORDER
+  for (const rid of ROUTE_IDS) for (const p of [1e-2, 1, 100, 1e4, 1e8]) for (const brake of [true, false]) for (const ts of [0.1, 1, 10]) {
+    const rs = rows(rid, p, { brake, thrustScale: ts }), tag = `${rid} p=${p} brake=${brake} k=${ts}`;
+    ok(rs.length === 7 && rs.map((x) => x.id).join() === ORDER.join(), tag + ': 7 rows in ORDER');
+    for (const r of rs) {
+      const t = `${tag} ${r.id}`, na = r.flags.includes('notApplicable');
+      for (const f of ['time', 'dvUsed', 'propUsed', 'mEnd']) ok(!Number.isNaN(r[f]), `${t}: ${f} not NaN`);
+      ok(typeof r.propUsed === 'number' && r.propUsed >= 0 && Number.isFinite(r.propUsed), t + ': propUsed finite >= 0');
+      ok(Number.isFinite(r.dvUsed), t + ': dvUsed finite');
+      ok(Number.isFinite(r.time) || r.time === Infinity, t + ': time finite or +Infinity');
+      if (na) ok(r.time === Infinity, t + ': n/a => Infinity');
+      if (r.time > 0 && Number.isFinite(r.time)) ok(r.time > 0, t + ': time > 0');
+    }
+  }
+}
+
 console.log(`engines.contract: ${checks} checks OK`);
