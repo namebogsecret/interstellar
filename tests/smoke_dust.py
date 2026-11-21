@@ -142,12 +142,30 @@ def run_viewport(browser, base, label, ctx_kwargs):
     page.goto(url + "?star=proxima&beta=0.05&clamped=below&bm=0.0001", wait_until="load")
     ready(page)
     check("URL clamped: note shown", "below this model" in txt("#clampnote"), txt("#clampnote")[:80])
+    setv("#beta", 0.2)
+    check("clamped note hidden once beta leaves the edge", txt("#clampnote").strip() == "", txt("#clampnote")[:80])
+    for bad_q in ("clamped=below&bm=0.3", "clamped=above&bm=0.2", "clamped=above&bm=1.5", "clamped=below&bm=-1", "clamped=below&bm=abc"):
+        page.goto(url + "?star=proxima&beta=0.05&" + bad_q, wait_until="load")
+        ready(page)
+        check(f"URL inconsistent {bad_q}: no note", txt("#clampnote").strip() == "", txt("#clampnote")[:80])
+    page.goto(url + "?star=barnard&payload=50&engine=photon", wait_until="load")
+    ready(page)
+    href = page.get_attribute("#tomission", "href")
+    check("link to mission.html carries engine from mission", href == "mission.html?star=barnard&engine=photon&payload=50", href)
+    page.goto(base.rstrip("/") + "/" + href, wait_until="load")
+    ready(page)
+    check("mission applies star/engine/payload from dust link", page.input_value("#eng") == "photon"
+          and "Barnard" in txt("#verdict") and txt("#plout") == "50.0 kg", txt("#plout"))
+    for q, want in (("payload=1e9", "1.00·10^6 kg"), ("payload=0.001", "1.00 kg"), ("payload=junk", "1 000 kg")):
+        page.goto(base.rstrip("/") + "/mission.html?" + q, wait_until="load")
+        ready(page)
+        check(f"mission ?{q} -> {want}", txt("#plout") == want, txt("#plout"))
 
     # mission.html -> dust.html link follows the plan
     page.goto(base.rstrip("/") + "/mission.html?star=barnard&engine=photon", wait_until="load")
     ready(page)
     href = page.get_attribute("#todust", "href") or ""
-    check("mission: dust link has star+payload+beta", href.startswith("dust.html?star=barnard&beta=0.5") and "payload=1000" in href, href)
+    check("mission: dust link has star+payload+beta", href.startswith("dust.html?star=barnard&engine=photon&beta=0.5") and "payload=1000" in href, href)
     check("mission: photon beta clamped above", "clamped=above" in href, href)
     page.select_option("#eng", "chemical")
     href2 = page.get_attribute("#todust", "href") or ""

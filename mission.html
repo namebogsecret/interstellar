@@ -190,7 +190,7 @@
 import { planMission, canBrake, ENGINE_IDS, ENGINES, NEIGHBORS, DEFAULTS } from './js/physics/mission.js';
 import { sliderToPayload, payloadToSlider, sliderToBudget, budgetToSlider, sliderToPower, powerToSlider, sliderToArea, areaToSlider,
   gOf, vOf, fmtMassKg, fmtPower, fmtArea, fmtBetaC, fmtGamma, fmtTime, fmtDv, fmtEnergy, fmtMassSci, fmtWorldYears, fmtBudgetVerdict,
-  fmtFrac, fmtLY, fmtOverBy, fmtSci, ENGINE_LABELS } from './js/verify/mission-view.js';
+  fmtFrac, fmtLY, fmtOverBy, fmtSci, ENGINE_LABELS, PAYLOAD_MIN, PAYLOAD_MAX } from './js/verify/mission-view.js';
 import { dustHref } from './js/verify/dust-view.js';
 
 const T = {
@@ -216,9 +216,11 @@ try { const s = localStorage.getItem('iss_lang'); lang = s === 'ru' || s === 'en
 const $ = (id) => document.getElementById(id);
 const sub = (s, o) => s.replace(/\{(\w+)\}/g, (_, k) => o[k]);
 const params = new URLSearchParams(location.search);
+// ?payload=<kg>: finite number clamped into the slider range; garbage -> default
+const plParam = params.get('payload') === null || params.get('payload').trim() === '' ? NaN : Number(params.get('payload'));
 const cur = { star: NEIGHBORS.some((n) => n.id === params.get('star')) ? NEIGHBORS.find((n) => n.id === params.get('star')).name : 'Proxima Centauri',
   engine: ENGINE_IDS.includes(params.get('engine')) ? params.get('engine') : 'fusion',
-  payload: DEFAULTS.payload, budget: DEFAULTS.budget, brake: true, accelG: DEFAULTS.accelG, laserPower: DEFAULTS.laserPower, laserArea: DEFAULTS.laserArea };
+  payload: Number.isFinite(plParam) ? Math.min(PAYLOAD_MAX, Math.max(PAYLOAD_MIN, plParam)) : DEFAULTS.payload, budget: DEFAULTS.budget, brake: true, accelG: DEFAULTS.accelG, laserPower: DEFAULTS.laserPower, laserArea: DEFAULTS.laserArea };
 
 const engName = (id) => { const e = ENGINES.find((x) => x.id === id); return e ? e.name[lang] : ENGINE_LABELS[id][lang]; };
 const starName = (n) => (lang === 'ru' && n.ru ? n.ru : n.name);
@@ -253,7 +255,7 @@ function render() {
 
   const p = planMission({ target: star, engine: cur.engine, payload: cur.payload, budget: cur.budget, brake: cur.brake,
     accelG: cur.accelG, laserPower: cur.laserPower, laserArea: cur.laserArea });
-  $('todust').href = p.valid ? dustHref({ starId: star.id, payload: cur.payload, beta: p.betaMax }) : dustHref({ starId: star.id, payload: cur.payload });
+  $('todust').href = p.valid ? dustHref({ starId: star.id, payload: cur.payload, beta: p.betaMax, engine: cur.engine }) : dustHref({ starId: star.id, payload: cur.payload, engine: cur.engine });
   if (!p.valid) {
     $('warn').innerHTML = '<div class="note warn">' + sub(t.bad, { reason: p.reason }) + '</div>';
     $('verdict').textContent = '';

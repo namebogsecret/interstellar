@@ -167,14 +167,14 @@
 <h2><span data-lang="en" class="active">Model and what is missing</span><span data-lang="ru">Модель и чего нет</span></h2>
 <div data-lang="en" class="active">
   <div class="note">
-    <p><b>This is an upper estimate.</b> The whole route is flown at the cruise speed (in reality acceleration and braking are slower, so fewer and softer hits). All kinetic energy of the dust, (&gamma;&minus;1)&middot;m&middot;c&sup2;, is assumed to go into evaporating the shield (pessimistic: much of it is radiated away). The gas does not ablate the shield in this model, it only sputters it: 0.01 shield atoms knocked out per incoming atom &mdash; an order-of-magnitude, pessimistic yield. The energy brought by the gas is shown separately: it becomes heat and radiation dose, not a hole.</p>
+    <p><b>This is an upper estimate.</b> The whole route is flown at the cruise speed (in reality acceleration and braking are slower, so the hits there are softer; their number does not depend on speed). All kinetic energy of the dust, (&gamma;&minus;1)&middot;m&middot;c&sup2;, is assumed to go into evaporating the shield (pessimistic: much of it is radiated away). The gas does not ablate the shield in this model, it only sputters it: 0.01 shield atoms knocked out per incoming atom &mdash; an order-of-magnitude, pessimistic yield. The energy brought by the gas is shown separately: it becomes heat and radiation dose, not a hole.</p>
     <p><b>Not modelled:</b> magnetic or electrostatic deflection of charged particles, cascades of secondary particles inside the shield, the radiation dose to a crew, the heating and cooling of the shield, the real distribution of grain sizes (one radius is used for the hit count; the eroded mass does not depend on it). The density of the medium is taken constant along the whole route; around the Sun it is roughly 0.1&ndash;0.3 atoms per cm&sup3;. Gas mass per H atom 1.4&middot;m<sub>H</sub> (helium included), dust 1% of the gas mass, grain density 2.5 g/cm&sup3;.</p>
     <p>Orientation sources: <a href="https://arxiv.org/abs/1608.05284" rel="noopener">Hoang et al. 2017, ApJ 837, 5 &laquo;Interaction of relativistic spacecraft with the interstellar medium&raquo;</a>; <a href="https://breakthroughinitiatives.org/initiative/3" rel="noopener">Breakthrough Starshot</a>. Star distances: hand-compiled list of the 50 nearest stars (<a href="neighbors.html">neighbours</a>).</p>
   </div>
 </div>
 <div data-lang="ru">
   <div class="note">
-    <p><b>Это оценка сверху.</b> Весь маршрут проходится на крейсерской скорости (на деле разгон и торможение медленнее, удары реже и слабее). Вся кинетическая энергия пыли, (&gamma;&minus;1)&middot;m&middot;c&sup2;, считается ушедшей на испарение щита (пессимистично: заметная часть уходит излучением). Газ в этой модели щит не испаряет, а только распыляет: 0,01 атома щита на каждый налетевший атом &mdash; оценка по порядку величины, пессимистичная. Энергия, принесённая газом, показана отдельно: она идёт в нагрев и радиационную дозу, а не в дыру.</p>
+    <p><b>Это оценка сверху.</b> Весь маршрут проходится на крейсерской скорости (на деле разгон и торможение медленнее, и удары там слабее; их число от скорости не зависит). Вся кинетическая энергия пыли, (&gamma;&minus;1)&middot;m&middot;c&sup2;, считается ушедшей на испарение щита (пессимистично: заметная часть уходит излучением). Газ в этой модели щит не испаряет, а только распыляет: 0,01 атома щита на каждый налетевший атом &mdash; оценка по порядку величины, пессимистичная. Энергия, принесённая газом, показана отдельно: она идёт в нагрев и радиационную дозу, а не в дыру.</p>
     <p><b>Не учтено:</b> магнитное и электростатическое отклонение заряженных частиц, каскады вторичных частиц в щите, радиационная доза экипажа, нагрев и охлаждение щита, реальное распределение пылинок по размерам (один радиус используется для числа попаданий; на массу эрозии он не влияет). Плотность среды принята постоянной по всему маршруту; около Солнца это примерно 0,1&ndash;0,3 атома на см&sup3;. Масса газа на атом H 1,4&middot;m<sub>H</sub> (с гелием), пыль &mdash; 1% массы газа, плотность пылинки 2,5 г/см&sup3;.</p>
     <p>Источники-ориентиры: <a href="https://arxiv.org/abs/1608.05284" rel="noopener">Hoang et al. 2017, ApJ 837, 5 &laquo;Interaction of relativistic spacecraft with the interstellar medium&raquo;</a>; <a href="https://breakthroughinitiatives.org/initiative/3" rel="noopener">Breakthrough Starshot</a>. Расстояния до звёзд: список 50 ближайших звёзд, составленный вручную (<a href="neighbors.html">соседи</a>).</p>
   </div>
@@ -236,7 +236,7 @@ const $ = (id) => document.getElementById(id);
 const sub = (s, o) => s.replace(/\{(\w+)\}/g, (_, k) => o[k]);
 const P = parseParams(location.search);
 const cur = { star: P.star, beta: P.beta, grain: GRAIN_RADIUS_DEFAULT, nH: P.nH, mat: P.mat, area: 10, payload: P.payload, margin: true,
-  clamped: P.clamped, betaMission: P.betaMission };
+  clamped: P.clamped, betaMission: P.betaMission, engine: P.engine };
 
 const starName = (n) => (lang === 'ru' && n.ru ? n.ru : n.name);
 function fillSelects() {
@@ -307,9 +307,10 @@ function render() {
   $('arout').textContent = fmtArea(cur.area, lang);
   $('plout').textContent = fmtMassKg(cur.payload, lang);
   for (const b of $('nhp').querySelectorAll('button')) b.classList.toggle('on', Math.abs(+b.dataset.n - cur.nH) / cur.nH < 0.02);
-  $('tomission').href = missionHref({ starId: cur.star, payload: cur.payload });
-  const bm = cur.betaMission === null ? '' : fmtBetaC(cur.betaMission, lang);
-  $('clampnote').innerHTML = cur.clamped ? '<div class="note warn">' + sub(t[cur.clamped], { b: bm || '?' }) + '</div>' : '';
+  $('tomission').href = missionHref({ starId: cur.star, payload: cur.payload, engine: cur.engine });
+  // the note describes the shown numbers only while beta still sits on the clamped edge
+  const onEdge = cur.clamped === 'below' ? cur.beta === BETA_MIN : cur.clamped === 'above' ? cur.beta === BETA_MAX : false;
+  $('clampnote').innerHTML = onEdge && cur.betaMission !== null ? '<div class="note warn">' + sub(t[cur.clamped], { b: fmtBetaC(cur.betaMission, lang) }) + '</div>' : '';
 
   const im = impact({ beta: cur.beta, grainRadius: cur.grain });
   const sp = { beta: cur.beta, ly: star.ly, nH_cm3: cur.nH, material: cur.mat, grainRadius: cur.grain, area_m2: cur.area, payload_kg: cur.payload, safety: cur.margin ? SAFETY : 1 };
@@ -350,8 +351,7 @@ function applyLang(l) {
   fillSelects();
   render();
 }
-// a manual change of speed drops the "clamped from the mission" note: it no longer describes the shown numbers
-$('beta').addEventListener('input', () => { cur.beta = Math.min(BETA_MAX, Math.max(BETA_MIN, +$('beta').value)); cur.clamped = null; render(); });
+$('beta').addEventListener('input', () => { cur.beta = Math.min(BETA_MAX, Math.max(BETA_MIN, +$('beta').value)); render(); });
 $('gr').addEventListener('input', () => { cur.grain = sliderToRadius(+$('gr').value); render(); });
 $('star').addEventListener('change', () => { cur.star = $('star').value; render(); });
 $('nh').addEventListener('input', () => { cur.nH = sliderToNH(+$('nh').value); render(); });

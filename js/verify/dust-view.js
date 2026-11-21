@@ -1,6 +1,7 @@
 // Pure presentation helpers for dust.html (no DOM) so the page logic is testable.
 import { fmt, fmtSci, fmtEnergy, fmtMassKg, fmtMassSci, fmtBetaC, fmtGamma } from './mission-view.js';
 import { BETA_MIN, BETA_MAX, MATERIAL_IDS, N_H_DEFAULT, DEFAULTS, NEIGHBORS, clampBeta } from '../physics/dust.js';
+import { ENGINE_IDS } from '../physics/mission.js';
 
 export { fmt, fmtSci, fmtEnergy, fmtMassKg, fmtMassSci, fmtBetaC, fmtGamma };
 
@@ -34,7 +35,8 @@ export const MATERIAL_LABELS = {
   aluminium: { en: 'Aluminium', ru: 'Алюминий' },
 };
 
-// ---- URL parameters: ?star=<id>&beta=&payload=&n=&mat=&clamped=below|above&bm=<mission beta>; invalid -> default ----
+// ---- URL parameters: ?star=<id>&beta=&payload=&n=&mat=&engine=&clamped=below|above&bm=<mission beta>; invalid -> default ----
+// clamped/bm are kept only as a consistent pair: below => 0 < bm < BETA_MIN, above => BETA_MAX < bm < 1.
 const num = (s) => (s === null || s === undefined || String(s).trim() === '' ? NaN : Number(s));
 export function parseParams(search) {
   const q = new URLSearchParams(search || '');
@@ -46,29 +48,32 @@ export function parseParams(search) {
   const n = num(q.get('n'));
   const nH = Number.isFinite(n) && n >= NH_MIN && n <= NH_MAX ? n : N_H_DEFAULT;
   const mat = MATERIAL_IDS.includes(q.get('mat')) ? q.get('mat') : 'graphite';
-  const cl = q.get('clamped');
-  const clamped = cl === 'below' || cl === 'above' ? cl : null;
-  const bm = num(q.get('bm'));
-  return { star, beta, payload, nH, mat, clamped, betaMission: clamped && Number.isFinite(bm) && bm >= 0 ? bm : null };
+  const engine = ENGINE_IDS.includes(q.get('engine')) ? q.get('engine') : null;
+  const cl = q.get('clamped'), bm = num(q.get('bm'));
+  const okBm = Number.isFinite(bm) && bm > 0 && bm < 1
+    && ((cl === 'below' && bm < BETA_MIN) || (cl === 'above' && bm > BETA_MAX));
+  return { star, beta, payload, nH, mat, engine, clamped: okBm ? cl : null, betaMission: okBm ? bm : null };
 }
 
 // round for a URL: 4 significant digits, no exponent noise for ordinary values
 const urlNum = (x) => String(+x.toPrecision(4));
 
 /** dust.html link for a mission: beta clamped into the model range, the clamp side and raw beta passed along. */
-export function dustHref({ starId, payload, beta }) {
+export function dustHref({ starId, payload, beta, engine }) {
   const q = new URLSearchParams();
   if (starId) q.set('star', starId);
+  if (ENGINE_IDS.includes(engine)) q.set('engine', engine);
   const c = clampBeta(beta);
   if (Number.isFinite(c.beta)) q.set('beta', urlNum(c.beta));
   if (Number.isFinite(payload) && payload > 0) q.set('payload', urlNum(Math.min(Math.max(payload, PAYLOAD_MIN), PAYLOAD_MAX)));
   if (c.clamped) { q.set('clamped', c.clamped); q.set('bm', urlNum(beta)); }
   return 'dust.html?' + q.toString();
 }
-/** mission.html link back: star id + payload. */
-export function missionHref({ starId, payload }) {
+/** mission.html link back: star id + payload (+ engine when it came from the mission). */
+export function missionHref({ starId, payload, engine }) {
   const q = new URLSearchParams();
   if (starId) q.set('star', starId);
+  if (ENGINE_IDS.includes(engine)) q.set('engine', engine);
   if (Number.isFinite(payload) && payload > 0) q.set('payload', urlNum(payload));
   return 'mission.html?' + q.toString();
 }
