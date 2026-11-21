@@ -210,7 +210,7 @@ const T = {
     src: 'Engines', srcR: 'Routes', ax: 'log scale', axT: [[86400, '1 day'], [3.15576e7, '1 year'], [3.15576e10, '1000 y'], [3.15576e13, '1 Myr'], [3.15576e16, '1 Gyr']], axD: [[10, '10 m/s'], [1e3, '1 km/s'], [1e5, '100 km/s'], [1e7, '10 000 km/s']], prop: 'Propellant used', flow: 'Flow', a0: 'Initial a', accT: 'time since launch, log scale', accA: 'acceleration, log scale', oneG: '1 g',
     accNote: 'Gaps in a line = coasting (a = 0). The braking burn sits at the end of the flight. Sail: a falls as 1/r².', kLbl: 'thrust ×',
     axA: [[1e-18, '1e-18'], [1e-14, '1e-14'], [1e-10, '1e-10'], [1e-6, '1e-6'], [1e-2, '0.01'], [1e2, '100'], [1e4, '1e4']], axTa: [[60, '1 min'], [3600, '1 h'], [86400, '1 day'], [3.15576e7, '1 year'], [3.15576e10, '1000 y'], [3.15576e13, '1 Myr'], [3.15576e16, '1 Gyr']],
-    fusionTag: 'assumption at k≠1', fusionNote: 'Fusion (Daedalus): the source gives only the total dry mass of 1 690 t; the split into 190 t engine and 1 500 t structure is an assumption. At thrust ×1 the split does not matter, at other values the fusion row is illustrative only.',
+    fusionTag: 'assumption at k≠1', fusionNote: 'Fusion (Daedalus): the source gives only the total dry mass of 1 690 t; the split into 190 t engine and 1 500 t structure is an assumption. At thrust ×1 the split does not matter, at other values the fusion row is illustrative only. Orion: the 80/20 split of its mass between propellant bombs and structure is likewise an assumption.',
     noProp: 'no propellant', na: 'n/a', notApplicable: 'n/a: needs a ground laser, interstellar routes only', overheat: 'beam heats the sail beyond the assumed limit', massLegend: 'Propellant burned over the whole flight (log scale). Sails carry none: shown as “—”, not as a bar.', axM: [[1, '1 kg'], [1e3, '1 t'], [1e6, '1000 t'], [1e9, '1 Mt']],
     plus: 'Sail bar = flyby speed at the target, not spent Δv.', sailLbl: 'flyby speed', oosHi: 'off scale', oosLo: 'off scale' },
   ru: { engine: 'Двигатель', time: 'Время полёта', dv: 'Затрачено Δv', budget: 'Бюджет Δv', cruise: 'Крейсерская скорость', unreach: 'недостижимо',
@@ -218,7 +218,7 @@ const T = {
     src: 'Двигатели', srcR: 'Маршруты', ax: 'лог. шкала', axT: [[86400, '1 сутки'], [3.15576e7, '1 год'], [3.15576e10, '1000 лет'], [3.15576e13, '1 млн лет'], [3.15576e16, '1 млрд лет']], axD: [[10, '10 м/с'], [1e3, '1 км/с'], [1e5, '100 км/с'], [1e7, '10 000 км/с']], prop: 'Расход топлива', flow: 'Поток', a0: 'Нач. ускорение', accT: 'время от старта, лог. шкала', accA: 'ускорение, лог. шкала', oneG: '1 g',
     accNote: 'Разрыв линии = полёт по инерции (a = 0). Тормозной участок лежит в конце полёта. Парус: a падает как 1/r².', kLbl: 'тяга ×',
     axA: [[1e-18, '1e-18'], [1e-14, '1e-14'], [1e-10, '1e-10'], [1e-6, '1e-6'], [1e-2, '0,01'], [1e2, '100'], [1e4, '1e4']], axTa: [[60, '1 мин'], [3600, '1 ч'], [86400, '1 сут'], [3.15576e7, '1 год'], [3.15576e10, '1000 лет'], [3.15576e13, '1 млн лет'], [3.15576e16, '1 млрд лет']],
-    fusionTag: 'допущение при k≠1', fusionNote: 'Термоядерный (Дедал): в источнике только суммарная сухая масса 1 690 т; разбивка на 190 т двигателя и 1 500 т конструкции — допущение. При тяге ×1 разбивка не важна, при других значениях строка термоядерного двигателя лишь иллюстративна.',
+    fusionTag: 'допущение при k≠1', fusionNote: 'Термоядерный (Дедал): в источнике только суммарная сухая масса 1 690 т; разбивка на 190 т двигателя и 1 500 т конструкции — допущение. При тяге ×1 разбивка не важна, при других значениях строка термоядерного двигателя лишь иллюстративна. Орион: разбивка массы 80/20 на заряды и конструкцию — тоже допущение.',
     noProp: 'топлива нет', na: 'н/п', notApplicable: 'н/п: нужен лазер на Земле, только межзвёздные маршруты', overheat: 'луч перегревает парус выше принятого предела', massLegend: 'Топливо, сожжённое за весь полёт (лог. шкала). У парусов его нет: «—», а не столбик.', axM: [[1, '1 кг'], [1e3, '1 т'], [1e6, '1000 т'], [1e9, '1 Мт']],
     plus: 'Столбик паруса — скорость пролёта у цели, а не затраченное Δv.', sailLbl: 'скорость пролёта', oosHi: 'за шкалой', oosLo: 'за шкалой' },
 };
@@ -253,11 +253,12 @@ function chart(rows, key, min, max, fmtVal, hohLine, t, ticks) {
   const hoh = hohLine == null ? '' : '<line class="hoh" x1="' + pct(hohLine) + '" x2="' + pct(hohLine) + '" y1="0" y2="16" stroke="#ff6b8a" stroke-width="2" />';
   const axis = ticks.map(([v, lbl], i) => '<span class="' + (i === 0 ? 'first' : i === ticks.length - 1 ? 'last' : '') + '" data-v="' + v + '" style="left:' + pct(v) + '">' + lbl + '</span>').join('');
   return rows.map((r) => {
-    const v = r[key], f = barFraction(v, min, max), name = engById[r.id].name[lang];
-    const finite = Number.isFinite(v), oos = finite && !noProp && !na && (v > max || v < min);
+    const v = r[key], name = engById[r.id].name[lang];
     const na = r.flags.includes('notApplicable');
+    const f = na ? 0 : barFraction(v, min, max);
     const sail = key === 'dvUsed' && (r.id === 'sail' || r.id === 'laser') && !na;
     const noProp = key === 'propUsed' && v === 0 && !na;
+    const finite = Number.isFinite(v), oos = finite && !noProp && !na && (v > max || v < min);
     const val = na ? t.na : noProp ? '— (' + t.noProp + ')' : finite ? (sail ? t.sailLbl + ' ' : '') + fmtVal(v) : t.unreach;
     const mark = oos ? '<span class="oos">' + (v > max ? '› ' : '‹ ') + t.oosHi + '</span>' : '';
     return '<div class="crow"><div class="lbl"><span>' + name + '</span><em>' + val + mark + '</em></div>' +
@@ -292,7 +293,8 @@ function accelChart(profiles, t) {
     const pos = p.points.filter((q) => q.a > 0 && q.phase !== 'coast');
     const hi = pos.some((q) => q.a > A_MAX), lo = pos.some((q) => q.a < A_MIN);
     const mark = (hi || lo) ? ' <span class="oos">' + (hi ? '› ' : '‹ ') + t.oosHi + '</span>' : '';
-    return '<span><span style="color:' + COLORS[p.id] + '">&#9632;</span> ' + engById[p.id].name[lang] + mark + '</span>';
+    const naKey = pos.length === 0 ? ' <span class="oos">' + t.na + '</span>' : '';
+    return '<span><span style="color:' + COLORS[p.id] + '">&#9632;</span> ' + engById[p.id].name[lang] + mark + naKey + '</span>';
   }).join('') + '</div>';
   return '<div class="legend">' + t.accA + ' (m/s²) &uarr; &middot; ' + t.accT + ' &rarr;</div><div class="achart"><svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true">' + grid + g + lines + '</svg>' + yl + xl + '</div>' + keys;
 }

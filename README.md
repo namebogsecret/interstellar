@@ -252,7 +252,7 @@ gravity, classical mechanics — an order-of-magnitude estimate, not a trajector
 proportional engine mass; sail area) and an a(t) acceleration chart (log-log,
 F/m(t) for rockets, 1/r^2 for the sail) are on the page; the thrust-scaling
 model is an author's assumption, flagged there. Maths in `js/physics/engines.js`, cited data in
-`js/data/engines.js`, display helpers in `js/verify/engines-view.js`.
+`js/data/engines.js`, display helpers in `js/verify/engines-view.js`. Smoke: `tests/smoke_engines.py`.
 
 ## Twin paradox in transit
 
