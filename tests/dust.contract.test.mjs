@@ -21,7 +21,7 @@ const MH = 1.6735575e-27, MU = 1.4, NA = 6.02214076e23, EVJ = 1.602176634e-19, T
 const g1 = (b) => { const s = Math.sqrt(1 - b * b); return (b * b) / (s * (1 + s)); }; // gamma-1, stable
 const KE = (m, b) => g1(b) * m * C * C;
 const MAT = { graphite: { rho: 2200, Q: 5.9e7, A: 12.011 }, beryllium: { rho: 1850, Q: 3.3e7, A: 9.012 }, aluminium: { rho: 2700, Q: 1.2e7, A: 26.98 } };
-function refDepth({ beta, ly, nH = 0.1, material = 'graphite', dustToGas = 0.01 }) {
+function refDepth({ beta, ly, nH_cm3: nH = 0.1, material = 'graphite', dustToGas = 0.01 }) {
   const m = MAT[material], col = nH * 1e6 * ly * LY;
   const dust = g1(beta) * C * C * dustToGas * col * MU * MH / m.Q;
   const gas = 0.01 * col * m.A * 1e-3 / NA;
@@ -53,7 +53,7 @@ near(D.kineticEnergy(MH, 0.05) / (EVJ * 1e6), 1.175701034248838, 1e-9, 'E_H(0.05
 }
 for (const b of [1e-8, 1e-6, 1e-4]) {
   const v = b * C, cl = 0.5 * 2.5 * v * v;
-  near(D.kineticEnergy(2.5, b) / cl, 1, 1e-9, 'stable small-beta ' + b);
+  near(D.kineticEnergy(2.5, b) / cl, 1 + 0.75 * b * b, 1e-12, 'stable small-beta ' + b);
 }
 near(D.kineticEnergy(3, 0.3), KE(3, 0.3), 1e-12, 'KE scalar m');
 near(D.kineticEnergy(2 * MH, 0.2), 2 * D.kineticEnergy(MH, 0.2), 1e-12, 'KE linear in m');
