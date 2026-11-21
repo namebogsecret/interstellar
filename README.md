@@ -241,11 +241,12 @@ no gravity, no fuel.
 
 ## Engines compared
 
-[`engines.html`](engines.html) — five propulsion types (chemical RL10B-2, ion
-NEXT-C, nuclear-thermal NERVA, fusion Project Daedalus stage 1, 500×500 m solar
-sail) on the same trip (Mars, Jupiter, Pluto, solar gravitational lens at
-550 AU, Alpha Centauri) for a payload of 100 kg – 1000 t: flight time and Δv
-spent, with the Hohmann Δv as reference for planets. Straight line, no solar
+[`engines.html`](engines.html) — seven propulsion types (chemical RL10B-2, ion
+NEXT-C, nuclear-thermal NERVA, nuclear pulse Orion (Dyson 1968), fusion Project
+Daedalus stage 1, 500×500 m solar sail, Starshot-class laser sail — the last
+on interstellar routes only) on the same trip (Mars, Jupiter, Pluto, solar gravitational lens at
+550 AU, Alpha Centauri) for a payload of 100 kg – 1000 t: flight time, Δv
+spent and propellant mass (three log-scale bars + table), with the Hohmann Δv as reference for planets. Straight line, no solar
 gravity, classical mechanics — an order-of-magnitude estimate, not a trajectory
 (stated on the page). A thrust slider (0.1x-10x: k times the engines with
 proportional engine mass; sail area) and an a(t) acceleration chart (log-log,

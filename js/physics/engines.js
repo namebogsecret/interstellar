@@ -1,8 +1,9 @@
-// Engine comparison: order-of-magnitude trip estimates for five propulsion types.
+// Engine comparison: order-of-magnitude trip estimates for seven propulsion types.
 // Straight-line flight over distance D, NO solar gravity, classical mechanics (not SR).
 // Pure functions, SI units; no DOM, no state. Planet routes also get the Hohmann reference.
 import { C, G0, AU, LY } from './constants.js';
 import { ENGINES, ROUTES, SAIL_EFF } from '../data/engines.js';
+import { launch, AREAL_DENSITY as LASER_SIGMA } from './lasersail.js';
 
 export { AU, LY, ENGINES, ROUTES, SAIL_EFF };
 export const MU_SUN = 1.32712440018e20;   // m^3/s^2
@@ -11,6 +12,10 @@ export const SOLAR_CONST = 1361;          // W/m^2 at 1 AU
 const okPos = (v) => typeof v === 'number' && Number.isFinite(v) && v > 0;
 const needPayload = (p) => { if (!okPos(p)) throw new RangeError('payload must be a finite number > 0 (kg)'); };
 const isSail = (e) => e.kind === 'sail';
+const isLaser = (e) => e.kind === 'laser';
+// The laser sail is modelled for interstellar routes only (beam range, relativistic flight); on planetary routes it is n/a.
+export const LASER_MIN_D = 1e15;   // m (~0.1 ly): routes at least this long are interstellar
+export const laserApplies = (route) => route.D >= LASER_MIN_D;
 
 // Hohmann transfer between circular coplanar orbits r1 -> r2 around mu.
 export function hohmann(r1, r2, mu = MU_SUN) {
@@ -28,6 +33,8 @@ export const THRUST_SCALE_MIN = 0.1, THRUST_SCALE_MAX = 10;
 export function scaleThrust(engine, k) {
   if (!okPos(k)) throw new RangeError('thrust scale must be a finite number > 0');
   if (isSail(engine)) return { ...engine, area: engine.area * k, thrustScale: k };
+  // laser sail: k times the laser power (beam force F = 2P/c); sail area fixed
+  if (isLaser(engine)) return { ...engine, laserPower: engine.laserPower * k, thrustScale: k };
   return { ...engine, F: engine.F * k, engineMass: engine.engineMass * k, thrustScale: k };
 }
 
@@ -39,7 +46,7 @@ export function stageMasses(engine, payload) {
 
 // Tsiolkovsky budget; a sail spends no propellant.
 export function dvBudget(engine, payload) {
-  if (isSail(engine)) return 0;
+  if (isSail(engine) || isLaser(engine)) return 0;
   const { m0, mDry } = stageMasses(engine, payload);
   return engine.isp * G0 * Math.log(m0 / mDry);
 }
@@ -124,6 +131,19 @@ export function sailTrip(engine, payload, r0, D) {
   return { time, dvUsed: v, vCruise: v, aChar: aC, flags: ['flyby'] };
 }
 
+// Laser sail over distance D: wrapper over lasersail.launch(). Delta-v used = the coasting speed beta_max*c; no propellant.
+// Returns null when the flight does not happen (no beam / unreachable). profile = launch() samples.
+export function laserTrip(engine, payload, D) {
+  needPayload(payload);
+  if (!okPos(D)) throw new RangeError('distance must be a finite number > 0');
+  let r;
+  try { r = launch({ payload, power: engine.laserPower, area: engine.laserArea }, { distance: D }); }
+  catch (e) { return null; }
+  if (!r.flights) return null;
+  return { time: r.tFlight, dvUsed: r.betaMax * C, vCruise: r.betaMax * C, aChar: r.aProper0, mass: r.mass,
+    flags: ['flyby', ...r.flags.filter((f) => f !== 'flyby')], profile: r.profile };
+}
+
 // Acceleration along the flight, a(t) = F/m(t), for one engine. Points {t, a, m, phase}, t in s from launch,
 // phase 'accel' | 'coast' | 'brake' | 'sail'. Rockets: constant thrust, mass falls by mdot = F/ve, so a rises
 // during each burn; coast has a = 0. Burn samples are geometric in t (log time axis), brake samples linear.
@@ -140,6 +160,13 @@ export function accelProfile(engine, payload, D, { brake = true, r0 = AU, n = 48
       points.push({ t: sailTimeTo(kk, r0, r), a: kk / (r * r), m, phase: 'sail', r });
     }
     return { time: sailTimeTo(kk, r0, r1), points, flags: ['flyby'] };
+  }
+  if (isLaser(engine)) {
+    const lt = D >= LASER_MIN_D ? laserTrip(engine, payload, D) : null;
+    if (!lt) return { time: Infinity, points: [], flags: ['notApplicable'] };
+    // beam phase: a = felt acceleration (g x g0); after the beam switches off the craft coasts (a = 0)
+    const points = lt.profile.map((q) => ({ t: q.t, a: q.g * G0, m: lt.mass, phase: q.g > 0 ? 'accel' : 'coast' }));
+    return { time: lt.time, points, flags: lt.flags };
   }
   const trip = propulsiveTrip(engine, payload, D, { brake });
   if (!Number.isFinite(trip.time)) return { time: Infinity, points: [], flags: trip.flags };
@@ -169,7 +196,7 @@ export function accelProfile(engine, payload, D, { brake = true, r0 = AU, n = 48
   return { time: trip.time, points, flags: trip.flags };
 }
 
-// One row per engine, fixed order chemical, ion, ntr, fusion, sail. thrustScale multiplies every engine's
+// One row per engine, fixed order chemical, ion, ntr, orion, fusion, sail, laser. thrustScale multiplies every engine's
 // thrust (see scaleThrust). Extra fields: mdot (kg/s), propUsed (kg), mEnd (kg), aStart (m/s^2).
 export function compareEngines(routeId, payload, { brake = true, thrustScale = 1 } = {}) {
   const route = ROUTES.find((r) => r.id === routeId);
@@ -177,6 +204,14 @@ export function compareEngines(routeId, payload, { brake = true, thrustScale = 1
   needPayload(payload);
   return ENGINES.map((e0) => {
     const e = thrustScale === 1 ? e0 : scaleThrust(e0, thrustScale);
+    if (isLaser(e)) {
+      const lt = laserApplies(route) ? laserTrip(e, payload, route.D) : null;
+      const mEnd = payload + LASER_SIGMA * e.laserArea;
+      if (!lt) return { id: e.id, time: Infinity, dvUsed: 0, dvBudget: 0, vCruise: 0, flags: ['notApplicable'],
+        mdot: 0, propUsed: 0, mEnd, aStart: 0 };
+      return { id: e.id, time: lt.time, dvUsed: lt.dvUsed, dvBudget: 0, vCruise: lt.vCruise, flags: lt.flags,
+        mdot: 0, propUsed: 0, mEnd, aStart: lt.aChar };
+    }
     if (isSail(e)) {
       const s = sailTrip(e, payload, route.r0, route.D);
       return { id: e.id, time: s.time, dvUsed: s.dvUsed, dvBudget: 0, vCruise: s.vCruise, flags: s.flags,

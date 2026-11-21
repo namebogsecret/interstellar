@@ -24,7 +24,8 @@ const invalid = (o, msg) => { const r = plan(o); ok(r && r.valid === false && ty
 
 const NEAR = NEIGHBORS.reduce((a, b) => (b.ly < a.ly ? b : a));
 const FAR = NEIGHBORS.reduce((a, b) => (b.ly > a.ly ? b : a));
-const ROCKETS = ENGINES.filter((e) => e.kind === 'rocket');
+const ROCKETS_ALL = ENGINES.filter((e) => e.kind === 'rocket');
+const ROCKETS = ROCKETS_ALL.filter((e) => ['chemical', 'ion', 'ntr', 'fusion'].includes(e.id));   // rockets the mission builder offers (orion is engines.html only)
 const SAILENG = ENGINES.find((e) => e.kind === 'sail');
 const eng = (id) => ENGINES.find((e) => e.id === id);
 const Dof = (s) => s.ly * LY;
@@ -34,7 +35,7 @@ const gam = (v) => 1 / Math.sqrt(1 - (v / C) ** 2);
 eq(ENGINE_IDS, ['chemical', 'ion', 'ntr', 'fusion', 'sail', 'laser', 'photon'], 'ENGINE_IDS');
 eq(DEFAULTS, { payload: 1000, budget: 1e21, accelG: 1, laserPower: 100e9, laserArea: 16 }, 'DEFAULTS');
 for (const id of ENGINE_IDS) eq(canBrake(id), !(id === 'sail' || id === 'laser'), 'canBrake ' + id);
-eq(ROCKETS.map((e) => e.id), ['chemical', 'ion', 'ntr', 'fusion'], 'data/engines.js has the 4 rockets');
+eq(ROCKETS_ALL.map((e) => e.id), ['chemical', 'ion', 'ntr', 'orion', 'fusion'], 'data/engines.js has the 5 rockets');
 ok(NEIGHBORS.length > 10 && FAR.ly > NEAR.ly, 'NEIGHBORS sane');
 
 // ---------- bad input: valid:false + reason, never throws ----------

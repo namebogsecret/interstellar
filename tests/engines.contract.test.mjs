@@ -22,8 +22,8 @@ const ENG = asList(ENGINES);
 const RTS = asList(ROUTES);
 const engById = (id) => ENG.find((e) => e.id === id);
 const routeById = (id) => RTS.find((r) => r.id === id);
-const REACTIVE = ['chemical', 'ion', 'ntr', 'fusion'];
-const ORDER = ['chemical', 'ion', 'ntr', 'fusion', 'sail'];
+const REACTIVE = ['chemical', 'ion', 'ntr', 'orion', 'fusion'];
+const ORDER = ['chemical', 'ion', 'ntr', 'orion', 'fusion', 'sail', 'laser'];
 const PAYLOADS = [100, 300, 1e3, 3e3, 1e4, 1e5, 1e6];
 const ROUTE_IDS = ['mars', 'jupiter', 'pluto', 'sgl', 'alphacen', 'proxima'];
 
@@ -143,7 +143,7 @@ near(SOLAR_CONST, 1361, 1e-15, 'SOLAR_CONST');
 // (3) data: engines & routes
 // =====================================================================================
 {
-  ok(ENG.length === 5, '5 engines');
+  ok(ENG.length === 7, '7 engines');
   ok(JSON.stringify(ENG.map((e) => e.id)) === JSON.stringify(ORDER), 'engine ids in contract order');
   ok(RTS.length === 6, '6 routes');
   ok(JSON.stringify(RTS.map((r) => r.id).sort()) === JSON.stringify([...ROUTE_IDS].sort()), 'route ids');
@@ -164,7 +164,7 @@ near(SOLAR_CONST, 1361, 1e-15, 'SOLAR_CONST');
   };
   for (const e of ENG) { checkSources(e, `engine ${e.id}`); checkNames(e, `engine ${e.id}`); }
   for (const r of RTS) { checkSources(r, `route ${r.id}`); checkNames(r, `route ${r.id}`); }
-  ok(new Set(ENG.map((e) => e.id)).size === 5 && new Set(RTS.map((r) => r.id)).size === 6, 'unique ids');
+  ok(new Set(ENG.map((e) => e.id)).size === 7 && new Set(RTS.map((r) => r.id)).size === 6, 'unique ids');
 
   for (const id of REACTIVE) {
     const e = engById(id);
@@ -198,7 +198,7 @@ near(SOLAR_CONST, 1361, 1e-15, 'SOLAR_CONST');
 // =====================================================================================
 for (const e of ENG) {
   for (const p of PAYLOADS) {
-    if (e.id === 'sail') { ok(dvBudget(e, p) === 0, 'sail dvBudget = 0'); continue; }
+    if (e.id === 'sail' || e.id === 'laser') { ok(dvBudget(e, p) === 0, e.id + ' dvBudget = 0'); continue; }
     const sm = stageMasses(e, p);
     near(sm.mDry, p + e.engineMass + e.tankMass, 1e-12, `${e.id} mDry`);
     near(sm.m0, sm.mDry + e.propMass, 1e-12, `${e.id} m0`);
@@ -412,16 +412,16 @@ for (const rid of ROUTE_IDS) for (const brake of [true, false]) {
   for (const p of PAYLOADS) {
     const rows = compareEngines(rid, p, { brake });
     const tag = `compare/${rid}/brake=${brake}/p=${p}`;
-    ok(Array.isArray(rows) && rows.length === 5, `${tag}: 5 rows`);
+    ok(Array.isArray(rows) && rows.length === 7, `${tag}: 7 rows`);
     ok(JSON.stringify(rows.map((x) => x.id)) === JSON.stringify(ORDER), `${tag}: engine order`);
     for (const x of rows) {
       ok(typeof x.time === 'number' && !Number.isNaN(x.time) && x.time > 0, `${tag}/${x.id}: time > 0, not NaN`);
       ok(Array.isArray(x.flags), `${tag}/${x.id}: flags array`);
       ok(['dvUsed', 'dvBudget', 'vCruise'].every((k) => typeof x[k] === 'number' && !Number.isNaN(x[k])), `${tag}/${x.id}: numeric fields`);
-      if (x.id !== 'sail') near(x.dvBudget, dvBudget(engById(x.id), p), 1e-12, `${tag}/${x.id}: dvBudget matches`);
-      else { ok(x.dvBudget === 0, `${tag}: sail dvBudget 0`); ok(FLAGS(x).has('flyby'), `${tag}: sail always flyby`); }
+      if (x.id !== 'sail' && x.id !== 'laser') near(x.dvBudget, dvBudget(engById(x.id), p), 1e-12, `${tag}/${x.id}: dvBudget matches`);
+      else { ok(x.dvBudget === 0, `${tag}: ${x.id} dvBudget 0`); if (x.id === 'sail') ok(FLAGS(x).has('flyby'), `${tag}: sail always flyby`); }
     }
-    if (rid === 'mars') for (const x of rows) ok(Number.isFinite(x.time), `${tag}/${x.id}: finite time to Mars`);
+    if (rid === 'mars') for (const x of rows.filter((y) => y.id !== 'laser')) ok(Number.isFinite(x.time), `${tag}/${x.id}: finite time to Mars`);
     // agrees with the primitive calls
     const D = routeById(rid).D;
     for (const id of REACTIVE) {
@@ -434,7 +434,8 @@ for (const rid of ROUTE_IDS) for (const brake of [true, false]) {
     // monotone in payload
     if (prev) for (const x of rows) {
       const q = prev.find((y) => y.id === x.id);
-      if (x.id === 'sail') ok(x.time > q.time, `${tag}/sail: time strictly increases with payload`);
+      if (x.id === 'laser') ok(x.time >= q.time, `${tag}/laser: time non-decreasing with payload (Infinity = n/a)`);
+      else if (x.id === 'sail') ok(x.time > q.time, `${tag}/sail: time strictly increases with payload`);
       else { ok(x.dvBudget < q.dvBudget, `${tag}/${x.id}: budget strictly decreases`); ok(x.time >= q.time * (1 - 1e-12), `${tag}/${x.id}: time non-decreasing`); }
     }
     prev = rows;

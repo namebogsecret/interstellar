@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Rocket engines compared — Interstellar</title>
-<meta name="description" content="Chemical, ion, nuclear-thermal, fusion and solar-sail propulsion compared on the same trip: flight time and delta-v to Mars, Jupiter, Pluto, the solar gravitational lens and Alpha Centauri for any payload mass (order-of-magnitude, no gravity)." />
+<meta name="description" content="Seven propulsion types — chemical, ion, nuclear-thermal, nuclear pulse (Orion), fusion (Daedalus), solar sail and laser sail — compared on the same trip: flight time, delta-v and propellant mass to Mars, Jupiter, Pluto, the solar gravitational lens and Alpha Centauri for any payload mass (order-of-magnitude, no gravity)." />
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="icon" type="image/png" sizes="120x120" href="/favicon-120.png" />
@@ -96,10 +96,10 @@
 <h1><span data-lang="en" class="active">ENGINES COMPARED</span><span data-lang="ru">СРАВНЕНИЕ ДВИГАТЕЛЕЙ</span></h1>
 
 <div data-lang="en" class="active">
-  <p>Same trip, five ways to fly it: chemical, ion, nuclear-thermal, fusion (Project Daedalus) and a solar sail. Choose a destination and payload mass &mdash; see how long each engine takes and how much velocity change (&Delta;v) it spends. An order-of-magnitude estimate, <b>not</b> a trajectory.</p>
+  <p>Same trip, seven ways to fly it: chemical, ion, nuclear-thermal, nuclear pulse (Project Orion), fusion (Project Daedalus), a solar sail and a laser sail. Choose a destination and payload mass &mdash; see how long each engine takes, how much velocity change (&Delta;v) it spends and how much propellant it burns. An order-of-magnitude estimate, <b>not</b> a trajectory.</p>
 </div>
 <div data-lang="ru">
-  <p>Один и тот же перелёт пятью способами: химический, ионный, ядерно-тепловой, термоядерный (проект «Дедал») и солнечный парус. Выберите цель и массу полезной нагрузки &mdash; увидите, сколько летит каждый двигатель и сколько изменения скорости (&Delta;v) тратит. Это оценка порядков величин, <b>не</b> траектория.</p>
+  <p>Один и тот же перелёт семью способами: химический, ионный, ядерно-тепловой, ядерный импульсный (проект «Орион»), термоядерный (проект «Дедал»), солнечный парус и лазерный парус. Выберите цель и массу полезной нагрузки &mdash; увидите, сколько летит каждый двигатель, сколько изменения скорости (&Delta;v) и сколько топлива он тратит. Это оценка порядков величин, <b>не</b> траектория.</p>
 </div>
 
 <div class="card">
@@ -137,6 +137,10 @@
 <div class="card chart" id="chartDv" role="img" aria-label="Delta-v by engine, log scale"></div>
 <div class="legend" id="hohLegend"></div>
 
+<h2><span data-lang="en" class="active">Propellant mass used</span><span data-lang="ru">Масса израсходованного топлива</span></h2>
+<div class="card chart" id="chartMass" role="img" aria-label="Propellant mass used by engine, log scale"></div>
+<div class="legend" id="massLegend"></div>
+
 <h2><span data-lang="en" class="active">Acceleration along the flight</span><span data-lang="ru">Ускорение вдоль полёта</span></h2>
 <div class="card chart" id="chartAccel" role="img" aria-label="Acceleration versus time since launch, log-log"></div>
 <div class="legend" id="accLegend"></div>
@@ -150,6 +154,8 @@
     <p><b>Order of magnitude, not a trajectory.</b> A straight line over the distance, <b>no solar gravity</b>, classical mechanics (no relativity &mdash; flagged where speed exceeds 0.1&thinsp;c). Real missions use gravity assists and curved orbits.</p>
     <p><b>Rocket engines</b> have constant thrust and a fixed &ldquo;typical stage&rdquo; (engine, tank, propellant); your payload is added. The whole &Delta;v budget is spent (Tsiolkovsky: &Delta;v = v<sub>e</sub>&middot;ln(m<sub>0</sub>/m<sub>dry</sub>)): accelerate to half, coast, brake with the other half. If the burns alone would overshoot the distance, the cruise speed is lowered so they fit exactly. &ldquo;Flyby&rdquo; spends it all on acceleration. Tank and propellant masses are illustrative round numbers, not a specific vehicle.</p>
     <p><b>Solar sail</b> starts at rest at 1&nbsp;AU, thrust falls as 1/r&sup2;, sail efficiency 0.9, always a flyby. Its &ldquo;&Delta;v&rdquo; is the speed it reaches at the target. Nothing is carried, so its budget is zero.</p>
+    <p><b>Nuclear pulse (Orion)</b> is Dyson's 1968 interstellar design from Project Orion: 400&nbsp;000&nbsp;t at departure, 100&nbsp;000&nbsp;t empty, 300&nbsp;000 one-megaton bombs, 1&nbsp;g mean acceleration, 10&nbsp;000&nbsp;km/s top speed. The article gives no exhaust velocity; v<sub>e</sub> = 7&nbsp;213&nbsp;km/s is <b>derived</b> from those figures (one burn, mass ratio 4). The real thrust is a train of explosions about a bomb a second; here it is <b>averaged to a constant thrust</b>. The 80/20 split of the empty mass into engine and structure is an assumption.</p>
+    <p><b>Laser sail</b> is the Breakthrough Starshot-class model from the laser-sail page (100&nbsp;GW, 16&nbsp;m&sup2;, areal density 1&nbsp;g/m&sup2; &mdash; not the solar sail's 10&nbsp;g/m&sup2;), run with relativistic dynamics; &ldquo;&Delta;v&rdquo; is its coasting speed, always a flyby, no propellant. It needs a laser aimed from the ground, so it is shown <b>only on the Alpha Centauri and Proxima routes</b>; for the planets it is n/a. With these fixed beam parameters a heavy payload takes millennia; the thrust slider scales the laser power. The overheat flag means the beam intensity exceeds the assumed 1&nbsp;GW/m&sup2; sail limit.</p>
     <p><b>Hohmann reference</b> (planets only): the two-impulse heliocentric &Delta;v between circular orbits &mdash; the usual yardstick for planetary missions, with gravity. For r<sub>2</sub>/r<sub>1</sub> &gt; 11.94 (Pluto) a bi-elliptic transfer is cheaper, so there it is a reference, not a minimum.</p>
     <p>Ion versus chemical depends on payload: with a light payload on a distant route the ion engine's far larger &Delta;v wins, but at around 1000&nbsp;t its 0.24&nbsp;N of thrust makes it the slowest. Low thrust needs a very long burn.</p>
     <p><b>Thrust scale (assumption).</b> The slider multiplies the thrust by k = 0.1&hellip;10 by fitting k times as many engines of the same kind: <b>thrust and the engine/propulsion-system mass both scale with k</b> (constant thrust-to-mass of the engine); tanks, propellant load and specific impulse stay as they are. A heavier engine lowers the &Delta;v budget, so more thrust can mean a <em>smaller</em> &Delta;v and a slower trip when the burns fill the whole distance. For the sail, k scales the <b>area</b> (and so the sail mass) at the same areal density. Cluster size, power-supply and cooling limits are not modelled; this is an illustration of the trade-off, not an engine design. <b>Fusion caveat:</b> for Daedalus the source gives only the total dry mass (1&nbsp;690&nbsp;t); the 190&nbsp;t engine / 1&nbsp;500&nbsp;t structure split is an assumption, and since only the engine mass scales with k, the fusion row at k&nbsp;&ne;&nbsp;1 is illustrative only (marked &ldquo;assumption at k&ne;1&rdquo;).</p>
@@ -161,6 +167,8 @@
     <p><b>Порядок величин, не траектория.</b> Прямая линия на заданное расстояние, <b>без гравитации Солнца</b>, классическая механика (без релятивизма &mdash; помечено там, где скорость выше 0,1&thinsp;c). Настоящие миссии используют гравитационные манёвры и криволинейные орбиты.</p>
     <p><b>Реактивные двигатели</b> имеют постоянную тягу и фиксированную «типовую ступень» (двигатель, бак, топливо); сверху добавляется ваша нагрузка. Тратится весь бюджет &Delta;v (Циолковский: &Delta;v = v<sub>e</sub>&middot;ln(m<sub>0</sub>/m<sub>сух</sub>)): разгон на половину, полёт по инерции, торможение второй половиной. Если одни только участки тяги перелетели бы дистанцию, крейсерская скорость уменьшается, чтобы они уложились ровно. «Пролёт» тратит всё на разгон. Массы баков и топлива &mdash; условные круглые числа, не конкретная машина.</p>
     <p><b>Солнечный парус</b> стартует с покоя на 1&nbsp;а.е., тяга падает как 1/r&sup2;, эффективность паруса 0,9, всегда пролёт. Его «&Delta;v» &mdash; скорость, набранная к цели. Рабочего тела нет, поэтому бюджет равен нулю.</p>
+    <p><b>Ядерный импульсный (Орион)</b> &mdash; межзвёздный вариант Дайсона 1968 из проекта «Орион»: 400&nbsp;000&nbsp;т на старте, 100&nbsp;000&nbsp;т пустой, 300&nbsp;000 мегатонных бомб, среднее ускорение 1&nbsp;g, максимальная скорость 10&nbsp;000&nbsp;км/с. Скорость истечения в источнике не указана; v<sub>e</sub> = 7&nbsp;213&nbsp;км/с <b>выведена</b> из этих цифр (один разгон, отношение масс 4). Реальная тяга &mdash; серия взрывов, около бомбы в секунду; здесь она <b>усреднена до постоянной тяги</b>. Разбивка пустой массы 80/20 на двигатель и конструкцию &mdash; допущение.</p>
+    <p><b>Лазерный парус</b> &mdash; модель класса Breakthrough Starshot со страницы лазерного паруса (100&nbsp;ГВт, 16&nbsp;м&sup2;, поверхностная плотность 1&nbsp;г/м&sup2; &mdash; не 10&nbsp;г/м&sup2; как у солнечного паруса), релятивистская динамика; «&Delta;v» &mdash; скорость полёта по инерции, всегда пролёт, топлива нет. Нужен лазер с Земли, поэтому показан <b>только на маршрутах к α Центавра и Проксиме</b>; для планет &mdash; н/п. При этих фиксированных параметрах луча тяжёлая нагрузка летит тысячелетиями; ползунок тяги масштабирует мощность лазера. Метка «перегрев» &mdash; интенсивность луча выше принятого предела паруса 1&nbsp;ГВт/м&sup2;.</p>
     <p><b>Эталон Хомана</b> (только планеты): двухимпульсное гелиоцентрическое &Delta;v между круговыми орбитами &mdash; обычная мерка межпланетных миссий, с гравитацией. При r<sub>2</sub>/r<sub>1</sub> &gt; 11,94 (Плутон) биэллиптический перелёт дешевле, так что там это ориентир, а не минимум.</p>
     <p>Ион против химии зависит от нагрузки: при лёгкой нагрузке на дальнем маршруте ионный двигатель выигрывает за счёт куда большего &Delta;v, а при ~1000&nbsp;т тяга 0,24&nbsp;Н делает его самым медленным. Малой тяге нужен очень долгий разгон.</p>
     <p><b>Масштаб тяги (допущение).</b> Ползунок умножает тягу на k = 0,1&hellip;10 установкой в k раз большего числа таких же двигателей: <b>тяга и масса двигателя/силовой установки растут вместе с k</b> (постоянное отношение тяги к массе двигателя); баки, запас топлива и удельный импульс не меняются. Более тяжёлый двигатель снижает бюджет &Delta;v, поэтому рост тяги может дать <em>меньшее</em> &Delta;v и более долгий полёт, когда участки тяги занимают всю дистанцию. Для паруса k масштабирует <b>площадь</b> (а с ней и массу паруса) при той же поверхностной плотности. Размер кластера, мощность питания и охлаждение не моделируются; это иллюстрация компромисса, а не проект двигателя. <b>Оговорка по термояду:</b> для «Дедала» в источнике дана только суммарная сухая масса (1&nbsp;690&nbsp;т); разбивка 190&nbsp;т двигатель / 1&nbsp;500&nbsp;т конструкция — допущение, а так как с k масштабируется только масса двигателя, строка термоядерного при k&nbsp;&ne;&nbsp;1 лишь иллюстративна (помечена «допущение при k≠1»).</p>
@@ -203,6 +211,7 @@ const T = {
     accNote: 'Gaps in a line = coasting (a = 0). The braking burn sits at the end of the flight. Sail: a falls as 1/r².', kLbl: 'thrust ×',
     axA: [[1e-18, '1e-18'], [1e-14, '1e-14'], [1e-10, '1e-10'], [1e-6, '1e-6'], [1e-2, '0.01'], [1e2, '100'], [1e4, '1e4']], axTa: [[60, '1 min'], [3600, '1 h'], [86400, '1 day'], [3.15576e7, '1 year'], [3.15576e10, '1000 y'], [3.15576e13, '1 Myr'], [3.15576e16, '1 Gyr']],
     fusionTag: 'assumption at k≠1', fusionNote: 'Fusion (Daedalus): the source gives only the total dry mass of 1 690 t; the split into 190 t engine and 1 500 t structure is an assumption. At thrust ×1 the split does not matter, at other values the fusion row is illustrative only.',
+    noProp: 'no propellant', na: 'n/a', notApplicable: 'n/a: needs a ground laser, interstellar routes only', overheat: 'beam heats the sail beyond the assumed limit', massLegend: 'Propellant burned over the whole flight (log scale). Sails carry none: shown as “—”, not as a bar.', axM: [[1, '1 kg'], [1e3, '1 t'], [1e6, '1000 t'], [1e9, '1 Mt']],
     plus: 'Sail bar = flyby speed at the target, not spent Δv.', sailLbl: 'flyby speed', oosHi: 'off scale', oosLo: 'off scale' },
   ru: { engine: 'Двигатель', time: 'Время полёта', dv: 'Затрачено Δv', budget: 'Бюджет Δv', cruise: 'Крейсерская скорость', unreach: 'недостижимо',
     flyby: 'пролёт', relativistic: 'классика неточна (>0,1 c)', noBudget: 'нет бюджета Δv', hoh: 'Эталон Хомана (двухимпульсный перелёт; при r2/r1 > 11,94 биэллиптический дешевле)', hohT: 'Время перелёта по Хоману',
@@ -210,9 +219,11 @@ const T = {
     accNote: 'Разрыв линии = полёт по инерции (a = 0). Тормозной участок лежит в конце полёта. Парус: a падает как 1/r².', kLbl: 'тяга ×',
     axA: [[1e-18, '1e-18'], [1e-14, '1e-14'], [1e-10, '1e-10'], [1e-6, '1e-6'], [1e-2, '0,01'], [1e2, '100'], [1e4, '1e4']], axTa: [[60, '1 мин'], [3600, '1 ч'], [86400, '1 сут'], [3.15576e7, '1 год'], [3.15576e10, '1000 лет'], [3.15576e13, '1 млн лет'], [3.15576e16, '1 млрд лет']],
     fusionTag: 'допущение при k≠1', fusionNote: 'Термоядерный (Дедал): в источнике только суммарная сухая масса 1 690 т; разбивка на 190 т двигателя и 1 500 т конструкции — допущение. При тяге ×1 разбивка не важна, при других значениях строка термоядерного двигателя лишь иллюстративна.',
+    noProp: 'топлива нет', na: 'н/п', notApplicable: 'н/п: нужен лазер на Земле, только межзвёздные маршруты', overheat: 'луч перегревает парус выше принятого предела', massLegend: 'Топливо, сожжённое за весь полёт (лог. шкала). У парусов его нет: «—», а не столбик.', axM: [[1, '1 кг'], [1e3, '1 т'], [1e6, '1000 т'], [1e9, '1 Мт']],
     plus: 'Столбик паруса — скорость пролёта у цели, а не затраченное Δv.', sailLbl: 'скорость пролёта', oosHi: 'за шкалой', oosLo: 'за шкалой' },
 };
-const COLORS = { chemical: '#ff9c6b', ion: '#7fb3ff', ntr: '#5fe3a1', fusion: '#ffd28a', sail: '#d9a6ff' };
+const COLORS = { chemical: '#ff9c6b', ion: '#7fb3ff', ntr: '#5fe3a1', orion: '#ff6bd6', fusion: '#ffd28a', sail: '#d9a6ff', laser: '#6bf0ff' };
+const M_MIN = 1, M_MAX = 1e10;     // kg, log axis of the propellant chart
 const T_MIN = 1e5, T_MAX = 1e17;   // s (about 1 day .. 3 Gyr), log axis
 const V_MIN = 10, V_MAX = 1e8;     // m/s, log axis
 
@@ -229,9 +240,10 @@ const engById = Object.fromEntries(ENGINES.map((e) => [e.id, e]));
 
 function badges(row, t, k) {
   const b = [];
-  if (row.id === 'fusion' && Math.abs(k - 1) > 1e-9) b.push('<span class="badge">' + t.fusionTag + '</span>');
-  if (!Number.isFinite(row.time)) b.push('<span class="badge bad">' + t.unreach + '</span>');
-  for (const f of row.flags) if (f !== 'noBudget') b.push('<span class="badge">' + t[f] + '</span>');
+  if ((row.id === 'fusion' || row.id === 'orion') && Math.abs(k - 1) > 1e-9) b.push('<span class="badge">' + t.fusionTag + '</span>');
+  if (row.flags.includes('notApplicable')) b.push('<span class="badge">' + t.notApplicable + '</span>');
+  else if (!Number.isFinite(row.time)) b.push('<span class="badge bad">' + t.unreach + '</span>');
+  for (const f of row.flags) if (f !== 'noBudget' && f !== 'notApplicable') b.push('<span class="badge">' + t[f] + '</span>');
   return b.join('');
 }
 
@@ -242,14 +254,16 @@ function chart(rows, key, min, max, fmtVal, hohLine, t, ticks) {
   const axis = ticks.map(([v, lbl], i) => '<span class="' + (i === 0 ? 'first' : i === ticks.length - 1 ? 'last' : '') + '" data-v="' + v + '" style="left:' + pct(v) + '">' + lbl + '</span>').join('');
   return rows.map((r) => {
     const v = r[key], f = barFraction(v, min, max), name = engById[r.id].name[lang];
-    const finite = Number.isFinite(v), oos = finite && (v > max || v < min);
-    const sail = key === 'dvUsed' && r.id === 'sail';
-    const val = finite ? (sail ? t.sailLbl + ' ' : '') + fmtVal(v) : t.unreach;
+    const finite = Number.isFinite(v), oos = finite && !noProp && !na && (v > max || v < min);
+    const na = r.flags.includes('notApplicable');
+    const sail = key === 'dvUsed' && (r.id === 'sail' || r.id === 'laser') && !na;
+    const noProp = key === 'propUsed' && v === 0 && !na;
+    const val = na ? t.na : noProp ? '— (' + t.noProp + ')' : finite ? (sail ? t.sailLbl + ' ' : '') + fmtVal(v) : t.unreach;
     const mark = oos ? '<span class="oos">' + (v > max ? '› ' : '‹ ') + t.oosHi + '</span>' : '';
     return '<div class="crow"><div class="lbl"><span>' + name + '</span><em>' + val + mark + '</em></div>' +
       '<svg width="100%" height="16" aria-hidden="true">' +
       '<rect class="track" x="0" y="0" width="100%" height="16" fill="rgba(120,200,230,0.06)" />' + lines +
-      '<rect class="bar' + (sail ? ' sailv' : '') + '" x="0" y="2" width="' + (f * 100) + '%" height="12" fill="' + COLORS[r.id] + '" opacity="' + (finite ? 0.85 : 0.3) + '"' + (sail ? ' fill-opacity="0.55" stroke="' + COLORS[r.id] + '" stroke-dasharray="3 2"' : '') + ' />' + hoh + '</svg></div>';
+      '<rect class="bar' + (sail ? ' sailv' : '') + '" x="0" y="2" width="' + (f * 100) + '%" height="12" fill="' + COLORS[r.id] + '" opacity="' + (finite && !na ? 0.85 : 0.3) + '"' + (sail ? ' fill-opacity="0.55" stroke="' + COLORS[r.id] + '" stroke-dasharray="3 2"' : '') + ' />' + hoh + '</svg></div>';
   }).join('') + '<div class="axis">' + axis + '</div>';
 }
 
@@ -301,19 +315,21 @@ function render() {
   const hoh = route.hohmann ? hohmann(route.r0, route.rTo) : null;
   $('chartTime').innerHTML = chart(rows, 'time', T_MIN, T_MAX, (v) => fmtTime(v, lang), null, t, t.axT);
   $('chartDv').innerHTML = chart(rows, 'dvUsed', V_MIN, V_MAX, (v) => fmtDv(v, lang), hoh && hoh.dv, t, t.axD);
+  $('chartMass').innerHTML = chart(rows, 'propUsed', M_MIN, M_MAX, (v) => fmtMass(v, lang), null, t, t.axM);
+  $('massLegend').textContent = t.massLegend;
   $('hohLegend').innerHTML = hoh
     ? '<span style="color:#ff6b8a">&#9632;</span> ' + t.hoh + ': Δv ' + fmtDv(hoh.dv, lang) + ', ' + t.hohT + ' ' + fmtTime(hoh.t, lang) + ' &middot; ' + t.ax + '. ' + t.plus
     : t.ax + '. ' + t.plus;
 
   const body = rows.map((r) =>
     '<tr><td data-label="' + t.engine + '">' + engById[r.id].name[lang] + '</td>' +
-    '<td data-label="' + t.time + '">' + (Number.isFinite(r.time) ? fmtTime(r.time, lang) : t.unreach) + '</td>' +
-    '<td data-label="' + t.dv + '">' + fmtDv(r.dvUsed, lang) + '</td>' +
-    '<td data-label="' + t.budget + '">' + (r.id === 'sail' ? '—' : fmtDv(r.dvBudget, lang)) + '</td>' +
-    '<td data-label="' + t.cruise + '">' + fmtDv(r.vCruise, lang) + '</td>' +
-    '<td data-label="' + t.prop + '">' + (r.id === 'sail' ? '—' : fmtMass(r.propUsed, lang)) + '</td>' +
-    '<td data-label="' + t.flow + '">' + (r.id === 'sail' ? '—' : fmtFlow(r.mdot, lang)) + '</td>' +
-    '<td data-label="' + t.a0 + '">' + fmtAccel(r.aStart, lang) + '</td>' +
+    '<td data-label="' + t.time + '">' + (r.flags.includes('notApplicable') ? t.na : Number.isFinite(r.time) ? fmtTime(r.time, lang) : t.unreach) + '</td>' +
+    '<td data-label="' + t.dv + '">' + (r.flags.includes('notApplicable') ? t.na : fmtDv(r.dvUsed, lang)) + '</td>' +
+    '<td data-label="' + t.budget + '">' + (r.id === 'sail' || r.id === 'laser' ? '—' : fmtDv(r.dvBudget, lang)) + '</td>' +
+    '<td data-label="' + t.cruise + '">' + (r.flags.includes('notApplicable') ? t.na : fmtDv(r.vCruise, lang)) + '</td>' +
+    '<td data-label="' + t.prop + '">' + (r.id === 'sail' || r.id === 'laser' ? '—' : fmtMass(r.propUsed, lang)) + '</td>' +
+    '<td data-label="' + t.flow + '">' + (r.id === 'sail' || r.id === 'laser' ? '—' : fmtFlow(r.mdot, lang)) + '</td>' +
+    '<td data-label="' + t.a0 + '">' + (r.flags.includes('notApplicable') ? t.na : fmtAccel(r.aStart, lang)) + '</td>' +
     '<td>' + badges(r, t, kScale) + '</td></tr>').join('');
   $('tableout').innerHTML = '<table><thead><tr><th>' + t.engine + '</th><th>' + t.time + '</th><th>' + t.dv + '</th><th>' + t.budget + '</th><th>' + t.cruise + '</th><th>' + t.prop + '</th><th>' + t.flow + '</th><th>' + t.a0 + '</th><th></th></tr></thead><tbody>' + body + '</tbody></table>';
 

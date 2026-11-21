@@ -28,6 +28,18 @@ export const ENGINES = [
     sources: [wiki('NERVA', 'NERVA')],
   },
   {
+    id: 'orion', kind: 'rocket',
+    name: { en: 'Nuclear pulse (Orion, Dyson 1968)', ru: 'Ядерный импульсный (Орион, Дайсон 1968)' },
+    // Dyson's 1968 "momentum-limited" interstellar Orion (Wikipedia, Project Orion): 100 m pusher, empty mass 100 000 t,
+    // 300 000 one-megaton bombs, departure mass 400 000 t, mean acceleration 1 g, top speed 10 000 km/s (3.3% c), 133 yr to Alpha Centauri.
+    // isp is DERIVED, not quoted: one burn from 400 000 t to 100 000 t (ratio 4) giving 10 000 km/s -> ve = 10 000/ln 4 = 7 213 km/s.
+    // F = 1 g x 400 000 t = 3.923e9 N. The 100 000 t empty mass is split 80 000 t engine+pusher / 20 000 t structure+tanks (ASSUMPTION; source gives only the sum).
+    // The real thrust is pulsed (~1 bomb/s class); it is averaged to a constant thrust here (assumption stated on the page).
+    isp: (1e7 / Math.log(4)) / G0, F: 1 * G0 * 400e6, engineMass: 80e6, propMass: 300e6, tankMass: 20e6,
+    sources: [wiki('Project Orion (nuclear propulsion)', 'Project_Orion_(nuclear_propulsion)'),
+      wiki('Nuclear pulse propulsion', 'Nuclear_pulse_propulsion')],
+  },
+  {
     id: 'fusion', kind: 'rocket',
     name: { en: 'Fusion (Daedalus, stage 1)', ru: 'Термоядерный (Дедал, 1-я ступень)' },
     // ve 10 600 km/s -> isp = ve/g0; dry stage 1 690 t total (source gives no split: 190 t engine / 1500 t structure+tanks is an ASSUMPTION; at k=1 only the sum matters, at k!=1 the result depends on it -- flagged on the page)
@@ -40,6 +52,15 @@ export const ENGINES = [
     area: 250000, arealDensity: 0.010,
     sources: [wiki('Solar sail', 'Solar_sail'),
       wiki('Advanced Composite Solar Sail System (ACS3)', 'Advanced_Composite_Solar_Sail_System')],
+  },
+  {
+    // Beam-driven light sail (Breakthrough Starshot class). Flown by js/physics/lasersail.js launch(); carries no propellant.
+    // Power/area = the mission builder's defaults. Sail areal density is lasersail.js's 1 g/m^2 (AREAL_DENSITY), NOT the solar sail's 0.010 kg/m^2.
+    id: 'laser', kind: 'laser',
+    name: { en: 'Laser sail (100 GW, 16 m²)', ru: 'Лазерный парус (100 ГВт, 16 м²)' },
+    laserPower: 100e9, laserArea: 16,
+    sources: [wiki('Breakthrough Starshot', 'Breakthrough_Starshot'),
+      { title: 'Parkin 2018, The Starshot system model (arXiv:1805.01306)', url: 'https://arxiv.org/abs/1805.01306' }],
   },
 ];
 
